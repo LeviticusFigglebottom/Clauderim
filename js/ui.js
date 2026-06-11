@@ -51,14 +51,27 @@ const UI = {
         lore: "By " + BOOKS[id].author,
       };
     }
-    const stock = (npc, ids) => { const s = NPC_DEFS[npc].shop; if (s && s.stock) s.stock.push(...ids); };
+    const stock = (npc, ids) => {
+      const s = NPC_DEFS[npc].shop;
+      if (!s) return;
+      if (!s.stock) s.stock = [];
+      s.stock.push(...ids);
+    };
     stock("serah", ["book_ember_treatise", "book_emberborn_book", "book_old_tongue_primer"]);
     stock("tobbe", ["book_shattered_march", "book_bestiary"]);
     stock("petra", ["book_duskmere_book"]);
     stock("sigrun", ["book_frosthollow_book"]);
     stock("maren", ["book_alchemy_primer"]);
+    stock("caldus", ["book_undermarch_book", "stormcaller"]);
     LOOT.chest_fine.push({ w: 1, id: "book_wardens_book", n: [1, 1] });
     LOOT.chest_rare.push({ w: 1, id: "book_citadel_book", n: [1, 1] });
+    LOOT.chest_rare.push({ w: 1, id: "ring_deep", n: [1, 1] });
+  },
+
+  /* item display name with forge honing */
+  itemName(it, p) {
+    const tier = p && p.honing && p.honing[it.id];
+    return it.name + (tier ? " +" + tier : "");
   },
 
   refreshTitle() {
@@ -171,8 +184,9 @@ const UI = {
         const it = ITEMS[s.id];
         const eq = Object.values(p.equip).includes(s.id);
         const sel = this.selItem === s.id ? " sel" : "";
+        const quick = p.quickItem === s.id ? ' <span style="color:#b9d8a0;font-size:11px">[T]</span>' : "";
         list += `<div class="inv-row${eq ? " equipped" : ""}${sel}" data-item="${s.id}">
-          <span class="iname r-${it.rarity}">${U.esc(it.name)}${s.n > 1 ? " ×" + s.n : ""}</span>
+          <span class="iname r-${it.rarity}">${U.esc(this.itemName(it, p))}${s.n > 1 ? " ×" + s.n : ""}${quick}</span>
           <span class="imeta">${this.itemMeta(it)} · ${it.weight || 0}wt</span></div>`;
       }
     }
@@ -217,11 +231,14 @@ const UI = {
       const eq = Object.values(p.equip).includes(it.id);
       actions += `<button class="act-btn" data-act="equip">${eq ? "Unequip" : "Equip"}</button>`;
     }
-    if (it.type === "consumable") actions += `<button class="act-btn" data-act="use">Use</button>`;
+    if (it.type === "consumable") {
+      actions += `<button class="act-btn" data-act="use">Use</button>`;
+      actions += `<button class="act-btn" data-act="quick">${p.quickItem === it.id ? "Unbind [T]" : "Bind to [T]"}</button>`;
+    }
     if (it.type === "book") actions += `<button class="act-btn" data-act="read">Read</button>`;
     if (it.type !== "key") actions += `<button class="act-btn danger" data-act="drop">Discard</button>`;
 
-    box.innerHTML = `<div class="idetail-name r-${it.rarity}">${U.esc(it.name)}</div>
+    box.innerHTML = `<div class="idetail-name r-${it.rarity}">${U.esc(this.itemName(it, p))}</div>
       <div class="idetail-type">${it.type}${it.twoHanded ? " · two-handed" : ""}</div>
       <div class="idetail-stats">${stats}</div>
       <div class="idetail-lore">${U.esc(it.lore || "")}</div>
@@ -229,6 +246,7 @@ const UI = {
     box.querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
       if (b.dataset.act === "equip") p.equipItem(it.id);
       else if (b.dataset.act === "use") p.useConsumable(it.id);
+      else if (b.dataset.act === "quick") { p.quickItem = p.quickItem === it.id ? null : it.id; Sfx.play("ui"); }
       else if (b.dataset.act === "read") { this.openBook(it.book); return; }
       else if (b.dataset.act === "drop") { p.removeItem(it.id, 1); Sfx.play("ui"); }
       this.renderMenu();
@@ -246,7 +264,7 @@ const UI = {
       const it = p.equip[slot] ? ITEMS[p.equip[slot]] : null;
       grid += `<div class="equip-slot" data-slot="${slot}">
         <span class="slot-label">${label}</span>
-        <span class="slot-item ${it ? "r-" + it.rarity : "empty"}">${it ? U.esc(it.name) : "—"}</span></div>`;
+        <span class="slot-item ${it ? "r-" + it.rarity : "empty"}">${it ? U.esc(this.itemName(it, p)) : "—"}</span></div>`;
     }
     const lr = p.loadRatio();
     const rollDesc = lr > 1 ? "cannot roll" : lr >= 0.75 ? "heavy roll" : lr >= 0.4 ? "medium roll" : "fast roll";
@@ -661,14 +679,15 @@ const UI = {
 
   renderCraft(kind) {
     const p = G.player;
-    const recipes = kind === "smith" ? RECIPES_SMITH : RECIPES_ALCH;
-    const skillId = kind === "smith" ? "smithing" : "alchemy";
+    const recipes = kind === "smith" ? RECIPES_SMITH : kind === "cook" ? RECIPES_COOK : RECIPES_ALCH;
+    const skillId = kind === "cook" ? "alchemy" : kind === "smith" ? "smithing" : "alchemy";
     const lvl = p.skills[skillId].lvl;
+    const verb = kind === "smith" ? "Forge" : kind === "cook" ? "Cook" : "Brew";
     const panel = U.el("station-panel");
     let rows = "";
     for (const r of recipes) {
       const out = ITEMS[r.out];
-      const locked = lvl < r.skillReq;
+      const locked = kind !== "cook" && lvl < r.skillReq;
       let req = "", can = !locked;
       for (const m in r.mats) {
         if (!r.mats[m]) continue;
@@ -680,20 +699,66 @@ const UI = {
       rows += `<div class="craft-row" style="${locked ? "opacity:.45" : ""}">
         <span class="c-name r-${out.rarity}">${U.esc(out.name)} ${locked ? `<span style="color:#d89090;font-size:11px">(requires ${SKILL_DEFS[skillId].name} ${r.skillReq})</span>` : ""}</span>
         <span><span class="c-req">${req}</span>
-        <button class="act-btn" data-craft="${r.out}" ${can ? "" : "disabled"}>${kind === "smith" ? "Forge" : "Brew"}</button></span></div>`;
+        <button class="act-btn" data-craft="${r.out}" ${can ? "" : "disabled"}>${verb}</button></span></div>`;
     }
-    panel.innerHTML = `<h2>${kind === "smith" ? "Forge — Smithing " + lvl : "Alchemy Bench — Alchemy " + lvl}</h2>
-      ${rows}<div style="margin-top:14px;text-align:right"><button class="act-btn" id="craft-close">Step away</button></div>`;
+
+    /* the forge also hones edges */
+    let honing = "";
+    if (kind === "smith") {
+      honing = `<h2 style="margin-top:22px">Hone an Edge — +8% damage per tier</h2>`;
+      const honables = p.inventory.filter(s => ["weapon", "bow", "staff"].includes(ITEMS[s.id].type));
+      if (!honables.length) honing += `<i style="color:#5d574c">Nothing in your pack takes an edge.</i>`;
+      for (const s of honables) {
+        const it = ITEMS[s.id];
+        const tier = p.honing[s.id] || 0;
+        if (tier >= HONE_TIERS.length) {
+          honing += `<div class="craft-row"><span class="c-name r-${it.rarity}">${U.esc(this.itemName(it, p))}</span>
+            <span class="c-req have">honed to the bone</span></div>`;
+          continue;
+        }
+        const cost = HONE_TIERS[tier];
+        let req = `<span class="${p.gold >= cost.gold ? "have" : "lack"}">${cost.gold} g</span> `, can = p.gold >= cost.gold;
+        for (const m in cost.mats) {
+          const ok = p.countItem(m) >= cost.mats[m];
+          if (!ok) can = false;
+          req += `<span class="${ok ? "have" : "lack"}">${ITEMS[m].name} ${p.countItem(m)}/${cost.mats[m]}</span> `;
+        }
+        honing += `<div class="craft-row">
+          <span class="c-name r-${it.rarity}">${U.esc(this.itemName(it, p))} → +${tier + 1}</span>
+          <span><span class="c-req">${req}</span>
+          <button class="act-btn" data-hone="${s.id}" ${can ? "" : "disabled"}>Hone</button></span></div>`;
+      }
+    }
+
+    const title = kind === "smith" ? "Forge — Smithing " + lvl
+      : kind === "cook" ? "Campfire — the old hunter's craft"
+      : "Alchemy Bench — Alchemy " + lvl;
+    panel.innerHTML = `<h2>${title}</h2>
+      ${rows}${honing}<div style="margin-top:14px;text-align:right"><button class="act-btn" id="craft-close">Step away</button></div>`;
     U.el("craft-close").onclick = () => this.closeStation();
     panel.querySelectorAll("[data-craft]").forEach(b => b.onclick = () => {
       const r = recipes.find(q => q.out === b.dataset.craft);
       // consume (Thrifty Mortar may spare alchemy ingredients)
-      const spare = kind !== "smith" && p.hasPerk("al_2") && Math.random() < 0.2;
+      const spare = kind === "alchemy" && p.hasPerk("al_2") && Math.random() < 0.2;
       if (!spare) for (const m in r.mats) if (r.mats[m]) p.removeItem(m, r.mats[m]);
       p.addItem(r.out, 1);
-      p.gainSkill(skillId, 14 + r.skillReq * 0.5);
+      p.gainSkill(skillId, kind === "cook" ? 4 : 14 + r.skillReq * 0.5);
       Sfx.play("craft");
-      G.msg(`${kind === "smith" ? "Forged" : "Brewed"}: ${ITEMS[r.out].name}` + (spare ? " (ingredients spared)" : ""), "good");
+      G.msg(`${kind === "smith" ? "Forged" : kind === "cook" ? "Cooked" : "Brewed"}: ${ITEMS[r.out].name}` + (spare ? " (ingredients spared)" : ""), "good");
+      this.renderCraft(kind);
+    });
+    panel.querySelectorAll("[data-hone]").forEach(b => b.onclick = () => {
+      const id = b.dataset.hone;
+      const tier = p.honing[id] || 0;
+      const cost = HONE_TIERS[tier];
+      if (p.gold < cost.gold) return;
+      for (const m in cost.mats) if (p.countItem(m) < cost.mats[m]) return;
+      p.gold -= cost.gold;
+      for (const m in cost.mats) p.removeItem(m, cost.mats[m]);
+      p.honing[id] = tier + 1;
+      p.gainSkill("smithing", 18);
+      Sfx.play("craft");
+      G.msg(`Honed: ${this.itemName(ITEMS[id], p)}`, "good");
       this.renderCraft(kind);
     });
   },
@@ -790,9 +855,9 @@ const UI = {
       <p><b>LMB tap</b> light attack · <b>LMB hold</b> heavy attack</p>
       <p><b>RMB hold</b> block with shield — raise it at the last instant to <b>parry</b></p>
       <p><b>F hold</b> draw bow, release to loose · <b>Q</b> cast equipped spell</p>
-      <p><b>1–4</b> speak Edicts of the Old Tongue · <b>R</b> drink the Ember Flask</p>
+      <p><b>1–4</b> speak Edicts of the Old Tongue · <b>R</b> drink the Ember Flask · <b>T</b> quick item</p>
       <h3>World</h3>
-      <p><b>E</b> interact — shrines, people, chests, herbs, doors</p>
+      <p><b>E</b> interact — shrines, people, chests, herbs, doors, graves, campfires, wells</p>
       <p><b>Tab</b> menu · <b>M</b> map · <b>J</b> journal · <b>C</b> character · <b>Esc</b> close/system</p>
       <h3>The rules of the March</h3>
       <p>Slain foes yield <b>embers</b> — spend them at shrines to level. Death drops your embers
@@ -800,7 +865,9 @@ const UI = {
       <p><b>Resting at a shrine</b> restores you, refills the flask, saves the world — and wakes everything you killed.</p>
       <p>Stamina governs all action. Equip load governs your roll. Watch both.</p>
       <p>Skills grow with use; every 5th skill level grants a perk point.</p>
-      <p>Enemies telegraph in <b style="color:#d89090">red</b>. Sneak attacks from behind unaware foes deal brutal damage.</p>
+      <p>Enemies telegraph in <b style="color:#d89090">red</b>. Sneak attacks from behind unaware foes deal brutal damage — approach from behind and they notice far less.</p>
+      <p><b>Hone weapons</b> at any forge (+8% damage a tier, three tiers). <b>Cook</b> hunted meat at campfires. Beware <b style="color:#ff7a3a">ashen elites</b> — they burn brighter and hit harder, but carry triple embers.</p>
+      <p>Hunt deer and hares for meat and hides. Search old graves if you dare; the tenants object roughly one time in four.</p>
       <h3>The road</h3>
       <p>Speak with <b>Serah the Lampwright</b> in Emberfall. Claim the four Sigils of the Wardens.
       Open the Citadel of Hollows. Decide what the light does next.</p>`;

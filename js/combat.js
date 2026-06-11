@@ -15,6 +15,9 @@ const Combat = {
 
   weaponDamage(p, w, heavy) {
     let dmg = w.dmg;
+    // forge honing: +8% per tier
+    const tier = (p.honing && p.honing[w.id]) || 0;
+    if (tier) dmg *= 1 + tier * 0.08;
     // attribute scaling
     if (w.scale) {
       let bonus = 0;
@@ -91,7 +94,11 @@ const Combat = {
         World.moveCircle(G.map, e, Math.cos(ang) * 30, Math.sin(ang) * 30);
       }
     }
-    if (hitAny) { Sfx.play("hit_flesh"); G.shake(heavy ? 4 : 2, 0.12); }
+    if (hitAny) {
+      Sfx.play("hit_flesh");
+      G.shake(heavy ? 4 : 2, 0.12);
+      if (heavy) G.hitstop = Math.max(G.hitstop || 0, 0.05); // a beat of weight on heavy connects
+    }
   },
 
   playerShoot(p, power) {
@@ -157,6 +164,13 @@ const Combat = {
   /* ---- damage an enemy ---- */
   applyDamage(e, info) {
     const def = e.def;
+
+    // a Warden unengaged is a Warden unharmed — no sniping bosses through their gates
+    if (def.boss && !e.engaged) {
+      G.float(e.x, e.y - e.r - 14, "unmoved", "#8a8378", 13);
+      return;
+    }
+
     let dmg = info.amount;
 
     // physical mitigation
@@ -218,8 +232,7 @@ const Combat = {
       Sfx.play("stagger");
     }
 
-    if (!def.boss || e.engaged) e.enterChase();
-    else if (def.boss && !e.engaged) { /* dormant bosses ignore pokes from outside */ }
+    if (!def.boss) e.enterChase();
 
     if (e.hp <= 0) this.killEnemy(e);
   },
@@ -236,7 +249,8 @@ const Combat = {
 
     if (p && !p.dead) {
       p.statsKills++;
-      p.gainEmbers(def.embers || 0);
+      p.gainEmbers(Math.round((def.embers || 0) * (e.elite ? 3 : 1)));
+      if (e.elite) G.msg(`The ashen ${def.name} crumbles.`, "ember");
       // loot: one weighted roll
       if (def.loot && def.loot.length) {
         const roll = U.weighted(Math.random, def.loot);
@@ -264,6 +278,7 @@ const Combat = {
     UI.hideBossBar();
     Music.setMood(G.map.outdoor ? "world" : "dungeon");
     G.shake(10, 0.6);
+    G.hitstop = Math.max(G.hitstop || 0, 0.22);
     G.banner(def.mini ? "FOE VANQUISHED" : "WARDEN FELLED", def.name + (def.title ? ", " + def.title : ""));
     Sfx.play("victory");
 
@@ -289,7 +304,7 @@ const Combat = {
     if (d > def.reach + p.r + 26) return;
 
     this.damagePlayer({
-      amount: def.dmg * (mult || 1),
+      amount: def.dmg * (mult || 1) * (e.dmgMult || 1),
       dtype: dtypeOverride || "phys",
       edmg: def.edmg,
       poiseDmg: def.poiseDmg,
@@ -326,6 +341,7 @@ const Combat = {
         info.source.poise = info.source.poiseMax;
         Sfx.play("parry");
         G.shake(4, 0.15);
+        G.hitstop = Math.max(G.hitstop || 0, 0.09);
         FX.burst(p.x + Math.cos(srcAng) * 18, p.y + Math.sin(srcAng) * 18, "#ffe9a8", 18, 180);
         G.float(p.x, p.y - 26, "PARRY", "#ffe9a8", 16);
         p.gainSkill("block", 14);
@@ -394,6 +410,7 @@ const Combat = {
       if (!(small && p.hasPerk("ha_4") && p.armorKindCount("heavy") >= 2)) {
         p.staggerT = Math.max(p.staggerT, 0.55);
         p.atk = null; p.cast = null; p.draw = null;
+        G.slowmoAim = false;
       }
     }
 

@@ -157,6 +157,21 @@ Brew at a proper bench. Brewing in a helmet over a campfire is not alchemy, it i
 And mind the first law of the mortar: the land grows a remedy within a mile of every ill it invents. The Mire makes mireweed; the ash makes emberbloom. The world is trying to apologize. Let it.`,
   },
 
+  undermarch_book: {
+    title: "What Holds the March Up",
+    author: "fragments of a Lampwright survey, bound out of order",
+    text:
+`Ask a farmer what holds the March up and he will say: the ground. Ask a miner and she will go quiet, stand you a drink, and change the subject. Buy her a second drink and she will tell you about the Undermarch.
+
+The realm is a roof. Beneath it runs a second country — drowned roads, root-halls, the cellars of cities that were old when Ald was young. The Great Sink east of the crossroads is its only honest door; the dishonest doors are everywhere, and open downward.
+
+Our order kept way-lamps down there once. Not to light the road — there is no road — but because the deep dark is the Old Dark's cellar, and a lamp in a cellar is a sentence in an argument. The lamps went cold in the Shattering. The argument, presumably, was lost.
+
+One more thing, found written on the survey's last page in a different hand:
+
+He is still down there. The first one. The king who went down to argue. We heard him through the stone, on the long watches — not words, just warmth, pacing. Whatever you do at the bottom of the world, do it respectfully. You will be standing in the middle of the oldest conversation there is.`,
+  },
+
   citadel_book: {
     title: "The Vault Beneath the Hollows",
     author: "final page of the Citadel chamberlain's ledger, recovered scorched",

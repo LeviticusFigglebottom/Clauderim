@@ -50,9 +50,21 @@ class Enemy extends Entity {
     this.activePattern = null;
     this.blocking = false;
     this.lastHitBy = null;
+    this.elite = false;
+    this.dmgMult = 1;
   }
 
   get isEnemy() { return true; }
+
+  /* ashen elite: rarer, meaner, brighter, richer */
+  makeElite() {
+    this.elite = true;
+    this.hpMax = Math.round(this.hpMax * 1.7);
+    this.hp = this.hpMax;
+    this.dmgMult = 1.4;
+    this.poiseMax = Math.round(this.poiseMax * 1.5);
+    this.poise = this.poiseMax;
+  }
 
   effSpd() {
     let s = this.def.spd * this.spdMult;
@@ -92,10 +104,18 @@ class Enemy extends Entity {
     if (this.state === "idle" || this.state === "patrol") {
       let range = def.aggro * (p && p.crouched ? 0.42 : 1);
       if (G.map.outdoor) range *= U.lerp(1, 0.62, G.darkness());
-      if (p) range *= Math.max(0.35, 1 - (p.skills.sneak.lvl * 0.004 + p.sneakBonus() * 0.01) * (p.crouched ? 1 : 0.2));
+      if (p) {
+        range *= Math.max(0.35, 1 - (p.skills.sneak.lvl * 0.004 + p.sneakBonus() * 0.01) * (p.crouched ? 1 : 0.2));
+        // approaching from behind is much harder to notice
+        const behind = Math.abs(U.angDiff(this.facing, U.angTo(this.x, this.y, p.x, p.y))) > 1.7;
+        if (behind) range *= 0.55;
+      }
       if (distP < range) {
         this.aware += dt * (p.crouched ? 1.2 : 4) * U.clamp(1 - distP / Math.max(1, range), 0.15, 1) * 2;
-        if (this.aware >= 1) this.enterChase();
+        if (this.aware >= 1) {
+          if (def.behavior === "flee") this.enterFlee();
+          else this.enterChase();
+        }
       } else {
         this.aware = Math.max(0, this.aware - dt * 0.5);
       }
@@ -122,6 +142,14 @@ class Enemy extends Entity {
         break;
       }
 
+      case "flee": {
+        if (!p || p.dead || distP > def.deaggro) { this.state = "idle"; this.aware = 0; break; }
+        const away = U.angTo(p.x, p.y, this.x, this.y) + Math.sin(G.elapsed * 3 + this.bobT) * 0.4;
+        const walked = World.steerMove(G.map, this, away, this.effSpd() * tdt);
+        if (walked !== null) this.facing = walked;
+        break;
+      }
+
       case "chase": {
         if (!p || p.dead) { this.state = "return"; break; }
         if (distP > def.deaggro) { this.state = "return"; break; }
@@ -129,24 +157,25 @@ class Enemy extends Entity {
 
         const b = def.behavior;
         if (b === "archer" || b === "caster") {
-          // keep mid distance, fire
+          // keep mid distance, fire — only with a clear line of sight
           const want = 200;
           const sp = this.effSpd() * tdt;
-          if (distP > want + 40) World.moveCircle(G.map, this, Math.cos(this.facing) * sp, Math.sin(this.facing) * sp);
-          else if (distP < want - 60) World.moveCircle(G.map, this, -Math.cos(this.facing) * sp * 0.7, -Math.sin(this.facing) * sp * 0.7);
+          const sees = World.lineClear(G.map, this.x, this.y, p.x, p.y);
+          if (!sees || distP > want + 40) World.steerMove(G.map, this, this.facing, sp);
+          else if (distP < want - 60) World.steerMove(G.map, this, this.facing + Math.PI, sp * 0.7);
           else {
             // strafe
             const sa = this.facing + Math.PI / 2 * (this.strafeDir || (this.strafeDir = Math.random() < 0.5 ? 1 : -1));
             if (!World.moveCircle(G.map, this, Math.cos(sa) * sp * 0.4, Math.sin(sa) * sp * 0.4)) this.strafeDir *= -1;
           }
           this.projCd -= dt;
-          if (this.projCd <= 0 && distP < 420) {
+          if (this.projCd <= 0 && distP < 420 && sees) {
             this.startAttack("shoot");
           }
         } else {
           const sp = this.effSpd() * tdt;
           if (distP > def.reach * 0.75 + p.r) {
-            World.moveCircle(G.map, this, Math.cos(this.facing) * sp, Math.sin(this.facing) * sp);
+            World.steerMove(G.map, this, this.facing, sp);
           }
           if (distP < def.reach + p.r + (b === "lunger" ? 30 : 4) && this.attackCd <= 0) {
             this.startAttack("melee");
@@ -156,7 +185,7 @@ class Enemy extends Entity {
       }
 
       case "attack": {
-        this.stateT -= dt;
+        this.stateT -= tdt; // attack timers honor KYR's stillness
         const def2 = this.def;
         if (this.attackPhase === "wind" && this.stateT <= 0) {
           this.attackPhase = "strike";
@@ -187,8 +216,7 @@ class Enemy extends Entity {
         if (distH < 30) { this.state = "idle"; this.aware = 0; this.hp = Math.min(this.hpMax, this.hp + this.hpMax * 0.02); break; }
         const ang = U.angTo(this.x, this.y, this.homeX, this.homeY);
         this.facing = ang;
-        const sp = this.effSpd() * 0.8 * tdt;
-        World.moveCircle(G.map, this, Math.cos(ang) * sp, Math.sin(ang) * sp);
+        World.steerMove(G.map, this, ang, this.effSpd() * 0.8 * tdt);
         this.hp = Math.min(this.hpMax, this.hp + this.hpMax * 0.1 * dt);
         // re-aggro if player gets close again
         if (p && !p.dead && U.dist(this.x, this.y, p.x, p.y) < def.aggro * 0.5) this.enterChase();
@@ -211,10 +239,17 @@ class Enemy extends Entity {
   }
 
   enterChase() {
+    if (this.def.behavior === "flee") { this.enterFlee(); return; }
     if (this.state === "chase" || this.state === "attack") return;
     this.state = "chase";
     this.aware = 1;
     Sfx.play(this.def.voice || "growl");
+  }
+
+  enterFlee() {
+    if (this.state === "flee") return;
+    this.state = "flee";
+    this.aware = 1;
   }
 
   startAttack(mode) {
@@ -288,8 +323,7 @@ class Enemy extends Entity {
 
     // movement when no pattern: close in
     if (distP > def.reach * 0.7 + p.r) {
-      const sp = this.effSpd() * tdt;
-      World.moveCircle(G.map, this, Math.cos(this.facing) * sp, Math.sin(this.facing) * sp);
+      World.steerMove(G.map, this, this.facing, this.effSpd() * tdt);
     }
 
     // choose a pattern
@@ -315,7 +349,7 @@ class Enemy extends Entity {
 
   runPattern(tdt, dt) {
     const ap = this.activePattern, pt = ap.def, def = this.def, p = G.player;
-    ap.t += dt;
+    ap.t += tdt; // KYR stretches even a king's tempo
 
     if (ap.phase === "wind") {
       this.attackPhase = "wind"; // reuse telegraph visuals
@@ -435,17 +469,24 @@ class Enemy extends Entity {
 /* ---------------- NPC ---------------- */
 
 class NPC extends Entity {
-  constructor(npcId, x, y) {
+  constructor(npcId, x, y, homeX, homeY) {
     super(x, y, 12);
     this.def = NPC_DEFS[npcId];
     this.npcId = npcId;
     this.hp = this.hpMax = 100;
-    this.anchorX = x; this.anchorY = y;
+    this.dayX = x; this.dayY = y;
+    this.homeX = homeX !== undefined ? homeX : x;
+    this.homeY = homeY !== undefined ? homeY : y;
     this.wanderT = U.randf(Math.random, 1, 5);
     this.wanderAng = Math.random() * TAU;
     this.moving = false;
     this.barkT = U.randf(Math.random, 4, 14);
   }
+
+  // people keep their posts by day and their hearths by night
+  get anchorX() { const h = G.time.hour; return (h >= 21 || h < 6.5) ? this.homeX : this.dayX; }
+  get anchorY() { const h = G.time.hour; return (h >= 21 || h < 6.5) ? this.homeY : this.dayY; }
+
   update(dt) {
     this.wanderT -= dt;
     if (this.wanderT <= 0) {
@@ -453,9 +494,15 @@ class NPC extends Entity {
       this.moving = !this.moving && Math.random() < 0.5;
       this.wanderAng = Math.random() * TAU;
     }
-    if (this.moving) {
-      const distA = U.dist(this.x, this.y, this.anchorX, this.anchorY);
-      const ang = distA > 60 ? U.angTo(this.x, this.y, this.anchorX, this.anchorY) : this.wanderAng;
+    const distA = U.dist(this.x, this.y, this.anchorX, this.anchorY);
+    if (distA > 40) {
+      // commute between post and home
+      const ang = U.angTo(this.x, this.y, this.anchorX, this.anchorY);
+      this.facing = ang;
+      World.steerMove(G.map, this, ang, 46 * dt);
+      this.bobT += dt * 6;
+    } else if (this.moving) {
+      const ang = distA > 28 ? U.angTo(this.x, this.y, this.anchorX, this.anchorY) : this.wanderAng;
       this.facing = ang;
       World.moveCircle(G.map, this, Math.cos(ang) * 24 * dt, Math.sin(ang) * 24 * dt);
     }
@@ -611,6 +658,7 @@ const FX = {
       if (p.t >= p.life) { G.particles.splice(i, 1); continue; }
       const dr = 1 - (p.drag || 0) * dt;
       p.vx *= dr; p.vy *= dr;
+      if (p.wander) p.vx += Math.sin(p.t * 2.2 + p.y * 0.02) * 18 * dt;
       p.x += p.vx * dt; p.y += p.vy * dt;
     }
     // floating texts
@@ -634,9 +682,12 @@ const Spawn = {
     G.particles = [];
     G.corpsePile = [];
 
+    // any enemies spawned on a previous visit are gone now; let spawners refill
+    for (const s of map.spawners) s.members = [];
+
     // npcs (towns)
     for (const n of map.npcs) {
-      G.entities.push(new NPC(n.id, n.x, n.y));
+      G.entities.push(new NPC(n.id, n.x, n.y, n.homeX, n.homeY));
     }
     // fixed encounters (interiors)
     for (const enc of map.encounters) {

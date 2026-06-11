@@ -35,6 +35,8 @@ class Player extends Entity {
     this.edictCds = {};
 
     this.flask = { max: 3, charges: 3, heal: 60 };
+    this.quickItem = null;   // consumable bound to [T]
+    this.honing = {};        // weaponId -> forge tier (0-3)
 
     // starting gear
     for (const slot in o.gear) {
@@ -474,6 +476,12 @@ class Player extends Entity {
     /* ---- flask ---- */
     if (Input.pressed("flask")) this.useFlask();
 
+    /* ---- quick item ---- */
+    if (Input.pressed("quickuse") && this.quickItem) {
+      if (this.hasItem(this.quickItem)) this.useConsumable(this.quickItem);
+      else { G.msg(`No ${ITEMS[this.quickItem].name} left.`, "bad"); Sfx.play("deny"); }
+    }
+
     /* ---- spell cast ---- */
     if (Input.pressed("cast") && this.equippedSpell) {
       Combat.beginCast(this, this.equippedSpell);
@@ -535,6 +543,7 @@ class Player extends Entity {
       flask: this.flask, x: this.x, y: this.y, hp: this.hp, stam: this.stam, mag: this.mag,
       respawn: this.respawn, quests: this.quests, readBooks: this.readBooks,
       undimmedUsed: this.undimmedUsed, statsKills: this.statsKills, statsDeaths: this.statsDeaths,
+      quickItem: this.quickItem, honing: this.honing,
     };
   }
 
@@ -554,6 +563,8 @@ class Player extends Entity {
     p.respawn = d.respawn; p.quests = d.quests; p.readBooks = d.readBooks || {};
     p.undimmedUsed = d.undimmedUsed || false;
     p.statsKills = d.statsKills || 0; p.statsDeaths = d.statsDeaths || 0;
+    p.quickItem = d.quickItem || null;
+    p.honing = d.honing || {};
     return p;
   }
 }

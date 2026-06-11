@@ -125,6 +125,7 @@ const World = {
       { id: "frost_keep", name: "White Pass Keep", kind: "dungeon", tx: 196, ty: 56, interior: "frost_keep" },
       { id: "ash_temple", name: "Temple of Answering Fire", kind: "dungeon", tx: 56, ty: 254, interior: "ash_temple" },
       { id: "citadel", name: "Citadel of Hollows", kind: "dungeon", tx: 144, ty: 166, interior: "citadel", lockedBy: "sigils" },
+      { id: "undermarch", name: "The Great Sink", kind: "dungeon", tx: 246, ty: 220, interior: "undermarch", hidden: true },
       { id: "camp_redwater", name: "Redwater Camp", kind: "camp", tx: 234, ty: 244 },
       { id: "camp_gallows", name: "Gallows Hill", kind: "camp", tx: 158, ty: 262 },
       { id: "camp_shiver", name: "Shiverwatch Ruin", kind: "camp", tx: 226, ty: 96 },
@@ -241,8 +242,12 @@ const World = {
     }
   },
 
-  placeNpc(map, npcId, tx, ty) {
-    map.npcs.push({ id: npcId, x: tx * TILE + 16, y: ty * TILE + 16 });
+  placeNpc(map, npcId, tx, ty, homeTx, homeTy) {
+    map.npcs.push({
+      id: npcId, x: tx * TILE + 16, y: ty * TILE + 16,
+      homeX: (homeTx !== undefined ? homeTx : tx) * TILE + 16,
+      homeY: (homeTy !== undefined ? homeTy : ty) * TILE + 16,
+    });
   },
 
   placeChest(map, tx, ty, tier) {
@@ -279,11 +284,17 @@ const World = {
     map.lights.push({ x: (cx - 3) * TILE + 16, y: (cy - 3) * TILE + 16, r: 110, color: "255,190,110" });
     map.lights.push({ x: (cx + 3) * TILE + 16, y: (cy - 3) * TILE + 16, r: 110, color: "255,190,110" });
 
-    this.placeNpc(map, "bram", cx - 8, cy - 5);
-    this.placeNpc(map, "maren", cx + 8, cy - 5);
-    this.placeNpc(map, "tobbe", cx, cy - 9);
-    this.placeNpc(map, "ralka", cx + 7, cy + 5);
-    this.placeNpc(map, "serah", cx - 7, cy + 6);
+    // day posts outside their doors; homes inside for the night
+    this.placeNpc(map, "bram", cx - 8, cy - 1, cx - 8, cy - 5);
+    this.placeNpc(map, "maren", cx + 8, cy - 1, cx + 8, cy - 5);
+    this.placeNpc(map, "tobbe", cx, cy - 9, cx, cy - 9);
+    this.placeNpc(map, "ralka", cx + 8, cy + 9, cx + 7, cy + 5);
+    this.placeNpc(map, "serah", cx - 7, cy + 9, cx - 7, cy + 5);
+
+    // hearth-fire by the inn for travellers' cooking, and the town well
+    map.stations.push({ kind: "campfire", x: (cx + 2) * TILE + 16, y: (cy - 4) * TILE + 16 });
+    map.lights.push({ x: (cx + 2) * TILE + 16, y: (cy - 4) * TILE + 16, r: 90, color: "255,150,60", flicker: true });
+    map.stations.push({ kind: "well", x: cx * TILE + 16, y: cy * TILE + 16 });
 
     // crypt entrance behind the inn
     const px = cx + 6, py = cy - 11;
@@ -314,8 +325,10 @@ const World = {
     map.lights.push({ x: (cx - 1) * TILE + 16, y: (cy - 1) * TILE + 16, r: 110, color: "190,255,170" });
     map.lights.push({ x: (cx + 1) * TILE + 16, y: (cy + 1) * TILE + 16, r: 110, color: "190,255,170" });
 
-    this.placeNpc(map, "mosswick", cx - 5, cy - 3);
-    this.placeNpc(map, "petra", cx + 5, cy - 3);
+    this.placeNpc(map, "mosswick", cx - 4, cy, cx - 4, cy - 4);
+    this.placeNpc(map, "petra", cx + 6, cy, cx + 6, cy - 4);
+    map.stations.push({ kind: "campfire", x: (cx - 1) * TILE + 16, y: (cy + 2) * TILE + 16 });
+    map.lights.push({ x: (cx - 1) * TILE + 16, y: (cy + 2) * TILE + 16, r: 90, color: "255,150,60", flicker: true });
   },
 
   /* ---- Frosthollow: timber village under the peaks ---- */
@@ -334,8 +347,10 @@ const World = {
     this.setDeco(map, cx - 2, cy + 6, D.CAIRN);
     map.lights.push({ x: cx * TILE + 16, y: (cy - 1) * TILE + 16, r: 110, color: "255,190,110" });
 
-    this.placeNpc(map, "eirik", cx - 4, cy - 2);
-    this.placeNpc(map, "sigrun", cx + 5, cy - 2);
+    this.placeNpc(map, "eirik", cx - 4, cy + 2, cx - 4, cy - 2);
+    this.placeNpc(map, "sigrun", cx + 6, cy + 1, cx + 6, cy - 3);
+    map.stations.push({ kind: "campfire", x: (cx + 1) * TILE + 16, y: (cy + 4) * TILE + 16 });
+    map.lights.push({ x: (cx + 1) * TILE + 16, y: (cy + 4) * TILE + 16, r: 90, color: "255,150,60", flicker: true });
   },
 
   /* ---- Caldus's watchtower ---- */
@@ -356,6 +371,7 @@ const World = {
     this.setDeco(map, tx + 1, ty - 2, D.TABLE);
     map.lights.push({ x: tx * TILE + 16, y: ty * TILE + 16, r: 130, color: "255,140,60", flicker: true });
     this.placeChest(map, tx, ty + 2, "chest_fine");
+    map.stations.push({ kind: "campfire", x: tx * TILE + 16, y: ty * TILE + 16 });
   },
 
   /* ---- stone mouth of a dungeon, with portal ---- */
@@ -512,6 +528,14 @@ const World = {
         chests: ["chest_rare", "chest_rare", "chest_fine"],
         boss: "boss_maerodric", vault: true, gather: ["ghost_fern"],
         ambient: "keep",
+      });
+      case "undermarch": return this.genCaveDungeon(rng, {
+        id, name: "The Undermarch", w: 78, h: 78,
+        floor: T.FLOOR_STONE, exit: { map: "overworld", poi: "undermarch" },
+        enemies: [["gloomcrawler", 9], ["grave_wisp", 5], ["wraith", 2], ["pale_knight", 2]],
+        chests: ["chest_fine", "chest_rare", "chest_rare"],
+        boss: "boss_echo", gather: ["ghost_fern", "glowcap"],
+        waylamps: 3, ambient: "undermarch",
       });
     }
     throw new Error("unknown interior: " + id);
@@ -715,6 +739,20 @@ const World = {
       map.shrines.push({ id: opt.id + "_shrine", name: opt.name + " Shrine", x: sx * TILE + 16, y: sy * TILE + 16 });
       map.lights.push({ x: sx * TILE + 16, y: sy * TILE + 16, r: 120, color: "255,150,60", flicker: true });
       bossRoom = { cx: bx, cy: by };
+
+      // cold way-lamps along the entrance->boss line (the Lampwright's quest)
+      if (opt.waylamps) {
+        for (let n = 1; n <= opt.waylamps; n++) {
+          const f = n / (opt.waylamps + 1);
+          const lx = Math.round(U.lerp(ex, bx, f)) + U.randi(rng, -2, 2);
+          const ly = Math.round(U.lerp(ey, by, f)) + U.randi(rng, -2, 2);
+          this.carveCircle(map, lx, ly, 2, floor);
+          map.stations.push({
+            kind: "waylamp", flag: "waylamp_um_" + n,
+            x: lx * TILE + 16, y: ly * TILE + 16,
+          });
+        }
+      }
     }
 
     // fake "rooms" list for population: random open spots
@@ -776,12 +814,14 @@ const World = {
       if (!s || !opt.gather || !opt.gather.length) break;
       map.pickups.push({ id: map.id + "_pk" + n, item: U.choice(rng, opt.gather), n: 1, x: s[0] * TILE + 16, y: s[1] * TILE + 16 });
     }
-    // grave deco for crypts
+    // grave deco for crypts — searchable, at a price
+    map.graves = map.graves || [];
     if (opt.graves) {
       for (let n = 0; n < 14; n++) {
         const s = next();
         if (!s) break;
         map.deco[s[1] * map.w + s[0]] = D.GRAVE;
+        map.graves.push({ id: map.id + "_g" + n, x: s[0] * TILE + 16, y: s[1] * TILE + 16 });
       }
     }
     // torch lights
@@ -846,19 +886,31 @@ const World = {
   // attempt to move a circular entity; slides along walls; returns true if any movement
   moveCircle(map, e, dx, dy) {
     let moved = false;
-    if (dx !== 0) {
-      if (!this.circleBlocked(map, e.x + dx, e.y, e.r)) { e.x += dx; moved = true; }
-      else {
-        // try nudge around corners
-        for (const ny of [-6, 6]) {
-          if (!this.circleBlocked(map, e.x + dx, e.y + ny * Math.abs(dx) * 0.2, e.r)) break;
-        }
-      }
-    }
-    if (dy !== 0) {
-      if (!this.circleBlocked(map, e.x, e.y + dy, e.r)) { e.y += dy; moved = true; }
-    }
+    if (dx !== 0 && !this.circleBlocked(map, e.x + dx, e.y, e.r)) { e.x += dx; moved = true; }
+    if (dy !== 0 && !this.circleBlocked(map, e.x, e.y + dy, e.r)) { e.y += dy; moved = true; }
     return moved;
+  },
+
+  // AI movement with obstacle steering: tries the desired heading, then fans
+  // outward until something gives. Returns the heading actually walked, or null.
+  steerMove(map, e, ang, sp) {
+    for (const off of [0, 0.65, -0.65, 1.25, -1.25]) {
+      const a = ang + off;
+      if (this.moveCircle(map, e, Math.cos(a) * sp, Math.sin(a) * sp)) return a;
+    }
+    return null;
+  },
+
+  // straight-line sight test (tiles + solid deco block it)
+  lineClear(map, x1, y1, x2, y2) {
+    const d = U.dist(x1, y1, x2, y2);
+    const steps = Math.max(1, Math.ceil(d / 14));
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      const x = U.lerp(x1, x2, t), y = U.lerp(y1, y2, t);
+      if (this.solidAtTile(map, (x / TILE) | 0, (y / TILE) | 0)) return false;
+    }
+    return true;
   },
 
   slowAt(map, px, py) {
@@ -917,6 +969,8 @@ const World = {
         if (U.dist(p.x, p.y, ex, ey) < 320) continue;
         const e = new Enemy(pick.id, ex, ey);
         e.homeX = s.x; e.homeY = s.y;
+        // a rare few burn brighter: elite "ashen" variants (never wildlife)
+        if (!(e.def.tags && e.def.tags.includes("critter")) && Math.random() < 0.07) e.makeElite();
         G.entities.push(e);
         s.members.push(e);
       }

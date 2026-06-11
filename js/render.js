@@ -70,6 +70,28 @@ const Render = {
     ctx.fillRect(px, py, TILE, TILE);
     ctx.globalAlpha = 1;
 
+    // soft transitions between natural terrains (walls/floors stay crisp)
+    if (t <= T.BRIDGE) {
+      const edges = [[0, -1, px, py, TILE, 7], [0, 1, px, py + TILE - 7, TILE, 7],
+                     [-1, 0, px, py, 7, TILE], [1, 0, px + TILE - 7, py, 7, TILE]];
+      for (const ed of edges) {
+        const nt = World.tileAt(map, wx + ed[0], wy + ed[1]);
+        if (nt === t || nt > T.BRIDGE) continue;
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = TILE_COLORS[nt] || "#222";
+        ctx.fillRect(ed[2], ed[3], ed[4], ed[5]);
+        ctx.globalAlpha = 1;
+        // foam line where land meets water
+        if ((nt === T.WATER || nt === T.DEEPWATER) && t !== T.WATER && t !== T.DEEPWATER) {
+          ctx.globalAlpha = 0.22;
+          ctx.fillStyle = "#dceaf2";
+          if (ed[0] === 0) ctx.fillRect(ed[2], ed[1] < 0 ? py : py + TILE - 2, TILE, 2);
+          else ctx.fillRect(ed[0] < 0 ? px : px + TILE - 2, ed[3], 2, TILE);
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
     // texture details
     const h2 = U.hash2(wx, wy, 777);
     if (t === T.GRASS || t === T.MEADOW || t === T.FORESTFLOOR) {
@@ -204,8 +226,10 @@ const Render = {
         ctx.arc(pt.x - camX, pt.y - camY, pt.maxR * (pt.t / pt.life), 0, TAU);
         ctx.stroke();
       } else {
+        if (pt.glow) { ctx.shadowColor = pt.color; ctx.shadowBlur = 7; }
         ctx.fillStyle = pt.color;
         ctx.fillRect(pt.x - camX - pt.size / 2, pt.y - camY - pt.size / 2, pt.size, pt.size);
+        if (pt.glow) ctx.shadowBlur = 0;
       }
     }
     ctx.globalAlpha = 1;
@@ -346,8 +370,42 @@ const Render = {
     }
 
     for (const st of map.stations) {
-      // stations are drawn via deco tiles; vault gets a pulse
-      if (st.kind === "vault" && vis(st.x, st.y)) {
+      if (st.kind === "campfire" && vis(st.x, st.y)) {
+        const x = st.x - camX, y = st.y - camY;
+        ctx.strokeStyle = "#4a3826"; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x - 8, y + 4); ctx.lineTo(x + 8, y - 2);
+        ctx.moveTo(x - 8, y - 2); ctx.lineTo(x + 8, y + 4);
+        ctx.stroke();
+        const fl = 0.7 + 0.3 * Math.sin(tm * 8 + st.x);
+        ctx.save();
+        ctx.shadowColor = "#ff8c3a"; ctx.shadowBlur = 12;
+        ctx.fillStyle = `rgba(255,${130 + fl * 70 | 0},45,0.92)`;
+        ctx.beginPath();
+        ctx.moveTo(x, y - 14 - fl * 4);
+        ctx.quadraticCurveTo(x + 5, y - 6, x, y - 1);
+        ctx.quadraticCurveTo(x - 5, y - 6, x, y - 14 - fl * 4);
+        ctx.fill();
+        ctx.restore();
+        if (Math.random() < 0.06) FX.sparkle(st.x, st.y - 10, "#ffb060");
+      } else if (st.kind === "waylamp" && vis(st.x, st.y)) {
+        const x = st.x - camX, y = st.y - camY;
+        const lit = G.flags[st.flag];
+        ctx.fillStyle = "#3c3a36";
+        ctx.fillRect(x - 3, y - 22, 6, 28);
+        ctx.fillRect(x - 7, y - 28, 14, 8);
+        if (lit) {
+          const fl = 0.75 + 0.25 * Math.sin(tm * 7 + st.x);
+          ctx.save();
+          ctx.shadowColor = "#ffc060"; ctx.shadowBlur = 14;
+          ctx.fillStyle = `rgba(255,205,120,${fl})`;
+          ctx.fillRect(x - 4, y - 27, 8, 6);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = "#15151a";
+          ctx.fillRect(x - 4, y - 27, 8, 6);
+        }
+      } else if (st.kind === "vault" && vis(st.x, st.y)) {
         const fl = 0.5 + 0.5 * Math.sin(tm * 2);
         ctx.save();
         ctx.shadowColor = "#ffd9a0"; ctx.shadowBlur = 20 + fl * 14;
@@ -355,6 +413,21 @@ const Render = {
         ctx.beginPath(); ctx.arc(st.x - camX, st.y - camY - 8, 6 + fl * 2, 0, TAU); ctx.fill();
         ctx.restore();
       }
+    }
+
+    // sealed boss arena: a breathing wall of fog
+    if (G.bossFight && map.bossArena) {
+      const a = map.bossArena;
+      const pulse = 0.45 + 0.2 * Math.sin(tm * 2.2);
+      ctx.save();
+      ctx.strokeStyle = `rgba(220,190,140,${pulse})`;
+      ctx.lineWidth = 5;
+      ctx.shadowColor = "#e8cf9a"; ctx.shadowBlur = 18;
+      ctx.setLineDash([14, 10]);
+      ctx.lineDashOffset = -tm * 30;
+      ctx.strokeRect(a.x1 - camX, a.y1 - camY, a.x2 - a.x1, a.y2 - a.y1);
+      ctx.restore();
+      ctx.setLineDash([]);
     }
 
     // lost embers (souls recovery)
@@ -389,6 +462,8 @@ const Render = {
   },
 
   drawDeco(ctx, d, x, y, h) {
+    // gentle canopy sway — the wood breathes
+    const sway = Math.sin(G.elapsed * 0.9 + x * 0.045 + h * 6) * (1.4 + h);
     switch (d) {
       case D.TREE: {
         ctx.fillStyle = "rgba(0,0,0,0.3)";
@@ -396,9 +471,9 @@ const Render = {
         ctx.fillStyle = "#4a3826";
         ctx.fillRect(x - 2.5, y - 12, 5, 18);
         ctx.fillStyle = h > 0.5 ? "#33522a" : "#3d5c30";
-        ctx.beginPath(); ctx.arc(x, y - 20, 14 + h * 4, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + sway, y - 20, 14 + h * 4, 0, TAU); ctx.fill();
         ctx.fillStyle = "rgba(255,255,255,0.07)";
-        ctx.beginPath(); ctx.arc(x - 4, y - 24, 7, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - 4 + sway, y - 24, 7, 0, TAU); ctx.fill();
         break;
       }
       case D.PINE: {
@@ -408,11 +483,11 @@ const Render = {
         ctx.fillRect(x - 2, y - 6, 4, 12);
         ctx.fillStyle = "#2c4630";
         ctx.beginPath();
-        ctx.moveTo(x, y - 34 - h * 6); ctx.lineTo(x + 11, y - 6); ctx.lineTo(x - 11, y - 6);
+        ctx.moveTo(x + sway * 0.7, y - 34 - h * 6); ctx.lineTo(x + 11, y - 6); ctx.lineTo(x - 11, y - 6);
         ctx.fill();
         ctx.fillStyle = "rgba(230,240,250,0.5)";
         ctx.beginPath();
-        ctx.moveTo(x, y - 33 - h * 6); ctx.lineTo(x + 5, y - 21); ctx.lineTo(x - 5, y - 21);
+        ctx.moveTo(x + sway * 0.7, y - 33 - h * 6); ctx.lineTo(x + 5, y - 21); ctx.lineTo(x - 5, y - 21);
         ctx.fill();
         break;
       }
@@ -422,7 +497,7 @@ const Render = {
         ctx.strokeStyle = "#3a3526"; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(x, y - 10); ctx.lineTo(x + 8, y - 20); ctx.moveTo(x, y - 8); ctx.lineTo(x - 7, y - 16); ctx.stroke();
         ctx.fillStyle = "rgba(70,90,60,0.8)";
-        ctx.beginPath(); ctx.arc(x + 2, y - 22, 10 + h * 3, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + 2 + sway * 0.6, y - 22, 10 + h * 3, 0, TAU); ctx.fill();
         break;
       }
       case D.DEADTREE: {
@@ -561,22 +636,72 @@ const Render = {
 
     const bob = Math.sin(e.bobT + G.elapsed * 5) * 1.2;
 
+    // ashen elites smolder
+    if (e.elite) {
+      const fl = 0.35 + 0.18 * Math.sin(G.elapsed * 5 + e.bobT);
+      ctx.save();
+      ctx.shadowColor = "#ff5a30"; ctx.shadowBlur = 18;
+      ctx.strokeStyle = `rgba(255,90,48,${fl})`;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(x, y, 16 * s, 0, TAU); ctx.stroke();
+      ctx.restore();
+      if (Math.random() < 0.12) FX.sparkle(e.x, e.y - 8, "#ff7a3a");
+    }
+
     ctx.save();
     ctx.translate(x, y + bob * 0.4);
 
     if (look.shape === "beast") {
       ctx.rotate(e.facing);
+      // little legs paddle while moving
+      const stride = (e.state === "chase" || e.state === "flee" || e.state === "patrol")
+        ? Math.sin(G.elapsed * 14 + e.bobT) * 4 * s : 0;
+      ctx.strokeStyle = look.trim; ctx.lineWidth = 2 * s;
+      ctx.beginPath();
+      ctx.moveTo(6 * s + stride, 5 * s); ctx.lineTo(6 * s + stride, 9 * s);
+      ctx.moveTo(-6 * s - stride, 5 * s); ctx.lineTo(-6 * s - stride, 9 * s);
+      ctx.stroke();
       ctx.fillStyle = look.body;
       ctx.beginPath(); ctx.ellipse(0, 0, 13 * s, 7.5 * s, 0, 0, TAU); ctx.fill();
       ctx.fillStyle = look.trim;
       ctx.beginPath(); ctx.ellipse(9 * s, 0, 6 * s, 4.5 * s, 0, 0, TAU); ctx.fill();
-      // ears
+      // ears / antlers
       ctx.fillStyle = look.body;
       ctx.beginPath();
       ctx.moveTo(7 * s, -4 * s); ctx.lineTo(10 * s, -8 * s); ctx.lineTo(11 * s, -4 * s); ctx.fill();
+      if (look.antlers) {
+        ctx.strokeStyle = "#c8b89a"; ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(11 * s, -3 * s); ctx.lineTo(15 * s, -9 * s); ctx.lineTo(18 * s, -10 * s);
+        ctx.moveTo(15 * s, -9 * s); ctx.lineTo(14 * s, -13 * s);
+        ctx.moveTo(11 * s, 3 * s); ctx.lineTo(15 * s, 9 * s); ctx.lineTo(18 * s, 10 * s);
+        ctx.moveTo(15 * s, 9 * s); ctx.lineTo(14 * s, 13 * s);
+        ctx.stroke();
+      }
       // tail
       ctx.strokeStyle = look.body; ctx.lineWidth = 2.5 * s;
       ctx.beginPath(); ctx.moveTo(-12 * s, 0); ctx.lineTo(-18 * s, -3 * s); ctx.stroke();
+    } else if (look.shape === "crawler") {
+      ctx.rotate(e.facing);
+      // eight scuttling legs
+      const skit = Math.sin(G.elapsed * 18 + e.bobT);
+      ctx.strokeStyle = look.trim; ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      for (let li = 0; li < 4; li++) {
+        const lx = (li - 1.5) * 5 * s;
+        const bend = (li % 2 === 0 ? skit : -skit) * 3;
+        ctx.moveTo(lx, -4 * s); ctx.lineTo(lx - 3 + bend, -11 * s);
+        ctx.moveTo(lx, 4 * s); ctx.lineTo(lx - 3 - bend, 11 * s);
+      }
+      ctx.stroke();
+      ctx.fillStyle = look.body;
+      ctx.beginPath(); ctx.ellipse(-3 * s, 0, 9 * s, 7 * s, 0, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(7 * s, 0, 5.5 * s, 4.5 * s, 0, 0, TAU); ctx.fill();
+      // pale eye cluster
+      ctx.fillStyle = look.trim;
+      ctx.beginPath();
+      ctx.arc(9 * s, -2 * s, 1.5, 0, TAU); ctx.arc(10.5 * s, 0.5 * s, 1.2, 0, TAU); ctx.arc(8 * s, 1.8 * s, 1.2, 0, TAU);
+      ctx.fill();
     } else if (look.shape === "blob") {
       const wob = Math.sin(G.elapsed * 4 + e.bobT) * 2 * s;
       ctx.fillStyle = look.body;
@@ -604,15 +729,41 @@ const Render = {
       const ex = Math.cos(e.facing) * 3, ey = Math.sin(e.facing) * 2;
       ctx.fillRect(ex - 3, ey - 6 * s, 2, 3);
       ctx.fillRect(ex + 2, ey - 6 * s, 2, 3);
+      // the Echo wears what the kings refused
+      if (look.crown) {
+        ctx.fillStyle = "#e8cf9a";
+        ctx.fillRect(-5 * s, -13 * s, 10 * s, 2.5 * s);
+        ctx.fillRect(-4 * s, -16 * s, 2 * s, 3 * s);
+        ctx.fillRect(2 * s, -16 * s, 2 * s, 3 * s);
+      }
     } else {
       // humanoid
       const fx = Math.cos(e.facing), fy = Math.sin(e.facing);
+      // shuffling feet while moving
+      const eMoving = (e.state === "chase" || e.state === "patrol" || e.state === "flee" || (e instanceof NPC && e.moving));
+      if (eMoving) {
+        const step = Math.sin(G.elapsed * 11 + e.bobT) * 3.5 * s;
+        ctx.fillStyle = "rgba(20,16,12,0.85)";
+        ctx.beginPath();
+        ctx.ellipse(-3 * s + Math.cos(e.facing) * step, 8 * s + Math.sin(e.facing) * step * 0.4, 2.4 * s, 1.6 * s, 0, 0, TAU);
+        ctx.ellipse(3 * s - Math.cos(e.facing) * step, 8 * s - Math.sin(e.facing) * step * 0.4, 2.4 * s, 1.6 * s, 0, 0, TAU);
+        ctx.fill();
+      }
       // body
       ctx.fillStyle = look.body;
       ctx.beginPath(); ctx.ellipse(0, 0, 8 * s, 9.5 * s, 0, 0, TAU); ctx.fill();
       // trim sash
       ctx.fillStyle = look.trim;
       ctx.fillRect(-7 * s, -2 * s, 14 * s, 4 * s);
+      // a coal where the heart should be (ash revenants)
+      if (look.ember) {
+        const fl = 0.6 + 0.4 * Math.sin(G.elapsed * 6 + e.bobT);
+        ctx.save();
+        ctx.shadowColor = "#ff7a2a"; ctx.shadowBlur = 9;
+        ctx.fillStyle = `rgba(255,130,50,${fl})`;
+        ctx.beginPath(); ctx.arc(0, -2 * s, 2.6 * s, 0, TAU); ctx.fill();
+        ctx.restore();
+      }
       // head
       ctx.fillStyle = isNpc ? "#caa882" : look.body;
       ctx.beginPath(); ctx.arc(fx * 2, fy * 2 - 9 * s, 5.5 * s, 0, TAU); ctx.fill();
@@ -693,6 +844,16 @@ const Render = {
     // shadow
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.beginPath(); ctx.ellipse(x, y + 8, 10, 4.5, 0, 0, TAU); ctx.fill();
+
+    // footwork
+    if (p.moving && p.rollT <= 0) {
+      const step = Math.sin(p.bobT) * 4;
+      ctx.fillStyle = "rgba(20,16,12,0.85)";
+      ctx.beginPath();
+      ctx.ellipse(x - 3 + Math.cos(p.moveAng) * step, y + 8 + Math.sin(p.moveAng) * step * 0.4, 2.6, 1.7, 0, 0, TAU);
+      ctx.ellipse(x + 3 - Math.cos(p.moveAng) * step, y + 8 - Math.sin(p.moveAng) * step * 0.4, 2.6, 1.7, 0, 0, TAU);
+      ctx.fill();
+    }
 
     ctx.save();
     ctx.translate(x, y + bob * 0.4);
@@ -815,6 +976,7 @@ const Render = {
   lighting(ctx, map, camX, camY) {
     let dark = map.outdoor ? G.darkness() * 0.72 : 0.62;
     if (map.ambient === "cave") dark = 0.7;
+    if (map.ambient === "undermarch") dark = 0.78;
     if (dark <= 0.02) return;
 
     const lc = this._lightCanvas || (this._lightCanvas = document.createElement("canvas"));
@@ -912,6 +1074,18 @@ const Render = {
     const p = G.player;
     if (!p) return;
 
+    // wounded vignette: the edges of the world redden as you fail
+    const hpFrac = p.hp / p.hpMax;
+    if (hpFrac < 0.35) {
+      const urgency = 1 - hpFrac / 0.35;
+      const pulse = 0.55 + 0.45 * Math.sin(G.elapsed * (3 + urgency * 4));
+      const g = ctx.createRadialGradient(G.W / 2, G.H / 2, G.H * 0.32, G.W / 2, G.H / 2, G.H * 0.75);
+      g.addColorStop(0, "rgba(120,10,10,0)");
+      g.addColorStop(1, `rgba(120,10,10,${0.38 * urgency * pulse})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, G.W, G.H);
+    }
+
     /* vitals */
     const bar = (x, y, w, h, frac, col, bg) => {
       ctx.fillStyle = bg || "rgba(0,0,0,0.66)";
@@ -970,12 +1144,14 @@ const Render = {
       ctx.fillText(sub, x + 7, cy + 29);
     };
     const w = p.weapon();
-    slotBox(G.W / 2 - 275, "WEAPON  [LMB/hold]", w ? w.name : "Fists");
-    slotBox(G.W / 2 - 137, "BOW  [F hold]", p.bow() ? p.bow().name : "—");
+    slotBox(G.W / 2 - 345, "WEAPON  [LMB/hold]", w ? UI.itemName(w, p) : "Fists");
+    slotBox(G.W / 2 - 207, "BOW  [F hold]", p.bow() ? UI.itemName(p.bow(), p) : "—");
     const sp = p.equippedSpell ? SPELLS[p.equippedSpell] : null;
-    slotBox(G.W / 2 + 1, "SPELL  [Q]", sp ? sp.name : "—", sp ? "#a8bcd8" : "#555");
+    slotBox(G.W / 2 - 69, "SPELL  [Q]", sp ? sp.name : "—", sp ? "#a8bcd8" : "#555");
+    const qi = p.quickItem ? ITEMS[p.quickItem] : null;
+    slotBox(G.W / 2 + 69, "ITEM  [T]", qi ? `${qi.name} ×${p.countItem(qi.id)}` : "—", qi ? "#b9d8a0" : "#555");
     // edicts with cooldown sweep
-    let ex = G.W / 2 + 139;
+    let ex = G.W / 2 + 207;
     for (let i = 0; i < 4; i++) {
       const eid = p.edicts[i];
       ctx.fillStyle = "rgba(10,9,7,0.78)";
@@ -1065,6 +1241,16 @@ const Render = {
         }
       }
     }
+    // lost embers beckon from where you fell
+    if (G.lostEmbers && G.lostEmbers.mapId === G.map.id) {
+      const ang = U.angTo(p.x, p.y, G.lostEmbers.x, G.lostEmbers.y);
+      const rel = U.angDiff(heading, ang);
+      if (Math.abs(rel) < 1.6) {
+        const fl = 0.6 + 0.4 * Math.sin(G.elapsed * 5);
+        ctx.fillStyle = `rgba(140,255,160,${fl})`;
+        ctx.fillRect(G.W / 2 + rel * (cw / 3.2) - 2, cy0 + 2, 4, 4);
+      }
+    }
     ctx.restore();
     ctx.textAlign = "left";
   },
@@ -1113,6 +1299,14 @@ const Render = {
       const px2 = mx + (s.x / TILE - sx) * scale, py2 = my + (s.y / TILE - sy) * scale;
       ctx.fillStyle = "#e07b39";
       ctx.fillRect(px2 - 1.5, py2 - 1.5, 3, 3);
+    }
+    // lost embers
+    if (G.lostEmbers && G.lostEmbers.mapId === G.map.id) {
+      const fl = 0.5 + 0.5 * Math.sin(G.elapsed * 5);
+      ctx.fillStyle = `rgba(140,255,160,${fl})`;
+      ctx.beginPath();
+      ctx.arc(mx + (G.lostEmbers.x / TILE - sx) * scale, my + (G.lostEmbers.y / TILE - sy) * scale, 2.6, 0, TAU);
+      ctx.fill();
     }
     // player
     ctx.fillStyle = "#fff";

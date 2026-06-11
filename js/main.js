@@ -88,7 +88,7 @@ const Game = {
     Spawn.populate(G.map);
     G.camera.x = U.clamp(x - G.W / 2, 0, G.map.w * TILE - G.W);
     G.camera.y = U.clamp(y - G.H / 2, 0, G.map.h * TILE - G.H);
-    Music.setMood(G.map.outdoor ? "world" : (G.map.bossArena && !G.slainBosses[G.map.bossArena.boss] ? "dungeon" : "dungeon"));
+    Music.setMood(G.map.outdoor ? "world" : "dungeon");
     if (!keepBanner) G.banner(G.map.name);
     QS.update();
   },
@@ -176,6 +176,7 @@ const Game = {
   },
 
   respawn() {
+    if (G.state !== "dead") return; // the timer may outlive a state change
     const p = G.player;
     p.dead = false;
     p.hp = p.hpMax; p.stam = p.stamMax; p.mag = p.magMax;
@@ -217,8 +218,19 @@ const Game = {
     for (const st of map.stations) {
       if (st.kind === "vault") {
         if (G.slainBosses.boss_maerodric) consider(st.x, st.y, 56, "vault", st, "Approach the First Ember");
+      } else if (st.kind === "well") {
+        consider(st.x, st.y, 46, "well", st, "Drink from the well");
+      } else if (st.kind === "campfire") {
+        consider(st.x, st.y, 46, "station", st, "Cook at the fire");
+      } else if (st.kind === "waylamp") {
+        if (!G.flags[st.flag]) consider(st.x, st.y, 46, "waylamp", st, "Light the cold way-lamp");
       } else {
         consider(st.x, st.y, 46, "station", st, st.kind === "smith" ? "Use the forge" : "Use the alchemy bench");
+      }
+    }
+    if (map.graves) {
+      for (const g of map.graves) {
+        if (!G.flags["searched_" + g.id]) consider(g.x, g.y, 40, "grave", g, "Search the grave");
       }
     }
     if (G.lostEmbers && G.lostEmbers.mapId === map.id) {
@@ -272,8 +284,46 @@ const Game = {
         break;
       }
       case "portal": this.usePortal(t.obj); break;
-      case "station": UI.openCraft(t.obj.kind); break;
+      case "station": UI.openCraft(t.obj.kind === "campfire" ? "cook" : t.obj.kind); break;
       case "vault": UI.openEndingChoice(); break;
+      case "well": {
+        p.heal(12);
+        delete p.status.burn;
+        Sfx.play("drink");
+        G.msg("Cold, clean well-water. The March still has its small mercies.", "good");
+        break;
+      }
+      case "waylamp": {
+        G.flags[t.obj.flag] = true;
+        G.map.lights.push({ x: t.obj.x, y: t.obj.y, r: 150, color: "255,190,110", flicker: true });
+        Sfx.play("shrine");
+        FX.burst(t.obj.x, t.obj.y - 14, "#ffc060", 22, 110);
+        const lit = QS.flagCount("waylamp_um_");
+        G.questToast("WAY-LAMP LIT", lit + " of 3 burn in the deep");
+        break;
+      }
+      case "grave": {
+        const g = t.obj;
+        G.flags["searched_" + g.id] = true;
+        Sfx.play("door");
+        const roll = Math.random();
+        if (roll < 0.40) {
+          const finds = [["old_bone", 2], ["silver_dust", 1], ["gold", U.randi(Math.random, 8, 40)], ["ember_shard", 1]];
+          const f = finds[(Math.random() * finds.length) | 0];
+          p.addItem(f[0], f[1]);
+          G.msg(f[0] === "gold" ? `Grave goods: ${f[1]} gold` : `Grave goods: ${ITEMS[f[0]].name}${f[1] > 1 ? " ×" + f[1] : ""}`, "good");
+        } else if (roll < 0.72) {
+          G.msg("Dust, roots, and somebody's patience. Nothing more.", "");
+        } else {
+          G.msg("The grave was not empty. It is now.", "bad");
+          const ang = Math.random() * TAU;
+          const e = new Enemy("hollow_thrall", g.x + Math.cos(ang) * 30, g.y + Math.sin(ang) * 30);
+          e.enterChase();
+          G.entities.push(e);
+          FX.burst(g.x, g.y, "#7d8278", 16, 100);
+        }
+        break;
+      }
       case "embers": {
         p.gainEmbers(t.obj.amount);
         G.lostEmbers = null;
@@ -320,8 +370,14 @@ const Game = {
     /* global key handling */
     this.handleMetaKeys();
 
+    // hit-stop: a frozen beat of impact (world halts, rendering continues)
+    if (G.hitstop > 0) {
+      G.hitstop -= dt;
+      dt = 0;
+    }
+
     if (G.state === "play" || G.state === "dialogue" || G.state === "dead") {
-      this.updateWorld(dt);
+      if (dt > 0) this.updateWorld(dt);
     }
     if (G.state !== "title" && G.state !== "chargen" && G.map) {
       this.updateCamera(dt);
@@ -385,6 +441,28 @@ const Game = {
     // quests poll
     if (G.frame % 30 === 0) QS.update();
 
+    // ambient life: fireflies, drifting embers, frost glints, marsh spores
+    this.ambientT = (this.ambientT || 0) - dt;
+    if (this.ambientT <= 0 && G.particles.length < 480) {
+      this.ambientT = 0.22;
+      const cx = G.camera.x + Math.random() * G.W, cy = G.camera.y + Math.random() * G.H;
+      const b = G.map.outdoor ? World.biomeAtPx(G.map, cx, cy) : -1;
+      const dark = G.darkness();
+      let col = null, vy = 0, glow = false;
+      if (!G.map.outdoor && G.map.ambient === "undermarch") { col = "rgba(150,170,220,0.5)"; vy = -7; glow = true; }
+      else if (b === B.ASHLAND) { col = "rgba(255,140,60,0.7)"; vy = -16; glow = true; }
+      else if ((b === B.HEART || b === B.FOREST) && dark > 0.45 && Math.random() < 0.8) { col = "rgba(190,230,130,0.9)"; vy = -4; glow = true; }
+      else if (b === B.MIRE && dark > 0.3) { col = "rgba(150,210,170,0.6)"; vy = -6; glow = true; }
+      else if (b === B.FROST && dark < 0.4 && Math.random() < 0.4) { col = "rgba(255,255,255,0.8)"; vy = 4; }
+      if (col) {
+        G.particles.push({
+          x: cx, y: cy, vx: (Math.random() - 0.5) * 14, vy,
+          life: 2.5 + Math.random() * 2.5, t: 0, color: col,
+          size: 1.4 + Math.random() * 1.4, drag: 0, glow, wander: true,
+        });
+      }
+    }
+
     // music mood by context
     if (G.frame % 90 === 0 && !G.bossFight && G.state === "play") {
       if (G.map.outdoor) {
@@ -439,6 +517,8 @@ G.restAtInn = function () {
   const p = G.player;
   p.hp = p.hpMax; p.stam = p.stamMax; p.mag = p.magMax;
   p.status = {};
+  p.flask.charges = p.flask.max;
+  p.undimmedUsed = false;
   G.time.hour = 8;
   G.time.day++;
   World.restReset();

@@ -18,6 +18,8 @@ Zero dependencies. Zero build step. Pure vanilla JavaScript + Canvas + WebAudio.
   <img src="docs/screenshots/11_boss.png" width="49%">
   <img src="docs/screenshots/05_dialogue.png" width="49%">
   <img src="docs/screenshots/08_worldmap.png" width="49%">
+  <img src="docs/screenshots/13_undermarch.png" width="49%">
+  <img src="docs/screenshots/15_emberfall_night.png" width="49%">
 </p>
 
 ---
@@ -68,13 +70,18 @@ Cinder Coast. Day/night cycle, biome weather (rain, snow, fog, ashfall), roads, 
 and a living spawn ecology.
 
 - **3 towns** — Emberfall (forge, stillroom, inn, lamp-house), Duskmere on its swamp stilts,
-  Frosthollow under the peaks — with **10 NPCs**, branching dialogue, shops, and an inn bed.
-- **7 dungeons** — a town crypt, four Warden lairs, a sunken chapel, and the Citadel of
-  Hollows — generated as rooms-and-corridors keeps or cellular-automata caverns.
+  Frosthollow under the peaks — with **10 NPCs** who keep day posts and walk home at night,
+  branching dialogue, shops, campfires, wells, and an inn bed.
+- **8 dungeons** — a town crypt, four Warden lairs, a sunken chapel, the Citadel of
+  Hollows, and the hidden **Undermarch** beneath the Great Sink — generated as
+  rooms-and-corridors keeps or cellular-automata caverns.
 - **9 overworld shrines** + one before each Warden: rest (heal, refill flask, respawn the
   world, autosave), level up with embers, and fast-travel between any shrines you've knelt to.
-- **5 bosses + 1 miniboss**, each with telegraphed patterns, a second phase, an arena that
-  seals behind you, and a souls-style intro banner and health bar.
+- **6 bosses + 1 miniboss** — including the optional superboss *Echo of Ald* — each with
+  telegraphed patterns, a second phase, a fog-walled arena that seals behind you, and a
+  souls-style intro banner and health bar.
+- **A living wild**: huntable deer and hares, smoldering *ashen elite* spawns, fireflies
+  at dusk, drifting ash, frost glints, marsh spores, swaying canopies, biome weather.
 
 ## The mechanics
 
@@ -94,8 +101,11 @@ and a living spawn ecology.
 - **11 spells** across Destruction and Restoration; staves amplify spell power.
 - **4 Edicts** (shouts) taken from the Wardens' corpses: VAL (force), SUTH (life-drain),
   KYR (time-slow), THUR (fire breath).
-- **Crafting**: smithing at forges (ore → ingots → steel and silvered weapons), alchemy at
-  benches (8 gatherable reagents grown by biome), with perk-gated recipes.
+- **Crafting**: smithing at forges (ore → ingots → steel and silvered weapons), **weapon
+  honing** (+8%/tier, three tiers), alchemy at benches (8 gatherable reagents grown by
+  biome), and **cooking** hunted meat at campfires — all perk- or skill-gated.
+- **Quick slot** (`T`), grave-searching (loot or angry tenants), drinkable wells,
+  parry/heavy-hit **hit-stop**, low-health vignette, lost-ember compass beacon.
 - **~80 items** — weapons, armor sets (light/heavy with stealth and resist identities),
   shields, trinkets, consumables, bombs — every one carrying its own lore line.
 - **10 readable in-world books** of deep lore, sold by fitting vendors and found in chests.

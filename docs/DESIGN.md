@@ -74,6 +74,28 @@ extended ×1.6 for slams and breaths.
 - Lighting is a single offscreen darkness layer with `destination-out` radial punches.
 - The world minimap is baked once per seed at 1px/tile.
 
+## Second-pass systems
+
+- **Weapon honing** at any forge: +8% damage per tier, three tiers
+  (iron → steel → silver/ember costs). Stored per weapon id on the player.
+- **Cooking** at campfires (camps, towns, the inn hearth): hunted meat becomes
+  travel food with regen buffs. Wildlife (deer, hares) flees, drops meat and hides.
+- **Ashen elites**: ~7% of overworld spawns roll elite — ×1.7 HP, ×1.4 damage,
+  ×3 embers, smoldering aura. Never wildlife.
+- **Quick slot**: any consumable binds to **T** from the inventory.
+- **Grave-searching** in crypts: 40% goods, 32% dust, 28% the tenant objects.
+- **The Undermarch**: hidden 78×78 super-dungeon under the Great Sink, with three
+  questable way-lamps and the optional superboss *Echo of Ald* (Aldsbane,
+  Circlet of the First).
+- **NPC schedules**: townsfolk hold day posts and walk home at 21:00.
+- **AI honesty**: ranged enemies need line-of-sight; melee steers around
+  obstacles; rear approach halves detection; dormant bosses are damage-immune
+  (no gate-sniping); KYR slows enemy attack timers, not just their feet.
+- **Feel**: hit-stop on heavy connects/parries/boss kills, low-HP vignette,
+  sealed-arena fog walls, terrain edge blending, canopy sway, footstep
+  animation, biome ambient motes (fireflies, drifting embers, frost glints,
+  marsh spores), compass/minimap pips for lost embers.
+
 ## Persistence model
 
 Geometry is never saved — it regenerates from the seed. Saves store only deltas:

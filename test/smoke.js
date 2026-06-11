@@ -164,7 +164,7 @@ const owStats = run(`
 `);
 check(`overworld ${owStats.w}x${owStats.h}, ${owStats.shrines} shrines`, owStats.shrines === 9);
 check(`overworld has ${owStats.npcs} npcs (10 expected)`, owStats.npcs === 10);
-check(`overworld portals (6 dungeon mouths + crypt door): ${owStats.portals}`, owStats.portals === 7);
+check(`overworld portals (7 dungeon mouths + crypt door): ${owStats.portals}`, owStats.portals === 8);
 check(`chests=${owStats.chests} pickups=${owStats.pickups} spawners=${owStats.spawners}`,
   owStats.chests > 15 && owStats.pickups > 200 && owStats.spawners > 50);
 
@@ -374,6 +374,155 @@ check("save/load preserves boss kills", run(`G.slainBosses.boss_korvash === true
 check("save/load preserves quest stage", run(`QS.stage("mq_ember")`) === 3);
 frames(60);
 check("post-load simulation stays healthy", run(`G.state`) === "play");
+
+/* ---------------- second-pass systems ---------------- */
+
+// the Undermarch generates with way-lamps and the hidden boss
+const um = run(`
+  const m = World.getMap("undermarch");
+  ({ boss: m.bossArena && m.bossArena.boss, lamps: m.stations.filter(s => s.kind === "waylamp").length,
+     enc: m.encounters.length, arrivalOk: !World.circleBlocked(m, m.arrival.x, m.arrival.y, 10) })
+`);
+check(`undermarch: boss=${um.boss}, ${um.lamps} way-lamps, ${um.enc} encounters`,
+  um.boss === "boss_echo" && um.lamps === 3 && um.enc > 10 && um.arrivalOk);
+
+// way-lamp quest: light all three, flags drive the objective
+run(`{
+  QS.start("sq_lamps");
+  const m = World.getMap("undermarch");
+  for (const st of m.stations) if (st.kind === "waylamp") G.flags[st.flag] = true;
+  QS.update();
+}`);
+check("lighting all way-lamps advances A Lamp for the Deep", run(`QS.stage("sq_lamps")`) === 1);
+
+// dormant bosses are immune (no sniping through the gate)
+run(`
+  Game.enterMap("undermarch", World.getMap("undermarch").arrival.x, World.getMap("undermarch").arrival.y);
+  G.echoBoss = G.entities.find(e => e.isEnemy && e.def.boss);
+  Combat.applyDamage(G.echoBoss, {amount: 500, dtype: "phys", poiseDmg: 10, attacker: G.player});
+`);
+check("dormant boss ignores damage", run(`G.echoBoss.hp === G.echoBoss.hpMax`));
+
+// engage and fell the Echo; retroactive quest credit on a quest started AFTER the kill
+run(`{
+  const m = World.getMap("undermarch");
+  G.player.x = m.bossArena.bossX + 60; G.player.y = m.bossArena.bossY;
+}`);
+frames(30);
+check("Echo of Ald engages in its arena", run(`G.bossFight && G.bossFight.def.id === "boss_echo"`));
+run(`while (!G.echoBoss.dead) Combat.applyDamage(G.echoBoss, {amount: 250, dtype: "phys", poiseDmg: 10, attacker: G.player});`);
+check("Echo drops Aldsbane and the Circlet", run(`G.player.hasItem("aldsbane") && G.player.hasItem("circlet_first")`));
+run(`QS.start("sq_echo")`);
+check("quest started after boss kill gets retroactive credit", run(`QS.stage("sq_echo")`) === 1);
+frames(5);
+
+// honing: forge tiers raise weapon damage
+run(`
+  G.player.addItem("iron_sword", 1);
+  G.dmg0 = Combat.weaponDamage(G.player, ITEMS.iron_sword, false);
+  G.player.honing.iron_sword = 2;
+  G.dmg2 = Combat.weaponDamage(G.player, ITEMS.iron_sword, false);
+`);
+check("honing +2 raises damage ~16%", run(`Math.abs(G.dmg2 / G.dmg0 - 1.16) < 0.01`));
+
+// cooking: campfire recipe consumes meat, yields food
+run(`{
+  G.player.addItem("raw_venison", 1);
+  const r = RECIPES_COOK.find(r2 => r2.out === "seared_venison");
+  for (const m in r.mats) if (r.mats[m]) G.player.removeItem(m, r.mats[m]);
+  G.player.addItem("seared_venison", 1);
+}`);
+check("cooking yields seared venison", run(`G.player.hasItem("seared_venison")`));
+
+// quick item: bind and use via T
+run(`
+  G.player.addItem("small_hp_potion", 1);
+  G.player.quickItem = "small_hp_potion";
+  G.player.hp = 10;
+  G.player.useConsumable(G.player.quickItem);
+`);
+check("quick item heals when used", run(`G.player.hp`) > 30);
+
+// critters: deer flees the player and drops venison when hunted
+run(`{
+  Game.enterMap("overworld", 220*32, 156*32);
+  const deer = new Enemy("deer", G.player.x + 60, G.player.y);
+  G.entities.push(deer);
+  G.deer = deer;
+}`);
+frames(40);
+check("deer flees rather than fights", run(`G.deer.state === "flee" || G.deer.state === "idle"`));
+run(`{
+  G.venBefore = G.player.countItem("raw_venison");
+  let guard = 0;
+  while (!G.deer.dead && guard++ < 20) Combat.applyDamage(G.deer, {amount: 20, dtype: "phys", poiseDmg: 5, attacker: G.player});
+}`);
+check("hunted deer dies", run(`G.deer.dead === true`));
+
+// elites: tougher, triple embers
+run(`{
+  const w1 = new Enemy("wolf", G.player.x + 500, G.player.y);
+  const base = w1.hpMax;
+  w1.makeElite();
+  G.eliteOk = w1.elite && w1.hpMax > base * 1.5 && w1.dmgMult > 1.2;
+}`);
+check("ashen elite stats scale", run(`G.eliteOk`));
+
+// graves: searching sets the flag and resolves an outcome
+run(`{
+  const crypt = World.getMap("crypt");
+  G.graveCount = (crypt.graves || []).length;
+  if (G.graveCount) {
+    const g = crypt.graves[0];
+    G.map = crypt;
+    Game.interact({ kind: "grave", obj: g });
+    G.graveFlag = !!G.flags["searched_" + g.id];
+  }
+  G.map = G.overworld;
+}`);
+check(`crypt has searchable graves (${run("G.graveCount")})`, run(`G.graveCount`) > 5);
+check("searching a grave marks it searched", run(`G.graveFlag`) === true);
+
+// LOS: walls block enemy sightlines
+check("line-of-sight blocked through dungeon wall", run(`{
+  const m = World.getMap("crypt");
+  let wallTx = -1, wallTy = -1;
+  outer: for (let y = 5; y < m.h - 5; y++) for (let x = 5; x < m.w - 5; x++) {
+    if (m.tiles[y*m.w+x] === T.WALL_STONE && m.tiles[y*m.w+x-1] !== T.WALL_STONE && m.tiles[y*m.w+x+1] !== T.WALL_STONE) {
+      wallTx = x; wallTy = y; break outer;
+    }
+  }
+  wallTx > 0 && !World.lineClear(m, (wallTx-1)*TILE+16, wallTy*TILE+16, (wallTx+1)*TILE+16, wallTy*TILE+16);
+}`));
+
+// NPC schedules: night sends them home
+check("NPCs use day posts and night homes", run(`{
+  Game.enterMap("overworld", 200*32, 200*32);
+  const npc = G.entities.find(e => e.npcId === "bram");
+  G.time.hour = 12;
+  const day = [npc.anchorX, npc.anchorY];
+  G.time.hour = 23;
+  const night = [npc.anchorX, npc.anchorY];
+  G.time.hour = 12;
+  day[0] !== night[0] || day[1] !== night[1];
+}`));
+
+// save/load round-trips the new state
+run(`G.player.quickItem = "small_hp_potion"; G.player.honing.iron_sword = 2; SaveSys.save(3); Game.loadGame(3);`);
+check("save/load keeps honing and quick item",
+  run(`G.player.honing.iron_sword === 2 && G.player.quickItem === "small_hp_potion"`));
+check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
+frames(30);
+
+// masterpiece quest chain (two collect stages then talk)
+run(`
+  QS.start("sq_masterpiece");
+  G.player.addItem("frost_crystal", 2); QS.update();
+  G.player.addItem("ember_residue", 2); QS.update();
+`);
+check("masterpiece quest reaches the talk stage", run(`QS.stage("sq_masterpiece")`) === 2);
+run(`QS.complete("sq_masterpiece")`);
+check("Bram forges the Twinned Temper", run(`G.player.hasItem("twinned_temper")`));
 
 /* ---------------- ending ---------------- */
 

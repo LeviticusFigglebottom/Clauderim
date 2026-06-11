@@ -18,6 +18,24 @@
 */
 const ENEMY_TYPES = {
 
+  /* ---------------- harmless wildlife (huntable) ---------------- */
+  deer: {
+    name: "Red Deer", hp: 16, dmg: 0, spd: 215, r: 12, reach: 0,
+    windup: 1, strike: 1, recover: 1, poise: 5, poiseDmg: 0,
+    armor: 0, aggro: 200, deaggro: 520, embers: 5, behavior: "flee",
+    tags: ["beast", "critter"], look: { shape: "beast", body: "#8a6a48", trim: "#5d4631", size: 1.1, antlers: true },
+    loot: [{ w: 6, id: "raw_venison", n: [1, 2] }, { w: 3, id: "leather_strips", n: [1, 2] }, { w: 1, id: "wolf_pelt", n: [1, 1] }],
+    voice: "squelch",
+  },
+  rabbit: {
+    name: "Marsh Hare", hp: 6, dmg: 0, spd: 230, r: 7, reach: 0,
+    windup: 1, strike: 1, recover: 1, poise: 2, poiseDmg: 0,
+    armor: 0, aggro: 150, deaggro: 420, embers: 2, behavior: "flee",
+    tags: ["beast", "critter"], look: { shape: "beast", body: "#9a8a70", trim: "#c8bca8", size: 0.55 },
+    loot: [{ w: 8, id: "rabbit_meat", n: [1, 1] }, { w: 2 }],
+    voice: "squelch",
+  },
+
   /* ---------------- beasts ---------------- */
   wolf: {
     name: "Grey Wolf", hp: 28, dmg: 9, spd: 150, r: 12, reach: 30,
@@ -71,6 +89,35 @@ const ENEMY_TYPES = {
     tags: ["fire"], look: { shape: "wisp", body: "#d8531f", trim: "#7a2408", size: 0.85 },
     loot: [{ w: 3, id: "ember_residue", n: [1, 1] }, { w: 2, id: "emberbloom", n: [1, 1] }, { w: 4 }],
     voice: "hiss",
+  },
+
+  gloomcrawler: {
+    name: "Gloomcrawler", hp: 64, dmg: 15, spd: 175, r: 14, reach: 34,
+    windup: 0.32, strike: 0.1, recover: 0.5, poise: 22, poiseDmg: 14,
+    armor: 3, resist: { poison: 100, shock: -25 }, aggro: 300, deaggro: 999,
+    embers: 60, behavior: "lunger", edmg: { poison: 6 },
+    tags: ["beast", "deep"], look: { shape: "crawler", body: "#3a3644", trim: "#7a6a9a", size: 1.2 },
+    loot: [{ w: 4, id: "ghost_fern", n: [1, 1] }, { w: 2, id: "silver_dust", n: [1, 1] }, { w: 4 }],
+    voice: "hiss",
+  },
+  mire_hag: {
+    name: "Mire Hag", hp: 58, dmg: 14, spd: 95, r: 13, reach: 0,
+    windup: 0.85, strike: 0.1, recover: 0.7, poise: 18, poiseDmg: 10,
+    armor: 1, resist: { poison: 100, fire: -20 }, aggro: 330, deaggro: 560,
+    embers: 52, behavior: "caster",
+    proj: { dmg: 13, dtype: "poison", speed: 300, color: "#9be09b", cd: 2.6 },
+    tags: ["human", "mire"], look: { shape: "humanoid", body: "#4a5240", trim: "#7d9460", size: 0.95, weapon: "staff", hunched: true },
+    loot: [{ w: 4, id: "mireweed", n: [1, 2] }, { w: 2, id: "ghost_fern", n: [1, 1] }, { w: 2, gold: [6, 20] }, { w: 2 }],
+    voice: "whisper",
+  },
+  ash_revenant: {
+    name: "Ash Revenant", hp: 105, dmg: 23, spd: 120, r: 15, reach: 48,
+    windup: 0.45, strike: 0.11, recover: 0.55, poise: 55, poiseDmg: 30,
+    armor: 7, resist: { fire: 100, frost: -30, poison: 100 }, aggro: 280, deaggro: 999,
+    embers: 95, behavior: "melee", edmg: { fire: 9 },
+    tags: ["undead", "fire"], look: { shape: "humanoid", body: "#4a3430", trim: "#ff7a2a", size: 1.15, weapon: "sword", ember: true },
+    loot: [{ w: 4, id: "ember_residue", n: [1, 2] }, { w: 2, id: "emberbloom", n: [1, 1] }, { w: 1, id: "ember_shard", n: [1, 1] }, { w: 2 }],
+    voice: "moan",
   },
 
   /* ---------------- men ---------------- */
@@ -289,6 +336,33 @@ const ENEMY_TYPES = {
     intro: "MAERODRIC, THE PALE KING",
   },
 
+  /* hidden superboss of the Undermarch */
+  boss_echo: {
+    name: "Echo of Ald", title: "the First-Kindled",
+    boss: true, hp: 940, dmg: 32, spd: 125, r: 20, reach: 70,
+    windup: 0.48, strike: 0.12, recover: 0.45, poise: 320, poiseDmg: 50,
+    armor: 14, resist: { fire: 60, shock: 60, poison: 100, frost: 30 }, edmg: { fire: 8, shock: 8 },
+    aggro: 460, deaggro: 9999, embers: 6000,
+    look: { shape: "wisp", body: "#e8cf9a", trim: "#8a6a3a", size: 2.0, crown: true },
+    patterns: [
+      { kind: "swing", cd: 1.8, range: 95 },
+      { kind: "volley", cd: 4.5, count: 4, aimed: true, proj: { dmg: 16, dtype: "fire", speed: 420, color: "#ffc060", arcSpread: 0.45 } },
+      { kind: "charge", cd: 6, minRange: 140, dmgMult: 1.3 },
+      { kind: "slam", cd: 7.5, range: 95, radius: 125, dmgMult: 1.3, dtype: "fire", leaves: "fire_field" },
+    ],
+    phase2: {
+      at: 0.5, spdMult: 1.3, announce: "The first flame remembers how it argued with the Dark.",
+      addPatterns: [
+        { kind: "breath", cd: 8, range: 250, arc: 1.15, dmg: 32, dtype: "fire" },
+        { kind: "summon", cd: 13, type: "grave_wisp", count: 3, max: 4 },
+        { kind: "volley", cd: 6, count: 12, proj: { dmg: 13, dtype: "shock", speed: 340, color: "#cfe0ff" } },
+      ],
+    },
+    drops: [["aldsbane", 1], ["circlet_first", 1], ["ember_core", 2]],
+    voice: "whisper",
+    intro: "ECHO OF ALD, THE FIRST-KINDLED",
+  },
+
   /* mini-boss */
   bell_wraith: {
     name: "Warden of the Drowned Bell",
@@ -316,29 +390,37 @@ const SPAWN_TABLES = {
     { w: 4, id: "bandit", pack: [1, 2] },
     { w: 2, id: "bandit_archer", pack: [1, 1] },
     { w: 1, id: "bandit_brute", pack: [1, 1] },
+    { w: 3, id: "deer", pack: [1, 2] },
+    { w: 2, id: "rabbit", pack: [1, 3] },
   ],
   forest: [
     { w: 5, id: "wolf", pack: [2, 4] },
     { w: 2, id: "dire_wolf", pack: [1, 1] },
     { w: 3, id: "bandit", pack: [1, 2] },
     { w: 1, id: "hollow_thrall", pack: [1, 2] },
+    { w: 3, id: "deer", pack: [1, 2] },
+    { w: 2, id: "rabbit", pack: [1, 2] },
   ],
   mire: [
     { w: 5, id: "mire_leech", pack: [2, 4] },
     { w: 3, id: "bog_horror", pack: [1, 1] },
     { w: 2, id: "hollow_thrall", pack: [1, 2] },
     { w: 1, id: "grave_wisp", pack: [1, 1] },
+    { w: 2, id: "mire_hag", pack: [1, 1] },
+    { w: 1, id: "rabbit", pack: [1, 2] },
   ],
   frostpeaks: [
     { w: 4, id: "dire_wolf", pack: [1, 2] },
     { w: 3, id: "frost_troll", pack: [1, 1] },
     { w: 2, id: "grave_wisp", pack: [1, 2] },
     { w: 2, id: "bandit", pack: [1, 2] },
+    { w: 2, id: "deer", pack: [1, 2] },
   ],
   ashlands: [
     { w: 5, id: "ash_imp", pack: [2, 3] },
     { w: 3, id: "cult_acolyte", pack: [1, 2] },
     { w: 2, id: "hollow_thrall", pack: [2, 3] },
     { w: 1, id: "bandit_brute", pack: [1, 1] },
+    { w: 2, id: "ash_revenant", pack: [1, 1] },
   ],
 };

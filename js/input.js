@@ -14,6 +14,7 @@ const BINDS = {
   roll: ["Space"],
   interact: ["KeyE"],
   flask: ["KeyR"],
+  quickuse: ["KeyT"],
   crouch: ["ControlLeft", "ControlRight", "KeyX"],
   cast: ["KeyQ"],
   aim: ["KeyF"],                  // hold to draw equipped bow

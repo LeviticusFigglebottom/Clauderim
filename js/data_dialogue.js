@@ -81,6 +81,7 @@ const DIALOGUES = {
     entry: [
       { cond: p => QS.stage("mq_ember") === 0, node: "mq_intro" },
       { cond: p => QS.stage("sq_glowcaps") === 1, node: "glowcaps_done" },
+      { cond: p => QS.stage("sq_lamps") === 1, node: "lamps_done" },
       { cond: p => QS.stage("mq_ember") === 4, node: "pre_end" },
       { cond: p => QS.sigilCount() >= 4 && QS.stage("mq_ember") === 2, node: "all_sigils" },
       { cond: () => true, node: "hub" },
@@ -133,9 +134,21 @@ const DIALOGUES = {
         choices: [
           { text: "Trade. (Spells & supplies)", next: null, action: () => UI.openShop("serah") },
           { text: "Tell me of the Wardens again.", next: "mq_where_repeat" },
+          { text: "Is there other work for the light?", next: "lamps_ask", cond: () => QS.stage("sq_lamps") === -1 && QS.stage("mq_ember") >= 1 },
           { text: "What is this place?", next: "lore_town" },
           { text: "Nothing. Keep your light.", next: null },
         ],
+      },
+      lamps_ask: {
+        text: "There is, if your legs are braver than your sense. My order kept way-lamps in the Undermarch once — the drowned country under the realm. The Great Sink swallows the road east of the crossroads; that's the door. Three lamps stand cold down there. Carry my fire to them, and the dark beneath every floor in the March gets a little politer.",
+        choices: [
+          { text: "I'll carry it down. (Quest: A Lamp for the Deep)", next: null, action: () => { QS.start("sq_lamps"); World.revealPoi("undermarch"); } },
+          { text: "Under the world? No.", next: null },
+        ],
+      },
+      lamps_done: {
+        text: "I felt them at dusk — three new stars under my feet. Four hundred years that dark went unanswered, and you answered it with my own fire. Here. The order would want you to have this; I want you to have this; for once everyone agrees.",
+        choices: [{ text: "(Receive reward)", next: "hub", action: () => QS.complete("sq_lamps") }],
       },
       mq_where_repeat: {
         text: "Korvash — barrows, east Heartlands. Vask — under the Mire, south past Duskmere. Hrolgar — the Frostpeaks, north past Frosthollow. Velmora — the western Ashlands. Their shrines are marked on your map. Rest before each. They will not chase you far from their charges, but they will not tire, either.",
@@ -152,6 +165,7 @@ const DIALOGUES = {
   bram: {
     entry: [
       { cond: p => QS.stage("sq_steel") === 1, node: "steel_done" },
+      { cond: p => QS.stage("sq_masterpiece") === 2, node: "master_done" },
       { cond: () => true, node: "hub" },
     ],
     nodes: {
@@ -161,8 +175,20 @@ const DIALOGUES = {
           { text: "Show me your wares.", next: null, action: () => UI.openShop("bram") },
           { text: "Let me use the forge.", next: null, action: () => UI.openCraft("smith") },
           { text: "Any work for me?", next: "steel_ask", cond: () => QS.stage("sq_steel") === -1 },
+          { text: "You look like a man with an unfinished thought.", next: "master_ask", cond: () => QS.stage("sq_masterpiece") === -1 && QS.stage("sq_steel") === 999 },
           { text: "Just warming my hands.", next: null },
         ],
+      },
+      master_ask: {
+        text: "...Aye. Twenty years I've dreamed one blade: quenched twice, once in deep frost, once in living ember. Two tempers in one steel, arguing forever, never settling — that's what an edge IS, friend. I need two frost crystals from where the trolls sleep, and two measures of ember residue from the burning dead out west. I'm too old for either errand and too proud to say so twice.",
+        choices: [
+          { text: "Frost and fire. I'll fetch both. (Quest: The Twinned Temper)", next: null, action: () => QS.start("sq_masterpiece") },
+          { text: "Dreams are cheap. Steel isn't.", next: null },
+        ],
+      },
+      master_done: {
+        text: "Both tempers... both! Stand back — no, further— *The forge roars twice, once white, once blue, and Bram lifts a blade that hums two notes at once.* Forty years of nails and horseshoes for this one hour. The Twinned Temper. It was never going to hang on a wall.",
+        choices: [{ text: "(Receive the Twinned Temper)", next: "hub", action: () => QS.complete("sq_masterpiece") }],
       },
       steel_ask: {
         text: "Aye, as it happens. I'm down to nails and apologies — the ore wagons stopped coming when the roads went feral. Four good lumps of iron ore and I'll pay coin and better. There's old workings in the hills, and the bandits squat on a seam east of here.",
@@ -247,6 +273,7 @@ const DIALOGUES = {
   ralka: {
     entry: [
       { cond: p => QS.stage("sq_wolves") === 1, node: "wolves_done" },
+      { cond: p => QS.stage("sq_hunt") === 1, node: "hunt_done" },
       { cond: () => true, node: "hub" },
     ],
     nodes: {
@@ -255,9 +282,21 @@ const DIALOGUES = {
         choices: [
           { text: "Trade.", next: null, action: () => UI.openShop("ralka") },
           { text: "Any bounties?", next: "wolves_ask", cond: () => QS.stage("sq_wolves") === -1 },
+          { text: "Teach me the hunter's trade.", next: "hunt_ask", cond: () => QS.stage("sq_hunt") === -1 && QS.stage("sq_wolves") >= 1 },
           { text: "Teach me to walk quieter.", next: "sneak_tip" },
           { text: "Nothing.", next: null },
         ],
+      },
+      hunt_ask: {
+        text: "The trade? The trade is patience and a clean shot, and knowing that a deer fed and fire-cooked is worth three eaten raw in the rain. Bring me three cuts of fresh venison — the red deer run the meadows and the Greywood. Spook them and they're gone; they hear like the dead owe them money.",
+        choices: [
+          { text: "Three cuts. Done. (Quest: The Old Ways)", next: null, action: () => QS.start("sq_hunt") },
+          { text: "I buy my meat.", next: null },
+        ],
+      },
+      hunt_done: {
+        text: "Fresh, clean, field-dressed — there's hope for you. Now watch: coals, not flame; fat side down; turn it when it sings. Any campfire in the March will do this for you. Sit. Eat. The road keeps.",
+        choices: [{ text: "(Receive reward)", next: "hub", action: () => QS.complete("sq_hunt") }],
       },
       wolves_ask: {
         text: "Wolves. The packs come down bolder every season — they've learned the wall has more gaps than guards. Eight grey hides and the town pays. They circle left, so you step right; the big ones don't circle, so you pray.",
@@ -391,6 +430,7 @@ const DIALOGUES = {
   caldus: {
     entry: [
       { cond: p => QS.stage("sq_blooms") === 1, node: "blooms_done" },
+      { cond: p => QS.stage("sq_echo") === 1, node: "echo_done" },
       { cond: () => true, node: "hub" },
     ],
     nodes: {
@@ -400,8 +440,20 @@ const DIALOGUES = {
           { text: "Show me your spells.", next: null, action: () => UI.openShop("caldus") },
           { text: "Why 'the Unlit'?", next: "lore_caldus" },
           { text: "Do you need anything out here?", next: "blooms_ask", cond: () => QS.stage("sq_blooms") === -1 },
+          { text: "What do you know of the Undermarch?", next: "echo_ask", cond: () => QS.stage("sq_echo") === -1 && QS.stage("sq_blooms") === 999 },
           { text: "Enjoy the solitude.", next: null },
         ],
+      },
+      echo_ask: {
+        text: "More than is healthy. When the line of Ald began, the first king did not take a throne — he took a torch, and went down through the Great Sink to argue with the Dark in person. He never came up. Something of him still paces the deep root of the realm: not a ghost, an *echo* — a flame that has forgotten everything except the argument. It has been burning, alone, in the dark, for an age. I think it should be allowed to stop. Wouldn't you want to be?",
+        choices: [
+          { text: "I'll put the First-Kindled to rest. (Quest: The First-Kindled)", next: null, action: () => { QS.start("sq_echo"); World.revealPoi("undermarch"); } },
+          { text: "Let old fires keep their grudges.", next: null },
+        ],
+      },
+      echo_done: {
+        text: "*Caldus listens to the whole telling without interrupting, which may be a first.* So even the first fire wanted permission to rest. It only needed someone strong enough to grant it. Remember that, pilgrim — when your own flame asks. Remember someone has to be strong enough.",
+        choices: [{ text: "(Receive reward)", next: "hub", action: () => QS.complete("sq_echo") }],
       },
       lore_caldus: {
         text: "I was an Ashpriest. Velmora's best pupil, which is to say her most flammable. I left when the congregation began preaching to the cinders and the cinders began answering with demands. Fire that answers is scripture; fire that interrupts is a tyrant with better lighting.",

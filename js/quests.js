@@ -26,6 +26,9 @@ const QS = {
     G.questToast("NEW QUEST", q.name);
     Sfx.play("quest");
     this.hooksFor(id, 0);
+    // deeds already done count: a boss slain before the asking still satisfies it
+    const obj = this.currentObjective(id);
+    if (obj && obj.kind === "boss" && G.slainBosses[obj.boss]) this.advance(id);
   },
 
   advance(id) {
@@ -140,6 +143,8 @@ const QS = {
         if (this.sigilCount() >= obj.count) this.advance(id);
       } else if (obj.kind === "flag") {
         if (G.flags[obj.flag]) this.advance(id);
+      } else if (obj.kind === "flags") {
+        if (this.flagCount(obj.prefix) >= obj.count) this.advance(id);
       } else if (obj.kind === "reach") {
         const poi = World.poiById(obj.poi);
         if (!poi) continue;
@@ -150,6 +155,12 @@ const QS = {
     }
   },
 
+  flagCount(prefix) {
+    let n = 0;
+    for (const k in G.flags) if (k.startsWith(prefix) && G.flags[k]) n++;
+    return n;
+  },
+
   /* journal helpers */
   objectiveText(id) {
     const obj = this.currentObjective(id);
@@ -157,6 +168,7 @@ const QS = {
     const p = G.player, st = p.quests[id];
     let txt = obj.hint || "";
     if (obj.kind === "kill") txt = txt.replace(/\(0\//, `(${st.counts.kill || 0}/`);
+    if (obj.kind === "flags") txt = txt.replace(/\(0\//, `(${this.flagCount(obj.prefix)}/`);
     if (obj.kind === "collect") txt += ` — ${Math.min(p.countItem(obj.item), obj.count)}/${obj.count}`;
     if (obj.kind === "sigils") txt += ` — ${this.sigilCount()}/${obj.count}`;
     return txt;

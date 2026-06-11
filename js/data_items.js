@@ -127,6 +127,18 @@ const ITEMS = {
     scale: { str: "B", fin: "B" }, edmg: { shock: 8 },
     lore: "Forged from the Citadel's portcullis by a king who feared visitors. Now it visits."
   },
+  aldsbane: {
+    name: "Aldsbane", type: "weapon", wclass: "2h", skill: "twohand", twoHanded: true,
+    dmg: 43, spd: 0.92, reach: 74, stam: 25, poiseDmg: 50, weight: 11, value: 1600, rarity: "unique",
+    scale: { str: "B", fin: "B" }, edmg: { shock: 7, fire: 7 },
+    lore: "The First-Kindled's own blade, left in the deep when he went down to argue with the Dark in person. The argument, by all evidence, continues."
+  },
+  twinned_temper: {
+    name: "Twinned Temper", type: "weapon", wclass: "1h", skill: "onehand",
+    dmg: 26, spd: 1.5, reach: 56, stam: 13, poiseDmg: 19, weight: 5, value: 1200, rarity: "unique",
+    scale: { str: "C", fin: "B" }, edmg: { fire: 6, frost: 6 },
+    lore: "Bram's masterpiece: a blade quenched twice, once in glacier-melt and once in ember-bath. The two tempers have never agreed about anything, including whom to cut."
+  },
 
   /* =================== BOWS =================== */
 
@@ -162,6 +174,12 @@ const ITEMS = {
     dmg: 9, spd: 1.2, reach: 50, stam: 8, poiseDmg: 8, weight: 3, value: 420, rarity: "rare",
     scale: { wil: "A" }, spellPower: 1.28,
     lore: "Recovered from the Drowned Bell. The previous owner is still looking for it. Listen, on quiet nights."
+  },
+  stormcaller: {
+    name: "Stormcaller", type: "staff", skill: "destruction", twoHanded: false,
+    dmg: 11, spd: 1.2, reach: 50, stam: 8, poiseDmg: 9, weight: 3, value: 950, rarity: "unique",
+    scale: { wil: "S" }, spellPower: 1.42,
+    lore: "Caldus carved it from a pine the lightning loved too much. It does not channel storms; it gossips with them."
   },
 
   /* =================== SHIELDS =================== */
@@ -252,6 +270,11 @@ const ITEMS = {
   warden_seal: { name: "Warden's Seal", type: "trinket", slot: "trinket", weight: 0, value: 450, rarity: "rare",
     bonus: { poise: 20, maxHp: 15 },
     lore: "An oath, cast in lead. Oaths are heavier than they look." },
+  ring_deep: { name: "Ring of the Deep", type: "trinket", slot: "trinket", weight: 0, value: 700, rarity: "unique",
+    bonus: { stamRegen: 5, maxHp: 12 },
+    lore: "Worn smooth by four hundred years of a dead king turning it on a dead finger. It remembers how to be patient, and lends the knack." },
+  circlet_first: { name: "Circlet of the First", type: "armor", slot: "head", kind: "light", armor: 12, weight: 1, value: 1400, rarity: "unique", edef: { shock: 20, fire: 20 },
+    lore: "Ald's coronal, a ring of cold gold and one ember-bead. Thirty-one kings refused to wear it after him; they said it listened." },
 
   /* =================== CONSUMABLES =================== */
 
@@ -280,6 +303,18 @@ const ITEMS = {
     use: { embers: 800 }, lore: "It beats, very slowly, like the heart of something patient." },
   fire_bomb: { name: "Cinder Bomb", type: "consumable", weight: 0.5, value: 35, rarity: "common",
     use: { throw: { dmg: 30, dtype: "fire", radius: 60 } }, lore: "Clay, pitch, and a strong opinion." },
+  raw_venison: { name: "Raw Venison", type: "consumable", weight: 0.5, value: 6, rarity: "common",
+    use: { hp: 5 }, lore: "Eat it raw if you must. The deer would consider it poor manners twice over." },
+  rabbit_meat: { name: "Rabbit Meat", type: "consumable", weight: 0.2, value: 4, rarity: "common",
+    use: { hp: 4 }, lore: "Fast food, formerly." },
+  seared_venison: { name: "Seared Venison", type: "consumable", weight: 0.5, value: 22, rarity: "common",
+    use: { hp: 42, buff: { id: "hearty", dur: 90, stamRegen: 6 } },
+    lore: "Cooked over a real fire until the fat sings. For a while afterward, the road feels shorter." },
+  hunters_skewer: { name: "Hunter's Skewer", type: "consumable", weight: 0.3, value: 12, rarity: "common",
+    use: { hp: 22, stam: 30 }, lore: "Ralka's recipe: meat, stick, patience, no questions about the meat." },
+  marsh_stew: { name: "Marsh Stew", type: "consumable", weight: 0.5, value: 28, rarity: "common",
+    use: { hp: 30, mag: 25, cure: "poison" },
+    lore: "A Duskmere kindness: everything the fen throws at you, boiled until it apologizes." },
 
   /* =================== INGREDIENTS (alchemy) =================== */
 
@@ -373,6 +408,22 @@ const RECIPES_SMITH = [
   { out: "leather_cap",    mats: { wolf_pelt: 1, leather_strips: 1 }, skillReq: 0 },
   { out: "leather_boots",  mats: { wolf_pelt: 2, leather_strips: 1 }, skillReq: 0 },
   { out: "leather_strips", mats: { wolf_pelt: 1 }, skillReq: 0 },
+];
+
+/* =================== COOKING (campfires & hearths) =================== */
+const RECIPES_COOK = [
+  { out: "seared_venison", mats: { raw_venison: 1 }, skillReq: 0 },
+  { out: "hunters_skewer", mats: { rabbit_meat: 2 }, skillReq: 0 },
+  { out: "marsh_stew",     mats: { mireweed: 1, dried_meat: 1, glowcap: 1 }, skillReq: 0 },
+  { out: "dried_meat",     mats: { raw_venison: 1, wolfsbane: 0 }, skillReq: 0, note: "smoke" },
+];
+
+/* =================== WEAPON HONING (forge) ===================
+   Per-tier costs; +8% weapon damage per tier, max +3.        */
+const HONE_TIERS = [
+  { gold: 60,  mats: { iron_ore: 2 } },
+  { gold: 180, mats: { steel_ingot: 2 } },
+  { gold: 420, mats: { silver_dust: 1, ember_residue: 1 } },
 ];
 
 /* =================== ALCHEMY RECIPES =================== */

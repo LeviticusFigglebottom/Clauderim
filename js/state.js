@@ -58,6 +58,8 @@ const G = {
   frame: 0,
   paused: false,
   slowmo: 0,            // seconds of time-dilation remaining (Edict of KYR)
+  hitstop: 0,           // frozen impact frames
+  slowmoAim: false,     // Steady Draw perk while drawing a bow
   saveSlot: 1,
 
   /* ---------- messaging ---------- */

@@ -137,6 +137,74 @@ const QUESTS = {
     rewardText: "Mosswick buried the clapper a third time — 'for certainty' — and gave you a bow of pale wraithwood.",
   },
 
+  sq_hunt: {
+    name: "The Old Ways", type: "side",
+    stages: [
+      {
+        journal: "Ralka says the wall-guard live on hard bread and harder opinions, and it shows in their aim. Bring her three cuts of fresh venison — the red deer run the Heartlands and the wood — and she'll show me the old hunter's fire-craft.",
+        objective: { kind: "collect", item: "raw_venison", count: 3, hint: "Hunt red deer for venison (need 3)" },
+      },
+      {
+        journal: "Three good cuts, field-dressed. Ralka will want them while they're fresh.",
+        objective: { kind: "talk", npc: "ralka", hint: "Bring the venison to Ralka" },
+      },
+    ],
+    rewards: { gold: 150, embers: 100, items: [["seared_venison", 2]] },
+    rewardText: "Ralka seared the venison over coals and split it with you. 'Any campfire will do it. Now you know.'",
+  },
+
+  sq_masterpiece: {
+    name: "The Twinned Temper", type: "side",
+    stages: [
+      {
+        journal: "Bram has dreamed for years of a blade quenched twice — once in deep frost, once in living ember. He needs two frost crystals; the trolls of the high snow carry winter in their fat, and the crystals form where they sleep.",
+        objective: { kind: "collect", item: "frost_crystal", count: 2, hint: "Gather Frost Crystals (need 2)" },
+      },
+      {
+        journal: "The frost is bottled. Now the fire: two measures of ember residue, scraped from the burning things of the Ashlands.",
+        objective: { kind: "collect", item: "ember_residue", count: 2, hint: "Gather Ember Residue (need 2)" },
+      },
+      {
+        journal: "Frost in one hand, fire in the other. Bram's forge is waiting, and so is his life's work.",
+        objective: { kind: "talk", npc: "bram", hint: "Bring both tempers to Bram" },
+      },
+    ],
+    rewards: { items: [["twinned_temper", 1]], embers: 200 },
+    rewardText: "Bram quenched the blade twice and wept once. 'The Twinned Temper. Take it — it was never going to hang on a wall.'",
+  },
+
+  sq_lamps: {
+    name: "A Lamp for the Deep", type: "side",
+    stages: [
+      {
+        journal: "Serah says the Lampwrights once kept way-lamps burning even in the Undermarch — the drowned-dark beneath the realm, where the Great Sink swallows the light east of the crossroads. Three lamps stand cold down there. Carry her fire to them.",
+        objective: { kind: "flags", prefix: "waylamp_um_", count: 3, hint: "Light the way-lamps in the Undermarch (0/3)" },
+      },
+      {
+        journal: "Three flames burn under the world where no flame has burned in living memory. Serah will feel them from her lamp-house, but she'll want to hear it said aloud.",
+        objective: { kind: "talk", npc: "serah", hint: "Tell Serah the deep lamps burn" },
+      },
+    ],
+    rewards: { items: [["ember_core", 1]], embers: 300 },
+    rewardText: "Serah closed her eyes. 'Three lights in the Undermarch. The dark down there just got a little politer.'",
+  },
+
+  sq_echo: {
+    name: "The First-Kindled", type: "side",
+    stages: [
+      {
+        journal: "Caldus, over bitter tea: when the line of Ald began, the first king went down into the Undermarch to argue with the Dark in person — and never came up. Something of him still burns down there, at the deep root of the realm. Caldus believes it should be allowed to stop.",
+        objective: { kind: "boss", boss: "boss_echo", hint: "Put the Echo of Ald to rest in the Undermarch" },
+      },
+      {
+        journal: "The Echo is quiet. The first argument is over, four hundred kings too late. Caldus will want to know how it ended.",
+        objective: { kind: "talk", npc: "caldus", hint: "Bring word to Caldus" },
+      },
+    ],
+    rewards: { embers: 1200, gold: 400 },
+    rewardText: "Caldus was silent a long time. 'So even the first fire wanted permission to rest. Remember that, when yours asks.'",
+  },
+
   sq_blooms: {
     name: "Ash and Blossom", type: "side",
     stages: [
