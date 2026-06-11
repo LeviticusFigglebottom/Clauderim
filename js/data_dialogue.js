@@ -1,0 +1,423 @@
+/* ============================================================
+   CLAUDERIM — data_dialogue.js
+   NPC definitions and dialogue trees.
+
+   Node: { text: string | fn(player)->string,
+           choices: [{ text, next, cond?, action?, cls? }] }
+   entry: ordered [{ cond, node }] — first passing condition wins.
+   Helper shorthands used in actions:
+     QS = QuestSys (quests.js), UI (ui.js), G (state.js)
+   ============================================================ */
+"use strict";
+
+const NPC_DEFS = {
+  serah: {
+    name: "Serah the Lampwright", town: "emberfall", role: "guide",
+    look: { body: "#7a5c30", trim: "#e8cf9a", hair: "#d8d0c0" },
+    shop: { stock: ["torch", "small_hp_potion", "ember_shard"], spells: ["frost_spike", "spark_lash", "lesser_heal", "cleanse", "stoneskin", "ward"] },
+    bark: "The lamps are low tonight.",
+  },
+  bram: {
+    name: "Bram the Smith", town: "emberfall", role: "smith",
+    look: { body: "#5a4633", trim: "#8a6a3a", hair: "#3a3026" },
+    shop: { stock: ["iron_sword", "iron_axe", "iron_mace", "iron_spear", "iron_helm", "iron_cuirass", "iron_greaves", "iron_kite", "wooden_shield", "iron_ore", "leather_strips", "steel_ingot"] },
+    bark: "Mind the sparks.",
+  },
+  maren: {
+    name: "Maren the Alchemist", town: "emberfall", role: "alchemist",
+    look: { body: "#3e5247", trim: "#9ad6a0", hair: "#6a4a30" },
+    shop: { stock: ["small_hp_potion", "big_hp_potion", "stam_potion", "mag_potion", "antidote", "warming_salve", "glowcap", "marrowroot", "mireweed", "fire_bomb"] },
+    bark: "Don't touch the blue ones.",
+  },
+  tobbe: {
+    name: "Tobbe the Innkeeper", town: "emberfall", role: "innkeeper",
+    look: { body: "#6a4a3a", trim: "#c8a878", hair: "#8a7050" },
+    shop: { stock: ["bread", "dried_meat", "honey_mead"] },
+    bark: "Warm hearth, cold mead, thick walls.",
+  },
+  ralka: {
+    name: "Ralka the Huntress", town: "emberfall", role: "hunter",
+    look: { body: "#4a5238", trim: "#a8b888", hair: "#2c2620" },
+    shop: { stock: ["hunting_bow", "leather_cap", "leather_jack", "leather_boots", "dried_meat", "wolf_pelt"] },
+    bark: "Wind's from the barrows. Bad hunting.",
+  },
+  mosswick: {
+    name: "Elder Mosswick", town: "duskmere", role: "elder",
+    look: { body: "#44503c", trim: "#7d9460", hair: "#c8c8c0" },
+    bark: "Walk the planks, stranger.",
+  },
+  petra: {
+    name: "Petra the Fisher", town: "duskmere", role: "merchant",
+    look: { body: "#3c4a50", trim: "#88a8b0", hair: "#5a4a3a" },
+    shop: { stock: ["antidote", "mireweed", "glowcap", "dried_meat", "steel_dirk", "mirewalker_cowl", "mirewalker_coat", "mirewalker_waders", "torch"] },
+    bark: "Eels are biting. Bite back.",
+  },
+  eirik: {
+    name: "Chief Eirik", town: "frosthollow", role: "chief",
+    look: { body: "#5a6470", trim: "#c8d8e0", hair: "#b89860" },
+    bark: "Don't climb past the third cairn.",
+  },
+  sigrun: {
+    name: "Sigrun the Healer", town: "frosthollow", role: "healer",
+    look: { body: "#705a5a", trim: "#e0c8c8", hair: "#e8e0d0" },
+    shop: { stock: ["small_hp_potion", "big_hp_potion", "warming_salve", "frostmoss", "troll_fat", "honey_mead", "frostplate_helm"] },
+    bark: "Keep your blood moving, southerner.",
+  },
+  caldus: {
+    name: "Caldus the Unlit", town: "watchtower", role: "hermit",
+    look: { body: "#3a3a44", trim: "#8888a8", hair: "#909090" },
+    shop: { spells: ["fireball", "glacial_burst", "soul_lance", "greater_heal"] },
+    bark: "...",
+  },
+};
+for (const id in NPC_DEFS) NPC_DEFS[id].id = id;
+
+/* ------------------------------------------------------------ */
+
+const DIALOGUES = {
+
+  /* ============ SERAH — main quest spine ============ */
+  serah: {
+    entry: [
+      { cond: p => QS.stage("mq_ember") === 0, node: "mq_intro" },
+      { cond: p => QS.stage("sq_glowcaps") === 1, node: "glowcaps_done" },
+      { cond: p => QS.stage("mq_ember") === 4, node: "pre_end" },
+      { cond: p => QS.sigilCount() >= 4 && QS.stage("mq_ember") === 2, node: "all_sigils" },
+      { cond: () => true, node: "hub" },
+    ],
+    nodes: {
+      mq_intro: {
+        text: "So. The shrine breathes out one more spark. Slowly, Emberborn — the first hour is the worst, and the rest are no feast either. I am Serah, last Lampwright of this March, and I have been waiting at this flame for someone exactly as unlucky as you.",
+        choices: [
+          { text: "What am I? What is this brand?", next: "mq_brand" },
+          { text: "Waiting for me? Why?", next: "mq_why" },
+        ],
+      },
+      mq_brand: {
+        text: "A debt-mark. The First Ember is dying, and a dying fire throws sparks — you are one. You will not stay dead; the shrines will breathe you back, lighter each time by whatever embers you carried. Spend them well, and kneel to every shrine you pass.",
+        choices: [{ text: "Why was I made? (continue)", next: "mq_why" }],
+      },
+      mq_why: {
+        text: "Because the Ember has one question left and no throat to ask it with. It lies hoarded in the Citadel of Hollows, behind gates the Pale King sealed with the Old Tongue. Four Wardens fled that court four hundred years ago, each carrying a Sigil — a word of power. Claim all four and the gates will know you for a king's better.",
+        choices: [
+          { text: "Where do I find the Wardens?", next: "mq_where" },
+        ],
+      },
+      mq_where: {
+        text: "Korvash stands his barrow in the eastern Heartlands. Vask waits below the Mire, south past Duskmere. Hrolgar keeps the high snow north of Frosthollow. Velmora preaches to the cinders in the western Ashlands. I have marked your map. Go armed, go rested, and go knowing they were heroes once. It will not help, but they deserve it.",
+        choices: [
+          { text: "I'll begin. (Start: The Guttering)", next: "hub_first", action: () => { QS.advance("mq_ember"); } },
+        ],
+      },
+      hub_first: {
+        text: "One more thing — my lantern is nearly dry, and a Lampwright without light is just a woman with opinions. If you find glowcaps on your road, I can render their shine into that flask of yours.",
+        choices: [
+          { text: "I'll keep an eye out. (Quest: The Lampwright's Request)", next: null, action: () => QS.start("sq_glowcaps") },
+          { text: "No time for mushrooms.", next: null },
+        ],
+      },
+      all_sigils: {
+        text: "Four words. I can feel them from here, like standing too near a forge. The Citadel of Hollows will open for you now — it is the dark keep at the heart of the March. Emberborn... when you reach the vault, the Ember will ask its question. Whatever you answer, answer it for more than yourself.",
+        choices: [{ text: "I understand.", next: null }],
+      },
+      pre_end: {
+        text: "The King is dead, then. I felt the lamps gutter at noon, all of them at once, like the world blinking. Only the question is left now. Go and answer it. And — thank you. Whichever silence you choose, thank you.",
+        choices: [{ text: "Goodbye, Serah.", next: null }],
+      },
+      glowcaps_done: {
+        text: "Glowcaps! And barely bruised. Watch — a little oil, a little patience... there. Your flask drinks deeper now. The light looks after those who carry it.",
+        choices: [{ text: "(Receive flask upgrade)", next: "hub", action: () => QS.complete("sq_glowcaps") }],
+      },
+      hub: {
+        text: "The lamps hold, Emberborn. What do you need of me?",
+        choices: [
+          { text: "Trade. (Spells & supplies)", next: null, action: () => UI.openShop("serah") },
+          { text: "Tell me of the Wardens again.", next: "mq_where_repeat" },
+          { text: "What is this place?", next: "lore_town" },
+          { text: "Nothing. Keep your light.", next: null },
+        ],
+      },
+      mq_where_repeat: {
+        text: "Korvash — barrows, east Heartlands. Vask — under the Mire, south past Duskmere. Hrolgar — the Frostpeaks, north past Frosthollow. Velmora — the western Ashlands. Their shrines are marked on your map. Rest before each. They will not chase you far from their charges, but they will not tire, either.",
+        choices: [{ text: "Thank you.", next: "hub" }],
+      },
+      lore_town: {
+        text: "Emberfall — last walled town of the March. Bram keeps the forge, Maren the stillroom, Tobbe the inn, Ralka the walls. We are a small fire in a large night, and we are very careful with our fuel.",
+        choices: [{ text: "Back.", next: "hub" }],
+      },
+    },
+  },
+
+  /* ============ BRAM ============ */
+  bram: {
+    entry: [
+      { cond: p => QS.stage("sq_steel") === 1, node: "steel_done" },
+      { cond: () => true, node: "hub" },
+    ],
+    nodes: {
+      hub: {
+        text: "Forge is hot, hammer's willing. Need work done, or just warming your hands?",
+        choices: [
+          { text: "Show me your wares.", next: null, action: () => UI.openShop("bram") },
+          { text: "Let me use the forge.", next: null, action: () => UI.openCraft("smith") },
+          { text: "Any work for me?", next: "steel_ask", cond: () => QS.stage("sq_steel") === -1 },
+          { text: "Just warming my hands.", next: null },
+        ],
+      },
+      steel_ask: {
+        text: "Aye, as it happens. I'm down to nails and apologies — the ore wagons stopped coming when the roads went feral. Four good lumps of iron ore and I'll pay coin and better. There's old workings in the hills, and the bandits squat on a seam east of here.",
+        choices: [
+          { text: "I'll fetch your ore. (Quest: Steel for Emberfall)", next: null, action: () => QS.start("sq_steel") },
+          { text: "Not my trade.", next: null },
+        ],
+      },
+      steel_done: {
+        text: "That's the music — good ore, heavy with intent. Give me a breath... there. Steel, and a blade of it. Emberfall pattern, like my master made, and his made, back when the March was a march and not a memory.",
+        choices: [{ text: "(Receive reward)", next: "hub", action: () => QS.complete("sq_steel") }],
+      },
+    },
+  },
+
+  /* ============ MAREN ============ */
+  maren: {
+    entry: [{ cond: () => true, node: "hub" }],
+    nodes: {
+      hub: {
+        text: "Mind the threshold, the floor's seen three explosions and holds a grudge. Buying, brewing, or bleeding?",
+        choices: [
+          { text: "Buying.", next: null, action: () => UI.openShop("maren") },
+          { text: "Brewing. (Use the alchemy bench)", next: null, action: () => UI.openCraft("alchemy") },
+          { text: "Heard of any work?", next: "delivery_ask", cond: () => QS.stage("sq_delivery") === -1 },
+          { text: "Bleeding, but it can wait.", next: null },
+        ],
+      },
+      delivery_ask: {
+        text: "Work — yes, and urgent. Fever's gone through Frosthollow like a rumor, and Sigrun's shelves are bare. I've a parcel sealed and ready, but the mountain road eats couriers. You look... durable. Repeatedly durable, if the stories about your kind are true.",
+        choices: [
+          { text: "I'll carry it north. (Quest: A Cold Delivery)", next: "delivery_yes" },
+          { text: "Find another courier.", next: null },
+        ],
+      },
+      delivery_yes: {
+        text: "Bless you. Here — wax-sealed against cold, damp, and curiosity. Sigrun keeps the healer's hut in Frosthollow, north past the pines, up where the air gets honest. Don't open it. The third ingredient is shy.",
+        choices: [{ text: "(Take the parcel)", next: null, action: p => { QS.start("sq_delivery"); p.addItem("medicine_parcel", 1); } }],
+      },
+    },
+  },
+
+  /* ============ TOBBE ============ */
+  tobbe: {
+    entry: [
+      { cond: p => QS.stage("sq_crypt") === 1, node: "crypt_done" },
+      { cond: () => true, node: "hub" },
+    ],
+    nodes: {
+      hub: {
+        text: "Welcome to the Guttered Candle — warm hearth, cold mead, thick walls, in that order of importance. What'll it be?",
+        choices: [
+          { text: "Food and drink.", next: null, action: () => UI.openShop("tobbe") },
+          { text: "A bed. (Rest until morning — 10 gold)", next: "rest", cond: p => p.gold >= 10 },
+          { text: "You look like a man with a problem.", next: "crypt_ask", cond: () => QS.stage("sq_crypt") === -1 },
+          { text: "Nothing tonight.", next: null },
+        ],
+      },
+      rest: {
+        text: "Top of the stairs, second door. Mind the floorboard that screams — no, that's its name, we've given up fixing it.",
+        choices: [{ text: "(Sleep until morning)", next: null, action: p => { p.gold -= 10; G.restAtInn(); } }],
+      },
+      crypt_ask: {
+        text: "...You can hear it too, can't you. The scratching. Under the cellar. The old crypt runs beneath half the town, and lately the tenants have been — active. I've the key, the guard won't go, and Serah says you're harder to discourage than most. Permanently harder.",
+        choices: [
+          { text: "Give me the key. (Quest: Whispers Below)", next: "crypt_yes" },
+          { text: "Hire an exorcist.", next: null },
+        ],
+      },
+      crypt_yes: {
+        text: "The stair's behind the inn, under the cellar hatch. Six of them at least, by the sound of the scratching — thin the dead down there and drinks are free for a season. Here. Key's cold, isn't it? It's always cold.",
+        choices: [{ text: "(Take the crypt key)", next: null, action: p => { QS.start("sq_crypt"); p.addItem("crypt_key", 1); } }],
+      },
+      crypt_done: {
+        text: "It's quiet. Gods, I'd forgotten what the quiet sounds like. Here — this was grandda's. He carried it in the Warden's day and it's done nothing under my floor but rust slower than it should. He'd want it working.",
+        choices: [{ text: "(Receive reward)", next: "hub", action: () => QS.complete("sq_crypt") }],
+      },
+    },
+  },
+
+  /* ============ RALKA ============ */
+  ralka: {
+    entry: [
+      { cond: p => QS.stage("sq_wolves") === 1, node: "wolves_done" },
+      { cond: () => true, node: "hub" },
+    ],
+    nodes: {
+      hub: {
+        text: "You walk too loud, southlander. Half the March heard you coming and the other half smelled you. What?",
+        choices: [
+          { text: "Trade.", next: null, action: () => UI.openShop("ralka") },
+          { text: "Any bounties?", next: "wolves_ask", cond: () => QS.stage("sq_wolves") === -1 },
+          { text: "Teach me to walk quieter.", next: "sneak_tip" },
+          { text: "Nothing.", next: null },
+        ],
+      },
+      wolves_ask: {
+        text: "Wolves. The packs come down bolder every season — they've learned the wall has more gaps than guards. Eight grey hides and the town pays. They circle left, so you step right; the big ones don't circle, so you pray.",
+        choices: [
+          { text: "Eight wolves. Done. (Quest: Wolves at the Gate)", next: null, action: () => QS.start("sq_wolves") },
+          { text: "I don't kill dogs.", next: null },
+        ],
+      },
+      sneak_tip: {
+        text: "Crouch low, move slow, stay dark, stay behind. A blade in the back is worth six in the front — that's not cowardice, that's arithmetic. And take the soft boots. Plate mail sneaking is a war drum apologizing.",
+        choices: [{ text: "Noted.", next: "hub" }],
+      },
+      wolves_done: {
+        text: "Eight, and clean kills by the look of your edge. The wall sleeps easier. Here's the coin — and take the spare bow. I made it for my brother. He won't mind. He's a barrow now, east of here.",
+        choices: [{ text: "(Receive reward)", next: "hub", action: () => QS.complete("sq_wolves") }],
+      },
+    },
+  },
+
+  /* ============ MOSSWICK ============ */
+  mosswick: {
+    entry: [
+      { cond: p => QS.stage("sq_bell") === 1, node: "bell_done" },
+      { cond: () => true, node: "hub" },
+    ],
+    nodes: {
+      hub: {
+        text: "Plank-walker. You've the look of someone the Mire hasn't decided about yet. Sit. The fen hears better than it sees, so speak soft.",
+        choices: [
+          { text: "Tell me of the Mire.", next: "lore_mire" },
+          { text: "Something troubles this village.", next: "bell_ask", cond: () => QS.stage("sq_bell") === -1 },
+          { text: "Tell me of the Matron.", next: "lore_vask", cond: () => QS.stage("mq_ember") >= 1 },
+          { text: "Stay dry, elder.", next: null },
+        ],
+      },
+      lore_mire: {
+        text: "The fen was here first; we are tolerated, not welcomed. Walk the planks. Wax your boots. If the water goes quiet, the water is listening. We bury our dead twice here — once for custom, once for certainty — and lately, certainty has been... underperforming.",
+        choices: [{ text: "Go on.", next: "hub" }],
+      },
+      bell_ask: {
+        text: "The Drowned Bell. The old chapel sank in my grandmother's day, bell and all, and a sunken bell should hold its tongue. It has begun to ring on windless nights — and our twice-buried sit up in their graves to listen. Something below pulls the rope. I am too old to swim and too wise to want to.",
+        choices: [
+          { text: "I'll silence it. (Quest: The Drowned Bell)", next: "bell_yes" },
+          { text: "Let it ring.", next: null },
+        ],
+      },
+      bell_yes: {
+        text: "The chapel lies south of the village — follow the glowcaps, then follow the silence; the fen goes quiet around it the way a crowd quiets around a fight. Take antidote. Take silver if you have it. And if you hear singing under the bell — that is not the bell's business, nor yours.",
+        choices: [{ text: "(Mark the sunken chapel)", next: null, action: () => { QS.start("sq_bell"); World.revealPoi("chapel"); } }],
+      },
+      lore_vask: {
+        text: "You hunt the Matron. I won't stop you — but know her: she nursed the Pale King himself at her breast, and when the court fell she carried the Keeping Word here because a nurse keeps, it is all she knows. The fen heard the word and liked it. Now she keeps her children below the water. Some of them were ours. Strike true, spark-bearer. Mothers do not die of half measures.",
+        choices: [{ text: "I'll remember.", next: "hub" }],
+      },
+      bell_done: {
+        text: "The night the bell stopped, every dog in Duskmere slept till noon. You've the clapper? Give it here — we'll bury it a third time, for certainty, and this time certainty will hold. Take the pale bow. It was fished from the chapel before my time, and it has been waiting for hands that don't shake.",
+        choices: [{ text: "(Receive reward)", next: "hub", action: () => QS.complete("sq_bell") }],
+      },
+    },
+  },
+
+  /* ============ PETRA ============ */
+  petra: {
+    entry: [{ cond: () => true, node: "hub" }],
+    nodes: {
+      hub: {
+        text: "Fresh eel, waxed leathers, and remedies for everything the fen does to strangers. Mostly the leathers and remedies, in your case.",
+        choices: [
+          { text: "Show me.", next: null, action: () => UI.openShop("petra") },
+          { text: "What do eels go for these days?", next: "smalltalk" },
+          { text: "Another time.", next: null },
+        ],
+      },
+      smalltalk: {
+        text: "Depends on the eel. The honest ones, three marks. The ones with too many opinions about being caught, those we throw back. The fen has rules and the first rule is: don't keep what watches you back.",
+        choices: [{ text: "Wise.", next: "hub" }],
+      },
+    },
+  },
+
+  /* ============ EIRIK ============ */
+  eirik: {
+    entry: [{ cond: () => true, node: "hub" }],
+    nodes: {
+      hub: {
+        text: "A southerner, above the snowline, on purpose. Sit by the fire, then — stupidity that determined deserves warming. I am Eirik. This hollow is mine to keep.",
+        choices: [
+          { text: "Tell me of the Frost-Tyrant.", next: "lore_hrolgar", cond: () => QS.stage("mq_ember") >= 1 },
+          { text: "What should I know about the peaks?", next: "lore_peaks" },
+          { text: "Stay warm, chief.", next: null },
+        ],
+      },
+      lore_hrolgar: {
+        text: "Hrolgar. My line carried his banners once — spear-hand of the March, the Marshal of the North. He spoke the Still Word at White Pass and stopped a battle like a held breath... then decided the whole world was improved by stopping. He keeps the high keep past the third cairn. Bring fire. Bring more fire than that. And if he offers you the quiet — and he will, he offers everyone the quiet — keep talking.",
+        choices: [{ text: "I'll bring fire.", next: "hub" }],
+      },
+      lore_peaks: {
+        text: "Cold first, trolls second, regret third. The trolls knit shut, so burn them as you go. Wear fur or wear frostplate, drink mead, keep moving. The cold above the third cairn is not weather — it is a king's house, and the door is always open, which is the worst thing about it.",
+        choices: [{ text: "Understood.", next: "hub" }],
+      },
+    },
+  },
+
+  /* ============ SIGRUN ============ */
+  sigrun: {
+    entry: [
+      { cond: p => QS.stage("sq_delivery") === 0 && p.hasItem("medicine_parcel", 1), node: "delivery_done" },
+      { cond: () => true, node: "hub" },
+    ],
+    nodes: {
+      hub: {
+        text: "In, in — you're letting the winter audit my shelves. Sit. Drink something warm. Now: salves, draughts, or sympathy? The first two cost money.",
+        choices: [
+          { text: "Salves and draughts.", next: null, action: () => UI.openShop("sigrun") },
+          { text: "How fares the village?", next: "smalltalk" },
+          { text: "Just passing through.", next: null },
+        ],
+      },
+      delivery_done: {
+        text: "That seal — that's Maren's wax! Give it here, give it — oh, bless her crooked ladles, it's all here. Fever-bark, ember-salt, the shy ingredient. You've carried spring up a mountain, southerner. Frosthollow doesn't forget.",
+        choices: [{ text: "(Hand over the parcel)", next: "hub", action: p => { p.removeItem("medicine_parcel", 1); QS.complete("sq_delivery"); } }],
+      },
+      smalltalk: {
+        text: "Cold, fevered, and stubborn — the village, and also everyone in it. We'll outlast the winter. We always do. Outlasting is the entire local art form.",
+        choices: [{ text: "Keep at it.", next: "hub" }],
+      },
+    },
+  },
+
+  /* ============ CALDUS ============ */
+  caldus: {
+    entry: [
+      { cond: p => QS.stage("sq_blooms") === 1, node: "blooms_done" },
+      { cond: () => true, node: "hub" },
+    ],
+    nodes: {
+      hub: {
+        text: "...Company. How novel. I am Caldus, called the Unlit, because I gave my flame away and the name stuck better than the reasons. You may browse my failures. Some of them are for sale.",
+        choices: [
+          { text: "Show me your spells.", next: null, action: () => UI.openShop("caldus") },
+          { text: "Why 'the Unlit'?", next: "lore_caldus" },
+          { text: "Do you need anything out here?", next: "blooms_ask", cond: () => QS.stage("sq_blooms") === -1 },
+          { text: "Enjoy the solitude.", next: null },
+        ],
+      },
+      lore_caldus: {
+        text: "I was an Ashpriest. Velmora's best pupil, which is to say her most flammable. I left when the congregation began preaching to the cinders and the cinders began answering with demands. Fire that answers is scripture; fire that interrupts is a tyrant with better lighting.",
+        choices: [{ text: "Hm.", next: "hub" }],
+      },
+      blooms_ask: {
+        text: "Need? No. Want — three emberblooms, from the deep ash where my old congregation chants. I intend to teach a flower to argue with the dark. It will fail, of course. Everything I plant fails. But it fails a little further from the dark each season, and that is the entire history of civilization in a pot.",
+        choices: [
+          { text: "Three emberblooms. Fine. (Quest: Ash and Blossom)", next: null, action: () => QS.start("sq_blooms") },
+          { text: "Argue with the dark yourself.", next: null },
+        ],
+      },
+      blooms_done: {
+        text: "Warm, rooted, and furious — perfect specimens. Here, the scepter. I pulled it from the Drowned Bell's parish in my adventuring days and we have disagreed ever since. It argues better than flowers. Mind its moods, and never apologize to it. It can smell apology.",
+        choices: [{ text: "(Receive reward)", next: "hub", action: () => QS.complete("sq_blooms") }],
+      },
+    },
+  },
+};

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLAUDERIM — The Shattered March</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="game-root">
+  <canvas id="game" width="1280" height="720"></canvas>
+
+  <!-- ============ TITLE SCREEN ============ -->
+  <div id="title-screen" class="screen">
+    <div class="title-fog"></div>
+    <h1 class="game-title">CLAUDERIM</h1>
+    <div class="game-subtitle">The Shattered March</div>
+    <div class="title-menu">
+      <button id="btn-newgame" class="title-btn">New Pilgrimage</button>
+      <button id="btn-continue" class="title-btn">Continue</button>
+      <button id="btn-loadgame" class="title-btn">Load Ember</button>
+      <button id="btn-titlehelp" class="title-btn">Manual</button>
+    </div>
+    <div class="title-footer">The Ember gutters. The March remembers.</div>
+  </div>
+
+  <!-- ============ CHARACTER CREATION ============ -->
+  <div id="chargen-screen" class="screen hidden">
+    <div class="panel chargen-panel">
+      <h2>The Waking</h2>
+      <p class="lore-text">You wake at a cold shrine with ash on your tongue and a brand upon your wrist.
+      The Lampwright watches you stir. &ldquo;Another Emberborn,&rdquo; she says. &ldquo;What were you, before the March took you?&rdquo;</p>
+      <div class="chargen-row">
+        <label>Name</label>
+        <input id="cg-name" type="text" maxlength="18" value="Wanderer" autocomplete="off">
+      </div>
+      <div class="chargen-row"><label>Origin</label></div>
+      <div id="cg-origins" class="origin-grid"></div>
+      <div id="cg-origin-desc" class="origin-desc"></div>
+      <div class="chargen-actions">
+        <button id="cg-begin" class="title-btn">Begin</button>
+        <button id="cg-back" class="title-btn dim">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ IN-GAME DOM UI ============ -->
+  <div id="hud-dom" class="hidden">
+    <div id="boss-bar" class="hidden">
+      <div id="boss-name"></div>
+      <div class="boss-bar-track"><div id="boss-bar-fill"></div></div>
+    </div>
+    <div id="interact-prompt" class="hidden"></div>
+    <div id="msg-log"></div>
+    <div id="area-banner" class="hidden"></div>
+    <div id="quest-toast" class="hidden"></div>
+  </div>
+
+  <!-- ============ DIALOGUE ============ -->
+  <div id="dialogue-box" class="hidden">
+    <div id="dlg-speaker"></div>
+    <div id="dlg-text"></div>
+    <div id="dlg-choices"></div>
+  </div>
+
+  <!-- ============ PAUSE / MENU SYSTEM ============ -->
+  <div id="menu-screen" class="screen hidden">
+    <div class="menu-tabs">
+      <button data-tab="inventory" class="menu-tab">Inventory</button>
+      <button data-tab="equipment" class="menu-tab">Equipment</button>
+      <button data-tab="character" class="menu-tab">Character</button>
+      <button data-tab="skills" class="menu-tab">Skills</button>
+      <button data-tab="magic" class="menu-tab">Magic</button>
+      <button data-tab="quests" class="menu-tab">Journal</button>
+      <button data-tab="map" class="menu-tab">Map</button>
+      <button data-tab="system" class="menu-tab">System</button>
+    </div>
+    <div id="menu-content" class="panel"></div>
+  </div>
+
+  <!-- ============ SHRINE MENU ============ -->
+  <div id="shrine-screen" class="screen hidden">
+    <div class="panel shrine-panel">
+      <h2 id="shrine-title">Embershrine</h2>
+      <div id="shrine-options"></div>
+    </div>
+  </div>
+
+  <!-- ============ CRAFTING / SHOP / READING ============ -->
+  <div id="station-screen" class="screen hidden">
+    <div class="panel station-panel" id="station-panel"></div>
+  </div>
+
+  <!-- ============ DEATH SCREEN ============ -->
+  <div id="death-screen" class="screen hidden">
+    <div id="death-text">YOU DIED</div>
+    <div id="death-sub"></div>
+  </div>
+
+  <!-- ============ ENDING ============ -->
+  <div id="ending-screen" class="screen hidden">
+    <div id="ending-text"></div>
+    <div id="ending-sub"></div>
+    <button id="ending-btn" class="title-btn hidden">Rest now, Emberborn</button>
+  </div>
+
+  <!-- ============ HELP / MANUAL ============ -->
+  <div id="help-screen" class="screen hidden">
+    <div class="panel help-panel">
+      <h2>Manual of the March</h2>
+      <div id="help-content"></div>
+      <button id="help-close" class="title-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/util.js"></script>
+<script src="js/state.js"></script>
+<script src="js/data_items.js"></script>
+<script src="js/data_spells.js"></script>
+<script src="js/data_perks.js"></script>
+<script src="js/data_enemies.js"></script>
+<script src="js/data_lore.js"></script>
+<script src="js/data_quests.js"></script>
+<script src="js/data_dialogue.js"></script>
+<script src="js/world.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/player.js"></script>
+<script src="js/combat.js"></script>
+<script src="js/quests.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/save.js"></script>
+<script src="js/input.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
