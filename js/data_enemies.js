@@ -214,6 +214,33 @@ const ENEMY_TYPES = {
     loot: [{ w: 1, id: "frost_crystal", n: [2, 3] }],
     voice: "whisper",
   },
+  tidelost_drowned: {
+    name: "Tidelost Drowned", hp: 55, dmg: 15, spd: 90, r: 13, reach: 42,
+    windup: 0.55, strike: 0.12, recover: 0.65, poise: 30, poiseDmg: 18,
+    armor: 3, resist: { poison: 100, frost: 60, fire: -20 }, edmg: { frost: 4 },
+    aggro: 230, deaggro: 999, embers: 44, behavior: "melee",
+    tags: ["undead", "tide"], look: { shape: "humanoid", body: "#5d7a78", trim: "#3a5250", size: 1, weapon: "sword", kelp: true },
+    loot: [{ w: 4, gold: [5, 22] }, { w: 2, id: "tide_pearl", n: [1, 1] }, { w: 2, id: "salt_cod", n: [1, 2] }, { w: 3 }],
+    voice: "squelch",
+  },
+  wrecker: {
+    name: "Wrecker", hp: 48, dmg: 14, spd: 118, r: 12, reach: 44,
+    windup: 0.4, strike: 0.1, recover: 0.5, poise: 25, poiseDmg: 16,
+    armor: 2, aggro: 270, deaggro: 480, embers: 34, behavior: "melee", canBlock: 0.2,
+    tags: ["human", "tide"], look: { shape: "humanoid", body: "#4f5a5d", trim: "#8a6a3a", size: 1, weapon: "axe" },
+    loot: [{ w: 4, gold: [6, 24] }, { w: 2, id: "torch", n: [1, 1] }, { w: 1, id: "tide_pearl", n: [1, 1] }, { w: 3 }],
+    voice: "man",
+  },
+  captain_veyra: {
+    name: "Captain Veyra, the Tidelost", hp: 360, dmg: 27, spd: 125, r: 16, reach: 52,
+    windup: 0.42, strike: 0.1, recover: 0.45, poise: 140, poiseDmg: 30,
+    armor: 7, resist: { poison: 100, frost: 70, fire: -15 }, edmg: { frost: 8 },
+    aggro: 320, deaggro: 999, embers: 850, behavior: "lunger",
+    drops: [["undertow", 1]], dropsOnce: true,
+    tags: ["undead", "tide"], look: { shape: "humanoid", body: "#6d8a88", trim: "#c9a86a", size: 1.5, weapon: "sword", hat: true },
+    loot: [{ w: 1, id: "tide_pearl", n: [2, 3] }],
+    voice: "whisper",
+  },
   pale_knight: {
     name: "Pale Knight", hp: 130, dmg: 26, spd: 105, r: 14, reach: 50,
     windup: 0.45, strike: 0.11, recover: 0.55, poise: 70, poiseDmg: 32,
@@ -446,6 +473,11 @@ const SPAWN_TABLES = {
     { w: 6, id: "thawed_soldier", pack: [1, 2] },
     { w: 3, id: "grave_wisp", pack: [1, 2] },
     { w: 1, id: "frost_troll", pack: [1, 1] },
+  ],
+  coast: [
+    { w: 5, id: "tidelost_drowned", pack: [1, 3] },
+    { w: 3, id: "wrecker", pack: [1, 2] },
+    { w: 2, id: "rabbit", pack: [1, 2] },
   ],
 };
 

@@ -17,7 +17,7 @@ const SaveSys = {
       if (!raw) return null;
       const d = JSON.parse(raw);
       return {
-        name: d.player.name, level: d.player.level,
+        name: d.player.name, level: d.player.level, cycle: d.cycle || 0,
         origin: ORIGINS[d.player.origin] ? ORIGINS[d.player.origin].name : "?",
         day: d.time.day, savedAt: d.savedAt,
         region: d.regionName || "",
@@ -34,6 +34,7 @@ const SaveSys = {
       time: G.time,
       mapId: G.map.id,
       viewMode: G.viewMode,
+      cycle: G.cycle || 0,
       regionName: World.regionNameAt(G.map, G.player.x, G.player.y),
       player: G.player.serialize(),
       flags: G.flags,
@@ -78,6 +79,7 @@ const SaveSys = {
     G.seed = data.seed;
     G.time = data.time;
     G.viewMode = data.viewMode || "fp";
+    G.cycle = data.cycle || 0;
     G.flags = data.flags || {};
     G.openedChests = data.openedChests || {};
     G.slainBosses = data.slainBosses || {};

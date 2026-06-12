@@ -52,6 +52,17 @@ class Enemy extends Entity {
     this.lastHitBy = null;
     this.elite = false;
     this.dmgMult = 1;
+    this.emberMult = 1;
+    // deeper cycles breed harder foes (wildlife is spared)
+    const cyc = G.cycle || 0;
+    if (cyc > 0 && !(def.tags && def.tags.includes("critter"))) {
+      this.hpMax = Math.round(this.hpMax * (1 + 0.5 * cyc));
+      this.hp = this.hpMax;
+      this.dmgMult *= 1 + 0.3 * cyc;
+      this.poiseMax = Math.round(this.poiseMax * (1 + 0.2 * cyc));
+      this.poise = this.poiseMax;
+      this.emberMult = 1 + 0.6 * cyc;
+    }
   }
 
   get isEnemy() { return true; }

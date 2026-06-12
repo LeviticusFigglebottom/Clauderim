@@ -132,6 +132,16 @@ const SKILL_DEFS = {
       { id: "sp_4", name: "Old Tongue Cadence", req: 70, desc: "Edicts recharge 20% faster — even power listens to delivery." },
     ],
   },
+  enchanting: {
+    name: "Enchanting", attr: "wil",
+    desc: "The Lampwright's third craft: teaching embers to live in things.",
+    perks: [
+      { id: "en_1", name: "Kindled Sigils", req: 10, desc: "Enchantments are 25% stronger." },
+      { id: "en_2", name: "Thrifty Flame", req: 25, desc: "Enchanting costs half the embers." },
+      { id: "en_3", name: "Twin Brand", req: 45, desc: "Weapons may carry a second enchantment." },
+      { id: "en_4", name: "Lampwright's Heir", req: 70, desc: "Enchantments are 50% stronger." },
+    ],
+  },
 };
 
 const ATTR_DEFS = {

@@ -31,7 +31,7 @@ const FP_DECO_H = {
   [D.ROCK]: 0.9, [D.BOULDER]: 1.25, [D.BUSH]: 0.55, [D.ANVIL]: 0.85,
   [D.ALCH]: 0.95, [D.WELL]: 0.95, [D.LAMP]: 2.0, [D.CAIRN]: 1.05,
   [D.GRAVE]: 1.05, [D.BARREL]: 0.95, [D.TABLE]: 0.85, [D.EMBERVAULT]: 1.35,
-  [D.PILLAR]: 2.2, [D.FROZEN]: 1.5,
+  [D.PILLAR]: 2.2, [D.FROZEN]: 1.5, [D.WRECK]: 1.8, [D.ALTAR]: 1.4,
 };
 
 const RenderFP = {

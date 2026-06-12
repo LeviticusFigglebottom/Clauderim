@@ -32,8 +32,6 @@ const UI = {
       const name = U.el("cg-name").value.trim() || "Wanderer";
       Game.newGame(name, this.chosenOrigin || "marchwarden");
     };
-    U.el("ending-btn").onclick = () => location.reload();
-
     for (const btn of document.querySelectorAll(".menu-tab")) {
       btn.onclick = () => { Sfx.play("ui"); this.menuTab = btn.dataset.tab; this.renderMenu(); };
     }
@@ -63,15 +61,20 @@ const UI = {
     stock("sigrun", ["book_frosthollow_book"]);
     stock("maren", ["book_alchemy_primer"]);
     stock("caldus", ["book_undermarch_book", "stormcaller"]);
+    stock("senn", ["book_tidelost_book"]);
     LOOT.chest_fine.push({ w: 1, id: "book_wardens_book", n: [1, 1] });
     LOOT.chest_rare.push({ w: 1, id: "book_citadel_book", n: [1, 1] });
     LOOT.chest_rare.push({ w: 1, id: "ring_deep", n: [1, 1] });
   },
 
-  /* item display name with forge honing */
+  /* item display name with forge honing and altar workings */
   itemName(it, p) {
     const tier = p && p.honing && p.honing[it.id];
-    return it.name + (tier ? " +" + tier : "");
+    let name = it.name + (tier ? " +" + tier : "");
+    if (p && p.enchants && p.enchants[it.id] && p.enchants[it.id].length) {
+      name += " [" + p.enchants[it.id].map(e => ENCHANTS[e] ? ENCHANTS[e].name : e).join(", ") + "]";
+    }
+    return name;
   },
 
   refreshTitle() {
@@ -111,7 +114,7 @@ const UI = {
     for (let s = 1; s <= 3; s++) {
       const info = SaveSys.slotInfo(s);
       html += info
-        ? `<button class="shrine-opt" data-load="${s}">Slot ${s} — ${U.esc(info.name)}, level ${info.level} ${info.origin}
+        ? `<button class="shrine-opt" data-load="${s}">Slot ${s} — ${U.esc(info.name)}, level ${info.level} ${info.origin}${info.cycle ? " · Cycle " + U.roman(info.cycle + 1) : ""}
              <span class="so-sub">Day ${info.day} · ${U.esc(info.region)}</span></button>`
         : `<button class="shrine-opt" disabled style="opacity:.4">Slot ${s} — empty</button>`;
     }
@@ -300,7 +303,7 @@ const UI = {
         <span class="a-val">${p.attrs[a]}</span>
         <span class="a-desc">${ATTR_DEFS[a].desc}</span></div>`;
     }
-    c.innerHTML = `<h2>${U.esc(p.name)} — ${ORIGINS[p.origin].name}</h2>
+    c.innerHTML = `<h2>${U.esc(p.name)} — ${ORIGINS[p.origin].name}${(G.cycle || 0) > 0 ? ` · Cycle ${U.roman(G.cycle + 1)}` : ""}</h2>
       <div class="char-cols">
         <div class="attr-table">${attrs}</div>
         <div class="attr-table">
@@ -553,6 +556,10 @@ const UI = {
     const box = U.el("shrine-options");
 
     if (mode === "main") {
+      const cycleOpt = G.flags.ending_chosen
+        ? `<button class="shrine-opt" data-o="cycle" style="color:#e07b39">Begin the next cycle — Cycle ${U.roman((G.cycle || 0) + 2)}
+            <span class="so-sub">The world renews and hardens; you keep all you are and carry</span></button>`
+        : "";
       box.innerHTML = `
         <button class="shrine-opt" data-o="rest">Rest at the ember
           <span class="so-sub">Restore vitals & flask · the slain return · the world is saved</span></button>
@@ -560,10 +567,16 @@ const UI = {
           <span class="so-sub">Cost: ${U.fmt(LEVEL_COST(p.level))} embers (you carry ${U.fmt(p.embers)})</span></button>
         <button class="shrine-opt" data-o="travel">Walk the ember-paths
           <span class="so-sub">Travel between shrines you have knelt to</span></button>
+        ${cycleOpt}
         <button class="shrine-opt" data-o="leave">Rise and continue</button>`;
       box.querySelector('[data-o="rest"]').onclick = () => { this.closeShrine(); Game.restAtShrine(s); };
       box.querySelector('[data-o="level"]').onclick = () => this.renderShrine("level");
       box.querySelector('[data-o="travel"]').onclick = () => this.renderShrine("travel");
+      const cyc = box.querySelector('[data-o="cycle"]');
+      if (cyc) cyc.onclick = () => {
+        if (cyc.dataset.confirm) { this.closeShrine(); Game.newCycle(); }
+        else { cyc.dataset.confirm = "1"; cyc.innerHTML = `Are you certain? The March resets — you remain.<span class="so-sub">Click again to begin Cycle ${U.roman((G.cycle || 0) + 2)}</span>`; }
+      };
       box.querySelector('[data-o="leave"]').onclick = () => this.closeShrine();
     } else if (mode === "level") {
       const cost = LEVEL_COST(p.level);
@@ -788,6 +801,103 @@ const UI = {
     });
   },
 
+  /* ============ enchanting (Lampwright's altar) ============ */
+
+  openEnchant() {
+    this.closeDialogue();
+    G.setState("station");
+    U.show("station-screen");
+    this.enchSel = null;
+    this.renderEnchant();
+  },
+
+  renderEnchant() {
+    const p = G.player;
+    const panel = U.el("station-panel");
+    const lvl = p.skills.enchanting.lvl;
+    const pot = p.enchPotency();
+    const emberMult = p.hasPerk("en_2") ? 0.5 : 1;
+
+    // enchantable gear in the pack
+    let items = "";
+    for (const s of p.inventory) {
+      const it = ITEMS[s.id];
+      const isWeapon = ["weapon", "bow", "staff"].includes(it.type);
+      const isArmor = it.type === "armor" || it.type === "shield";
+      if (!isWeapon && !isArmor) continue;
+      const cur = p.itemEnchants(s.id);
+      const max = isWeapon && p.hasPerk("en_3") ? 2 : 1;
+      const sel = this.enchSel === s.id ? " sel" : "";
+      items += `<div class="inv-row${sel}" data-ench-item="${s.id}">
+        <span class="iname r-${it.rarity}">${U.esc(this.itemName(it, p))}</span>
+        <span class="imeta">${cur.length}/${max} workings</span></div>`;
+    }
+
+    // workings for the selected item
+    let workings = "";
+    if (this.enchSel) {
+      const it = ITEMS[this.enchSel];
+      const isWeapon = ["weapon", "bow", "staff"].includes(it.type);
+      const slotKind = isWeapon ? "weapon" : "armor";
+      const cur = p.itemEnchants(this.enchSel);
+      const max = isWeapon && p.hasPerk("en_3") ? 2 : 1;
+      if (cur.length >= max) {
+        workings = `<i style="color:#5d574c">${U.esc(this.itemName(it, p))} can hold no more.</i>`;
+      } else {
+        for (const eid in ENCHANTS) {
+          const en = ENCHANTS[eid];
+          if (en.slot !== slotKind || cur.includes(eid)) continue;
+          const cost = Math.round(en.embers * emberMult);
+          let req = `<span class="${p.embers >= cost ? "have" : "lack"}">${cost} embers</span> `;
+          let can = p.embers >= cost;
+          for (const m in en.mats) {
+            const ok = p.countItem(m) >= en.mats[m];
+            if (!ok) can = false;
+            req += `<span class="${ok ? "have" : "lack"}">${ITEMS[m].name} ${p.countItem(m)}/${en.mats[m]}</span> `;
+          }
+          workings += `<div class="craft-row">
+            <span class="c-name" style="color:#c8b8e8">${en.name} <span style="color:#6a665e;font-size:12px">${U.esc(en.desc)}</span></span>
+            <span><span class="c-req">${req}</span>
+            <button class="act-btn" data-ench="${eid}" ${can ? "" : "disabled"}>Bind</button></span></div>`;
+        }
+      }
+    } else {
+      workings = `<i style="color:#5d574c">Choose a piece from your pack. The altar will listen.</i>`;
+    }
+
+    panel.innerHTML = `<h2>Lampwright's Altar — Enchanting ${lvl} · potency ×${pot.toFixed(2)}</h2>
+      <p class="lore-text" style="margin-bottom:10px">Embers power the working; materials shape it. What you bind to one blade lives in all of its kind your hands have known.</p>
+      <div class="inv-layout">
+        <div class="inv-list" style="max-height:360px">${items || '<i style="color:#5d574c">Nothing in your pack takes a working.</i>'}</div>
+        <div class="inv-detail">${workings}</div>
+      </div>
+      <div style="margin-top:14px;text-align:right">
+        <span style="color:#e07b39;margin-right:14px">◆ ${U.fmt(p.embers)} embers</span>
+        <button class="act-btn" id="ench-close">Step away</button></div>`;
+    U.el("ench-close").onclick = () => this.closeStation();
+    panel.querySelectorAll("[data-ench-item]").forEach(el => el.onclick = () => {
+      this.enchSel = el.dataset.enchItem;
+      Sfx.play("ui");
+      this.renderEnchant();
+    });
+    panel.querySelectorAll("[data-ench]").forEach(b => b.onclick = () => {
+      const en = ENCHANTS[b.dataset.ench];
+      const cost = Math.round(en.embers * emberMult);
+      if (p.embers < cost) return;
+      for (const m in en.mats) if (p.countItem(m) < en.mats[m]) return;
+      p.embers -= cost;
+      for (const m in en.mats) p.removeItem(m, en.mats[m]);
+      if (!p.enchants[this.enchSel]) p.enchants[this.enchSel] = [];
+      p.enchants[this.enchSel].push(en.id);
+      p.gainSkill("enchanting", 22);
+      p.hpMax = p.calcHpMax(); p.magMax = p.calcMagMax();
+      Sfx.play("levelup");
+      FX.burst(p.x, p.y, "#c8b8e8", 20, 110);
+      G.msg(`Bound: ${en.name} into ${ITEMS[this.enchSel].name}`, "good");
+      this.renderEnchant();
+    });
+  },
+
   closeStation() {
     U.hide("station-screen");
     if (G.state === "station") G.setState("play");
@@ -830,6 +940,19 @@ const UI = {
     G.setState("station");
     U.show("station-screen");
     const panel = U.el("station-panel");
+    if (G.flags.ending_chosen) {
+      const chose = G.flags.ending_chosen === "kindle";
+      panel.innerHTML = `<h2>The First Ember</h2>
+        <p class="lore-text">${chose
+          ? "The coal beats steadier now, fed and patient. It knows you. It is, in its way, grateful — and it is already, quietly, asking again."
+          : "The vault holds a soft dark, full of the memory of warmth. Nothing here is afraid anymore. Somewhere beneath the silence, the question stirs in its sleep."}</p>
+        <button class="shrine-opt" data-end="cycle">Answer it again — begin Cycle ${U.roman((G.cycle || 0) + 2)}
+          <span class="so-sub">The March renews and hardens; you keep all you are and carry</span></button>
+        <button class="shrine-opt" data-end="leave">Leave the vault in peace</button>`;
+      panel.querySelector('[data-end="cycle"]').onclick = () => { this.closeStation(); Game.newCycle(); };
+      panel.querySelector('[data-end="leave"]').onclick = () => this.closeStation();
+      return;
+    }
     panel.innerHTML = `<h2>The First Ember</h2>
       <p class="lore-text">It is smaller than you imagined — a coal you could cup in two hands, beating
       like the heart of something patient. The vault is silent. The Pale King's hoarded light drifts in the
@@ -853,19 +976,39 @@ const UI = {
     const txt = U.el("ending-text"), sub = U.el("ending-sub");
     if (which === "kindle") {
       txt.textContent = "THE EMBER BURNS";
-      sub.innerHTML = "You step into the coal's small warmth and give it the only fuel it ever wanted.<br>" +
+      sub.innerHTML = "You hold your hand to the coal and give it a measure of what it asks — not all; sparks are stubborn.<br>" +
         "Far away, in Emberfall, every lamp flares gold at once, and Serah closes her eyes.<br>" +
-        "The March will not remember your name. The light remembers nothing else.<br><br><i>— the age of flame continues —</i>";
+        "The March is warmer now. And you are still walking in it.<br><br><i>— the age of flame continues —</i>";
     } else {
       txt.textContent = "THE LONG DUSK";
       sub.innerHTML = "You sit with the Ember as it dims, the way one sits with the dying: quietly, holding on.<br>" +
-        "When it goes, the dark that follows is not the Deep Dark. It is soft, and full of stars.<br>" +
-        "Somewhere above, for the first time in four hundred years, the March dreams of morning.<br><br><i>— the age of embers ends —</i>";
+        "What follows is not the Deep Dark. It is soft, and full of stars, and you are still beneath them.<br>" +
+        "Somewhere above, for the first time in four hundred years, the March dreams of morning.<br><br><i>— the age of embers wanes —</i>";
     }
     U.show("ending-screen");
     requestAnimationFrame(() => {
       U.el("ending-screen").classList.add("on");
-      setTimeout(() => U.show("ending-btn"), 5200);
+      setTimeout(() => {
+        const btns = U.el("ending-btns");
+        btns.classList.remove("hidden");
+        U.el("ending-continue").onclick = () => {
+          U.hide("ending-screen");
+          U.el("ending-screen").classList.remove("on");
+          btns.classList.add("hidden");
+          U.show("hud-dom");
+          G.setState("play");
+          Music.setMood(G.map.outdoor ? "world" : "dungeon");
+          G.banner("THE MARCH REMAINS", "and so do you");
+          G.msg("The story holds its breath, not its ending. The next cycle waits at any shrine.", "good");
+          SaveSys.save(G.saveSlot);
+        };
+        U.el("ending-cycle").onclick = () => {
+          U.hide("ending-screen");
+          U.el("ending-screen").classList.remove("on");
+          btns.classList.add("hidden");
+          Game.newCycle();
+        };
+      }, 5200);
     });
   },
 
@@ -897,6 +1040,11 @@ const UI = {
       <p>Enemies telegraph in <b style="color:#d89090">red</b>. Sneak attacks from behind unaware foes deal brutal damage — approach from behind and they notice far less.</p>
       <p><b>Hone weapons</b> at any forge (+8% damage a tier, three tiers). <b>Cook</b> hunted meat at campfires. Beware <b style="color:#ff7a3a">ashen elites</b> — they burn brighter and hit harder, but carry triple embers.</p>
       <p>Hunt deer and hares for meat and hides. Search old graves if you dare; the tenants object roughly one time in four.</p>
+      <h3>The third craft & the next cycle</h3>
+      <p><b>Enchanting</b> at a Lampwright's altar (Serah's lamp-house, the Unlit Tower) binds
+      embers into gear: elemental brands, lifesteal, wards, and more — potency grows with the skill.
+      After the vault's question is answered, the world goes on; any shrine can begin the
+      <b>next cycle</b>: the March renews and hardens, and you keep everything you are.</p>
       <h3>Words & wagers</h3>
       <p><b>Speech</b> grows with every trade: better prices, and (with Silver Tongue) <b>persuasion</b>
       options in conversation. <b>Brann's Gauntlet</b> south of the crossroads pays embers per survived

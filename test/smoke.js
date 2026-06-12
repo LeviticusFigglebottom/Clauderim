@@ -162,8 +162,8 @@ const owStats = run(`
      portals: ow.portals.length, chests: ow.chests.length,
      pickups: ow.pickups.length, spawners: ow.spawners.length, pois: ow.poiList.length })
 `);
-check(`overworld ${owStats.w}x${owStats.h}, ${owStats.shrines} shrines`, owStats.shrines === 9);
-check(`overworld has ${owStats.npcs} npcs (10 expected)`, owStats.npcs === 10);
+check(`overworld ${owStats.w}x${owStats.h}, ${owStats.shrines} shrines`, owStats.shrines === 10);
+check(`overworld has ${owStats.npcs} npcs (11 expected)`, owStats.npcs === 11);
 check(`overworld portals (8 dungeon mouths + crypt door): ${owStats.portals}`, owStats.portals === 9);
 check(`chests=${owStats.chests} pickups=${owStats.pickups} spawners=${owStats.spawners}`,
   owStats.chests > 15 && owStats.pickups > 200 && owStats.spawners > 50);
@@ -610,6 +610,113 @@ check("quest target star resolves a poi", run(`{
 run(`Game.enterMap("overworld", 200*32, 206*32);`);
 frames(10);
 
+/* ---------------- fourth pass: enchanting, the coast, the cycle ---------------- */
+
+// the Strand: wreck, Senn, pearls, the Captain
+const strand = run(`{
+  const ow = World.getMap("overworld");
+  ({ senn: ow.npcs.some(n => n.id === "senn"),
+     veyra: ow.encounters.some(e => e.type === "captain_veyra"),
+     pearls: ow.pickups.filter(pk => pk.item === "tide_pearl" && pk.id.startsWith("pearl")).length,
+     wreck: (() => { let n = 0; for (let i = 0; i < ow.deco.length; i++) if (ow.deco[i] === D.WRECK) n++; return n; })(),
+     altars: ow.stations.filter(s => s.kind === "enchant").length,
+     shrine: ow.shrines.some(s => s.id === "shrine_strand") });
+}`);
+check(`Tidelost Strand: senn=${strand.senn} veyra=${strand.veyra} pearls=${strand.pearls} wreck=${strand.wreck} altars=${strand.altars}`,
+  strand.senn && strand.veyra && strand.pearls >= 4 && strand.wreck >= 4 && strand.altars === 2 && strand.shrine);
+
+// Tidelost quest chain: crew -> captain -> Senn
+run(`{
+  Game.enterMap("overworld", 152*32, 378*32);
+  QS.start("sq_tide");
+  for (let i = 0; i < 6; i++) QS.onKill("tidelost_drowned");
+}`);
+check("crew relieved, the Captain remains", run(`QS.stage("sq_tide")`) === 1);
+run(`{
+  const v = new Enemy("captain_veyra", G.player.x + 60, G.player.y);
+  G.entities.push(v);
+  let guard = 0;
+  while (!v.dead && guard++ < 80) Combat.applyDamage(v, {amount: 90, dtype: "phys", poiseDmg: 10, attacker: G.player});
+}`);
+check("Veyra yields Undertow", run(`G.player.hasItem("undertow") && QS.stage("sq_tide") === 2`));
+run(`QS.complete("sq_tide")`);
+check("the tide rests when the quest closes", run(`G.flags.tide_at_rest === true`));
+
+// enchanting: bind a flamebrand, verify damage rider and armor working
+run(`{
+  G.player.addItem("iron_sword", 1);
+  G.player.addItem("ember_residue", 2);
+  G.player.embers = 1000;
+  const before = G.player.embers;
+  // simulate the altar bind
+  G.player.embers -= 280;
+  G.player.removeItem("ember_residue", 2);
+  G.player.enchants.iron_sword = ["flamebrand"];
+  G.enchPaid = before - G.player.embers === 280;
+}`);
+check("flamebrand binds for embers and residue", run(`G.enchPaid && G.player.itemEnchants("iron_sword").includes("flamebrand")`));
+run(`{
+  G.player.equip.weapon = "iron_sword";
+  const e = new Enemy("wolf", G.player.x + 30, G.player.y);
+  G.entities.push(e);
+  G.player.facing = 0;
+  Combat.playerStrike(G.player, false);
+  G.enchBurn = (e.status.burn || 0) > 0 || e.dead;
+}`);
+check("flamebrand sets foes alight", run(`G.enchBurn`) === true);
+run(`{
+  G.player.addItem("iron_cuirass", 1);
+  G.player.equip.body = "iron_cuirass";
+  const a0 = G.player.armorTotal();
+  G.player.enchants.iron_cuirass = ["stonehide"];
+  G.enchArmor = G.player.armorTotal() > a0;
+  const h0 = G.player.calcHpMax();
+  G.player.enchants.iron_cuirass = ["emberheart"];
+  G.enchHp = G.player.calcHpMax() > h0;
+}`);
+check("armor workings raise armor and health", run(`G.enchArmor && G.enchHp`));
+
+// leech: Undertow drinks
+run(`{
+  G.player.equip.weapon = "undertow";
+  G.player.hp = 40;
+  const e = new Enemy("bandit", G.player.x + 30, G.player.y);
+  G.entities.push(e);
+  G.player.facing = 0;
+  Combat.playerStrike(G.player, false);
+  G.leeched = G.player.hp > 40;
+}`);
+check("Undertow leeches life on hit", run(`G.leeched`) === true);
+
+// the ending continues, and the cycle begins
+run(`{
+  G.flags.ending_chosen = "dark";
+  G.kept = { level: G.player.level, gold: G.player.gold, sword: G.player.hasItem("undertow"),
+             ench: !!G.player.enchants.iron_sword };
+  G.player.addItem("sigil_grave", 1);
+  Game.newCycle();
+}`);
+check("cycle increments and the main quest restarts", run(`G.cycle === 1 && QS.stage("mq_ember") === 0`));
+check("the pilgrim keeps level, gold, gear and workings", run(`
+  G.player.level === G.kept.level && G.player.gold === G.kept.gold &&
+  G.player.hasItem("undertow") === G.kept.sword && !!G.player.enchants.iron_sword === G.kept.ench
+`));
+check("the cycle reclaims its sigils and the ending flag", run(`!G.player.hasItem("sigil_grave") && !G.flags.ending_chosen`));
+check("cycle foes harden", run(`{
+  const w = new Enemy("wolf", 0, 0);
+  const tough = w.hpMax > ENEMY_TYPES.wolf.hp && w.emberMult > 1;
+  tough;
+}`));
+run(`{
+  // save/load round-trips the cycle
+  SaveSys.save(3);
+  G.cycle = 0;
+  Game.loadGame(3);
+}`);
+check("cycle survives save/load", run(`G.cycle`) === 1);
+run(`G.cycle = 0; Game.enterMap("overworld", 200*32, 206*32);`);
+frames(10);
+
 /* ---------------- first-person mode ---------------- */
 
 run(`Game.enterMap("overworld", 200*32, 206*32); G.viewMode = "fp";`);
@@ -665,7 +772,12 @@ run(`Game.enterMap("overworld", 200*32, 206*32); G.viewMode = "top";`);
 
 /* ---------------- ending ---------------- */
 
-run(`G.slainBosses.boss_maerodric = true; QS.onBoss("boss_maerodric");`);
+run(`{
+  // drive the main quest to the King's door regardless of prior test state
+  G.player.quests.mq_ember = { stage: 3, counts: {}, done: false };
+  G.slainBosses.boss_maerodric = true;
+  QS.onBoss("boss_maerodric");
+}`);
 check("Pale King's fall advances to the final choice", run(`QS.stage("mq_ember")`) === 4);
 run(`UI.runEnding("dark")`);
 check("ending completes the main quest", run(`QS.stage("mq_ember")`) === 999);

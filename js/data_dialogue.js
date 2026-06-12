@@ -63,6 +63,12 @@ const NPC_DEFS = {
     shop: { stock: ["small_hp_potion", "big_hp_potion", "warming_salve", "frostmoss", "troll_fat", "honey_mead", "frostplate_helm"] },
     bark: "Keep your blood moving, southerner.",
   },
+  senn: {
+    name: "Quartermaster Senn", town: "strand", role: "castaway",
+    look: { body: "#4a5a60", trim: "#c9a86a", hair: "#3a302a" },
+    shop: { stock: ["salt_cod", "antidote", "torch", "tide_pearl", "hunting_bow", "leather_strips"] },
+    bark: "Keep above the tide line after dark.",
+  },
   brann: {
     name: "Brann the Pitmaster", town: "gauntlet", role: "pitmaster",
     look: { body: "#5d4632", trim: "#c4502a", hair: "#2c2620" },
@@ -84,6 +90,7 @@ const DIALOGUES = {
   /* ============ SERAH — main quest spine ============ */
   serah: {
     entry: [
+      { cond: p => G.flags.ending_chosen && QS.stage("mq_ember") === 999 && !G.flags.serah_post, node: "post_end" },
       { cond: p => QS.stage("mq_ember") === 0, node: "mq_intro" },
       { cond: p => QS.stage("sq_glowcaps") === 1, node: "glowcaps_done" },
       { cond: p => QS.stage("sq_lamps") === 1, node: "lamps_done" },
@@ -129,6 +136,10 @@ const DIALOGUES = {
       pre_end: {
         text: "The King is dead, then. I felt the lamps gutter at noon, all of them at once, like the world blinking. Only the question is left now. Go and answer it. And — thank you. Whichever silence you choose, thank you.",
         choices: [{ text: "Goodbye, Serah.", next: null }],
+      },
+      post_end: {
+        text: "*Serah studies you the way one studies a lamp that should have gone out and didn't.* So. You answered, and the world is still here, and so are you — which no scripture of my order ever predicted, by the way. Walk it. Finish what's unfinished. And when the question starts asking itself again — and it will, it always does — any shrine knows the way down to the next cycle.",
+        choices: [{ text: "I'll keep walking.", next: "hub", action: () => { G.flags.serah_post = true; } }],
       },
       glowcaps_done: {
         text: "Glowcaps! And barely bruised. Watch — a little oil, a little patience... there. Your flask drinks deeper now. The light looks after those who carry it.",
@@ -499,6 +510,52 @@ const DIALOGUES = {
         text: "FIVE. *He spits into the brazier, which is how pit-folk applaud.* Twenty years I've watched that sand eat better-armored fools. A champion's due, as promised" + "—" + "and the pit's open to you whenever the road feels too polite.",
         choices: [{ text: "(Receive the champion's due)", next: "hub",
           action: p => { QS.complete("sq_arena"); if (G.flags.gauntlet_double) { p.gold += 300; G.msg("Brann doubles the purse, as persuaded. +300 gold", "good"); } } }],
+      },
+    },
+  },
+
+  senn: {
+    entry: [
+      { cond: p => QS.stage("sq_tide") === 2, node: "tide_done" },
+      { cond: p => QS.stage("sq_pearls") === 1, node: "pearls_done" },
+      { cond: () => true, node: "hub" },
+    ],
+    nodes: {
+      hub: {
+        text: "Quartermaster Senn, of the GLAD PENNY — the ship you can see the ribs of, there, where the sand keeps her. Trade if you like; I salvage more than I can eat. And keep above the tide line after dark, pilgrim. The watch below is... diligent.",
+        choices: [
+          { text: "Trade.", next: null, action: () => UI.openShop("senn") },
+          { text: "What happened to your ship?", next: "lore_wreck" },
+          { text: "The watch below?", next: "tide_ask", cond: () => QS.stage("sq_tide") === -1 },
+          { text: "Need anything gathered?", next: "pearls_ask", cond: () => QS.stage("sq_pearls") === -1 && QS.stage("sq_tide") >= 1 },
+          { text: "Mind the tide, Quartermaster.", next: null },
+        ],
+      },
+      lore_wreck: {
+        text: "Wreckers' lamps on the headland, a reef where the chart said channel, and the PENNY opened like a purse. I came ashore holding the ledger. Thirty-one others came ashore holding nothing... and then, three weeks later, they came ashore anyway. The sea doesn't keep what it drowns. Everyone knows that, and everyone is wrong about what it means.",
+        choices: [{ text: "Go on.", next: "hub" }],
+      },
+      tide_ask: {
+        text: "*She looks at the water a long time.* My crew. The Tidelost. They walk the strand at low tide, still on duty, because drowned captains keep command — and Veyra is down there with the whole watch-bill in her fist. They cannot dismiss themselves, pilgrim. Someone has to relieve the watch. Put the crew down kindly, and then... then the Captain. Tell her the ledger's balanced. She'll know my hand.",
+        choices: [
+          { text: "I'll relieve the watch. (Quest: The Tidelost Crew)", next: null, action: () => QS.start("sq_tide") },
+          { text: "The sea's business is the sea's.", next: null },
+        ],
+      },
+      tide_done: {
+        text: "*You tell her how the Captain went down the second time — easier than the first, you'd swear it.* ...Aye. She held them at stations four hundred fathoms past the end of the world, because nobody ever told her to stand down. You did. *She pulls Undertow's empty scabbard from the salvage pile and gives you the gold meant for the crew's last wages.* Spend it on the living, hey?",
+        choices: [{ text: "(Receive reward)", next: "hub", action: () => QS.complete("sq_tide") }],
+      },
+      pearls_ask: {
+        text: "Tideglass pearls. The sea makes them of whatever it regrets, and after a wreck like ours the surf is rich with regret. The Lampwrights pay handsomely — they bind workings with them. Four good pearls and I can buy passage somewhere the water doesn't know my name.",
+        choices: [
+          { text: "Four pearls, then. (Quest: Salt and Silver)", next: null, action: () => QS.start("sq_pearls") },
+          { text: "Harvest your own regrets.", next: null },
+        ],
+      },
+      pearls_done: {
+        text: "Four — and clean ones. That's passage, with enough left over for this: take the rest of my pearl-pouch and the salvage coin. If you're working altars with them, work one for me. Something that keeps a person above the water line.",
+        choices: [{ text: "(Receive reward)", next: "hub", action: () => QS.complete("sq_pearls") }],
       },
     },
   },

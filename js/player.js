@@ -39,6 +39,7 @@ class Player extends Entity {
     this.honing = {};        // weaponId -> forge tier (0-3)
     this.fpPitch = 0;        // first-person look pitch
     this.stepT = 0;          // footstep cadence
+    this.enchants = {};      // itemId -> [enchantId, ...]
 
     // starting gear
     for (const slot in o.gear) {
@@ -83,9 +84,9 @@ class Player extends Entity {
 
   /* ---------------- derived stats ---------------- */
 
-  calcHpMax() { return 80 + this.attrs.vig * 14 + (this.trinketBonus("maxHp") || 0); }
+  calcHpMax() { return Math.round(80 + this.attrs.vig * 14 + (this.trinketBonus("maxHp") || 0) + this.enchBonus("maxHp")); }
   calcStamMax() { return 60 + this.attrs.end * 9; }
-  calcMagMax() { return 40 + this.attrs.mnd * 11 + (this.trinketBonus("maxMag") || 0); }
+  calcMagMax() { return Math.round(40 + this.attrs.mnd * 11 + (this.trinketBonus("maxMag") || 0) + this.enchBonus("maxMag")); }
   equipLoadMax() { return 40 + this.attrs.end * 3 + this.attrs.str; }
 
   equipLoad() {
@@ -142,6 +143,7 @@ class Player extends Entity {
       a += v;
     }
     if (this.buffs.stoneskin) a += this.buffs.stoneskin.armor;
+    a += this.enchBonus("armor");
     return a;
   }
 
@@ -154,6 +156,7 @@ class Player extends Entity {
     if (dtype === "poison" && this.hasPerk("al_3")) r += 25;
     if (dtype === "frost" && this.buffs.warm) r += this.buffs.warm.frostRes;
     r += this.attrs.wil * 0.6;
+    r += this.enchResist(dtype);
     return Math.min(80, r);
   }
 
@@ -186,6 +189,44 @@ class Player extends Entity {
     return Math.max(1, Math.floor(it.value * Math.min(0.8, m)));
   }
   canPersuade() { return this.hasPerk("sp_2") || this.skills.speech.lvl >= 40; }
+
+  /* ---- enchanting ---- */
+
+  enchPotency() {
+    let m = 1 + this.skills.enchanting.lvl * 0.004;
+    if (this.hasPerk("en_4")) m *= 1.5;
+    else if (this.hasPerk("en_1")) m *= 1.25;
+    return m;
+  }
+  itemEnchants(itemId) { return this.enchants[itemId] || []; }
+  // summed numeric enchant bonus of a given key across equipped armor/shield
+  enchBonus(key) {
+    let total = 0;
+    const pot = this.enchPotency();
+    for (const slot of ["head", "body", "legs", "shield"]) {
+      const id = this.equip[slot];
+      if (!id) continue;
+      for (const eid of this.itemEnchants(id)) {
+        const en = ENCHANTS[eid];
+        if (en && en[key]) total += en[key] * pot;
+      }
+    }
+    return total;
+  }
+  // elemental resist from armor enchants
+  enchResist(dtype) {
+    let total = 0;
+    const pot = this.enchPotency();
+    for (const slot of ["head", "body", "legs", "shield"]) {
+      const id = this.equip[slot];
+      if (!id) continue;
+      for (const eid of this.itemEnchants(id)) {
+        const en = ENCHANTS[eid];
+        if (en && en.edef && en.edef[dtype]) total += en.edef[dtype] * pot;
+      }
+    }
+    return total;
+  }
 
   sneakBonus() {
     let b = 0;
@@ -380,7 +421,7 @@ class Player extends Entity {
 
     // passive regen
     if (this.stamLock <= 0 && !this.blocking && !this.sprinting) {
-      let rs = 16 + this.attrs.end * 0.7 + (this.trinketBonus("stamRegen") || 0);
+      let rs = 16 + this.attrs.end * 0.7 + (this.trinketBonus("stamRegen") || 0) + this.enchBonus("stamRegen");
       if (this.crouched) rs *= 1.2;
       this.stam = Math.min(this.stamMax, this.stam + rs * dt);
     }
@@ -583,7 +624,7 @@ class Player extends Entity {
       flask: this.flask, x: this.x, y: this.y, hp: this.hp, stam: this.stam, mag: this.mag,
       respawn: this.respawn, quests: this.quests, readBooks: this.readBooks,
       undimmedUsed: this.undimmedUsed, statsKills: this.statsKills, statsDeaths: this.statsDeaths,
-      quickItem: this.quickItem, honing: this.honing,
+      quickItem: this.quickItem, honing: this.honing, enchants: this.enchants,
     };
   }
 
@@ -607,6 +648,8 @@ class Player extends Entity {
     p.statsKills = d.statsKills || 0; p.statsDeaths = d.statsDeaths || 0;
     p.quickItem = d.quickItem || null;
     p.honing = d.honing || {};
+    p.enchants = d.enchants || {};
+    p.hpMax = p.calcHpMax(); p.magMax = p.calcMagMax();
     return p;
   }
 }

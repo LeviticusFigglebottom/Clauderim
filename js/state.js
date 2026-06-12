@@ -16,6 +16,7 @@ const G = {
   H: 720,
 
   seed: 0,            // world seed (fixed per save)
+  cycle: 0,           // NG+ depth: how many times the Ember has asked
   player: null,
   map: null,          // current active map object
   maps: {},           // mapId -> generated map (interiors cached)
@@ -113,9 +114,14 @@ const G = {
   // returns 0..1 darkness factor by world clock (0 = noon, 1 = deep night)
   darkness() {
     const h = G.time.hour;
-    if (h >= 7 && h <= 17) return 0;
-    if (h > 17 && h < 21) return (h - 17) / 4;        // dusk
-    if (h >= 21 || h <= 4) return 1;                  // night
-    return 1 - (h - 4) / 3;                            // dawn 4-7
+    let d;
+    if (h >= 7 && h <= 17) d = 0;
+    else if (h > 17 && h < 21) d = (h - 17) / 4;       // dusk
+    else if (h >= 21 || h <= 4) d = 1;                 // night
+    else d = 1 - (h - 4) / 3;                          // dawn 4-7
+    // the world remembers your answer at the vault
+    if (G.flags.ending_chosen === "kindle") d *= 0.85;        // the lamps burn warmer
+    else if (G.flags.ending_chosen === "dark") d = Math.min(1, d * 1.08); // the dusk leans in
+    return d;
   },
 };

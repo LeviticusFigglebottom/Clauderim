@@ -615,6 +615,40 @@ const Render = {
         ctx.fillRect(x - 2 + h * 4, y - 12, 2, 2);
         break;
       }
+      case D.WRECK: {
+        // a rib of the hull, barnacled
+        ctx.strokeStyle = "#3a3026"; ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(x - 8, y + 6);
+        ctx.quadraticCurveTo(x + (h > 0.5 ? 10 : -10), y - 18, x + (h > 0.5 ? 4 : -4), y - 30);
+        ctx.stroke();
+        ctx.strokeStyle = "#4a4036"; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - 6, y + 4);
+        ctx.quadraticCurveTo(x + (h > 0.5 ? 8 : -8), y - 16, x + (h > 0.5 ? 3 : -3), y - 26);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(120,160,150,0.5)";
+        ctx.fillRect(x - 4 + h * 6, y - 12, 3, 3);
+        break;
+      }
+      case D.ALTAR: {
+        ctx.fillStyle = "rgba(0,0,0,0.25)";
+        ctx.beginPath(); ctx.ellipse(x, y + 5, 9, 4, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = "#4a4456";
+        ctx.fillRect(x - 6, y - 10, 12, 16);
+        ctx.fillStyle = "#5d5870";
+        ctx.fillRect(x - 8, y - 13, 16, 4);
+        const fl2 = 0.6 + 0.4 * Math.sin(G.elapsed * 3 + x);
+        ctx.save();
+        ctx.shadowColor = "#c8b8e8"; ctx.shadowBlur = 12;
+        ctx.strokeStyle = `rgba(200,184,232,${fl2})`;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(x, y - 20, 5 + fl2 * 1.5, 0, TAU); ctx.stroke();
+        ctx.fillStyle = `rgba(200,184,232,${fl2})`;
+        ctx.beginPath(); ctx.arc(x, y - 20, 2, 0, TAU); ctx.fill();
+        ctx.restore();
+        break;
+      }
       case D.EMBERVAULT: {
         ctx.fillStyle = "#393733";
         ctx.beginPath(); ctx.arc(x, y, 14, 0, TAU); ctx.fill();
@@ -805,6 +839,31 @@ const Render = {
       if (look.crown) {
         ctx.fillStyle = "#d8d4cc";
         ctx.fillRect(fx * 2 - 5 * s, fy * 2 - 15 * s, 10 * s, 3 * s);
+      }
+      if (look.hat) {
+        // a drowned captain keeps her tricorn
+        ctx.fillStyle = "#2c2a26";
+        ctx.beginPath();
+        ctx.ellipse(fx * 2, fy * 2 - 13 * s, 7 * s, 3 * s, 0, 0, TAU);
+        ctx.fill();
+        ctx.fillRect(fx * 2 - 3 * s, fy * 2 - 16 * s, 6 * s, 3 * s);
+      }
+      if (look.kelp) {
+        ctx.strokeStyle = "rgba(60,90,70,0.8)"; ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(-4 * s, -6 * s); ctx.lineTo(-6 * s, 4 * s + Math.sin(G.elapsed * 2 + e.bobT) * 2);
+        ctx.moveTo(3 * s, -8 * s); ctx.lineTo(5 * s, 2 * s);
+        ctx.stroke();
+      }
+      if (look.banner) {
+        ctx.strokeStyle = "#6d8290"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(-6 * s, 4 * s); ctx.lineTo(-10 * s, -22 * s); ctx.stroke();
+        ctx.fillStyle = "rgba(196,210,218,0.85)";
+        ctx.beginPath();
+        ctx.moveTo(-10 * s, -22 * s);
+        ctx.lineTo(-10 * s + 12 + Math.sin(G.elapsed * 2.5) * 2, -19 * s);
+        ctx.lineTo(-10 * s, -15 * s);
+        ctx.closePath(); ctx.fill();
       }
       // weapon
       if (look.weapon && !isNpc) {

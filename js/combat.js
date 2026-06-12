@@ -81,10 +81,29 @@ const Combat = {
       const edmg = Object.assign({}, w && w.edmg);
       if (w && w.skill === "onehand" && !heavy && p.hasPerk("oh_2") && Math.random() < 0.2) edmg.bleed = 5;
 
-      this.applyDamage(e, {
+      // enchantments ride the edge
+      let bonusVs = w && w.bonusVs, leech = (w && w.leech) || 0;
+      if (w) {
+        const pot = p.enchPotency();
+        for (const eid of p.itemEnchants(w.id)) {
+          const en = ENCHANTS[eid];
+          if (!en) continue;
+          if (en.edmg) for (const t2 in en.edmg) edmg[t2] = (edmg[t2] || 0) + en.edmg[t2] * pot;
+          if (en.leech) leech += en.leech * pot;
+          if (en.bonusVs) bonusVs = en.bonusVs;
+        }
+      }
+
+      const dealt = this.applyDamage(e, {
         amount: dmg, dtype: "phys", edmg, poiseDmg, sneak, crit,
-        attacker: p, bonusVs: w && w.bonusVs,
+        attacker: p, bonusVs,
       });
+      if (leech > 0 && dealt > 0) {
+        p.heal(dealt * leech);
+        if (w && p.itemEnchants(w.id).length) p.gainSkill("enchanting", 2);
+      } else if (w && p.itemEnchants(w.id).length) {
+        p.gainSkill("enchanting", 1.5);
+      }
       if (w) p.gainSkill(w.skill, heavy ? 9 : 6);
       else p.gainSkill("onehand", 3);
 
@@ -168,7 +187,7 @@ const Combat = {
     // a Warden unengaged is a Warden unharmed — no sniping bosses through their gates
     if (def.boss && !e.engaged) {
       G.float(e.x, e.y - e.r - 14, "unmoved", "#8a8378", 13);
-      return;
+      return 0;
     }
 
     let dmg = info.amount;
@@ -235,6 +254,7 @@ const Combat = {
     if (!def.boss) e.enterChase();
 
     if (e.hp <= 0) this.killEnemy(e);
+    return dmg;
   },
 
   killEnemy(e) {
@@ -249,7 +269,7 @@ const Combat = {
 
     if (p && !p.dead) {
       p.statsKills++;
-      p.gainEmbers(Math.round((def.embers || 0) * (e.elite ? 3 : 1)));
+      p.gainEmbers(Math.round((def.embers || 0) * (e.elite ? 3 : 1) * (e.emberMult || 1)));
       if (e.elite) G.msg(`The ashen ${def.name} crumbles.`, "ember");
       // loot: one weighted roll
       if (def.loot && def.loot.length) {

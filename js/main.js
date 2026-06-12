@@ -34,6 +34,7 @@ const Game = {
 
   newGame(name, originId) {
     G.seed = (U.hashStr(name) ^ 0x5EED1) >>> 0;
+    G.cycle = 0;
     G.flags = {}; G.openedChests = {}; G.slainBosses = {};
     G.discoveredShrines = {}; G.discoveredPois = {};
     G.lostEmbers = null; G.maps = {}; G.overworld = null; G.bossFight = null;
@@ -78,6 +79,46 @@ const Game = {
     G.setState("play");
     G.banner(World.regionNameAt(G.map, G.player.x, G.player.y));
     G.msg("The shrine breathes you back. Welcome again, Emberborn.", "ember");
+    this.lastRegion = "";
+  },
+
+  /* ---------------- the next cycle (NG+) ---------------- */
+
+  newCycle() {
+    const p = G.player;
+    G.cycle = (G.cycle || 0) + 1;
+    // the March renews: world state resets, the pilgrim endures
+    G.flags = {}; G.openedChests = {}; G.slainBosses = {};
+    G.discoveredShrines = { first_shrine: true };
+    G.discoveredPois = {};
+    G.lostEmbers = null; G.maps = {}; G.overworld = null; G.bossFight = null;
+    G.gauntletActive = false;
+    G.time = { day: 1, hour: 8.5 };
+    G.weather = { kind: "clear", t: 0, next: 70, intensity: 0 };
+    Render.chunkCache.clear();
+    Render.minimapCanvas = null;
+
+    // the cycle reclaims its tokens; your strength, gear and words remain
+    for (const key of ["sigil_grave", "sigil_mire", "sigil_frost", "sigil_ash",
+      "crypt_key", "citadel_key", "medicine_parcel", "pass_warhorn", "drowned_bell_clapper"]) {
+      while (p.hasItem(key)) p.removeItem(key, 1);
+    }
+    p.quests = {};
+    p.hp = p.hpMax; p.stam = p.stamMax; p.mag = p.magMax;
+    p.flask.charges = p.flask.max;
+    p.status = {}; p.buffs = {}; p.undimmedUsed = false;
+    QS.start("mq_ember");
+
+    const ow = World.getMap("overworld");
+    const first = ow.shrines.find(s => s.id === "first_shrine");
+    p.respawn = { map: "overworld", x: first.x + 20, y: first.y + 26, shrine: "first_shrine" };
+    U.show("hud-dom");
+    this.enterMap("overworld", first.x + 20, first.y + 26, true);
+    G.setState("play");
+    G.banner("CYCLE " + U.roman(G.cycle + 1), "the Ember gutters again · the March does not remember — you do");
+    G.msg("The shrine breathes you out once more. The world is harder this time; so are you.", "ember");
+    Music.setMood("world");
+    SaveSys.save(G.saveSlot);
     this.lastRegion = "";
   },
 
@@ -240,6 +281,8 @@ const Game = {
         if (!G.flags.pass_at_rest) consider(st.x, st.y, 50, "passcairn", st, "Sound the charge at the great cairn");
       } else if (st.kind === "gauntlet") {
         if (!G.gauntletActive) consider(st.x, st.y, 50, "gauntlet", st, `Light the brazier — wave ${(G.flags.gauntlet_wave || 0) + 1}`);
+      } else if (st.kind === "enchant") {
+        consider(st.x, st.y, 46, "station", st, "Work the Lampwright's altar");
       } else {
         consider(st.x, st.y, 46, "station", st, st.kind === "smith" ? "Use the forge" : "Use the alchemy bench");
       }
@@ -305,7 +348,11 @@ const Game = {
         break;
       }
       case "portal": this.usePortal(t.obj); break;
-      case "station": UI.openCraft(t.obj.kind === "campfire" ? "cook" : t.obj.kind); break;
+      case "station": {
+        if (t.obj.kind === "enchant") UI.openEnchant();
+        else UI.openCraft(t.obj.kind === "campfire" ? "cook" : t.obj.kind);
+        break;
+      }
       case "vault": UI.openEndingChoice(); break;
       case "well": {
         p.heal(12);

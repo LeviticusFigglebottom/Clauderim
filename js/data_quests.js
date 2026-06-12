@@ -241,6 +241,43 @@ const QUESTS = {
     rewardText: "Brann slid the Spark-Champion's Ring across the rail. 'Forge-slag of a hundred broken blades. Wear what didn't survive you.'",
   },
 
+  sq_tide: {
+    name: "The Tidelost Crew", type: "side",
+    stages: [
+      {
+        journal: "Quartermaster Senn's drowned crew still stand their watch off the Tidelost Strand, walking ashore at low tide with their orders unfinished. She asked me to relieve the watch — six of the Tidelost, put down kindly.",
+        objective: { kind: "kill", enemy: "tidelost_drowned", count: 6, hint: "Relieve the Tidelost watch (0/6)", targetPoi: "strand" },
+      },
+      {
+        journal: "The crew is dismissed. Their captain is not — Veyra holds the wreck of the GLAD PENNY, keeping a four-hundred-fathom watch nobody ordered her to keep. Tell her the ledger's balanced. With steel, most likely.",
+        objective: { kind: "kill", enemy: "captain_veyra", count: 1, hint: "Stand down Captain Veyra at the wreck (0/1)", targetPoi: "strand" },
+      },
+      {
+        journal: "The Captain went down a second time — easier than the first, I'd swear it. Senn will want to know the watch is over.",
+        objective: { kind: "talk", npc: "senn", hint: "Tell Senn the watch is relieved" },
+      },
+    ],
+    rewards: { gold: 350, embers: 400 },
+    completeFlag: "tide_at_rest",
+    rewardText: "Senn paid out the crew's last wages — to you, the only one left on the books.",
+  },
+
+  sq_pearls: {
+    name: "Salt and Silver", type: "side",
+    stages: [
+      {
+        journal: "Senn wants four tideglass pearls from the surf line — passage money, she says, to somewhere the water doesn't know her name. The sea makes pearls of whatever it regrets, and this coast is rich with regret.",
+        objective: { kind: "collect", item: "tide_pearl", count: 4, hint: "Gather Tideglass Pearls (need 4)", targetPoi: "strand" },
+      },
+      {
+        journal: "Four pearls, cold as the deep they came from. Senn is waiting above the tide line.",
+        objective: { kind: "talk", npc: "senn", hint: "Bring the pearls to Senn" },
+      },
+    ],
+    rewards: { gold: 220, items: [["tide_pearl", 3]], embers: 200 },
+    rewardText: "Senn kept four pearls for passage and pressed the rest of her pouch on you — 'Work an altar with them. Something that floats.'",
+  },
+
   sq_blooms: {
     name: "Ash and Blossom", type: "side",
     stages: [

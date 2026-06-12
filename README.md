@@ -102,9 +102,10 @@ and a living spawn ecology.
 - **Resting wakes the world**: shrines restore you and respawn every non-boss enemy.
 - **Six attributes** (Vigor, Endurance, Mind, Strength, Finesse, Will), Dark Souls level
   costs, weapon **scaling letters** (S/A/B/…) per attribute.
-- **12 use-based skills** (One-/Two-Handed, Archery, Block, Light/Heavy Armor, Destruction,
-  Restoration, Sneak, Smithing, Alchemy, **Speech**), each with a 4-perk tree; a perk point
-  every 5th skill level. Speech moves shop prices and unlocks **persuasion** in dialogue.
+- **13 use-based skills** (One-/Two-Handed, Archery, Block, Light/Heavy Armor, Destruction,
+  Restoration, Sneak, Smithing, Alchemy, **Speech**, **Enchanting**), each with a 4-perk
+  tree; a perk point every 5th skill level. Speech moves shop prices and unlocks
+  **persuasion** in dialogue.
 - **Equip load** sets your roll: fast / medium / fat / none.
 - **Poise & stagger**, parry → riposte windows, guard breaks, backstab sneak multipliers,
   shield-bearing enemies that block.
@@ -112,16 +113,23 @@ and a living spawn ecology.
 - **11 spells** across Destruction and Restoration; staves amplify spell power.
 - **4 Edicts** (shouts) taken from the Wardens' corpses: VAL (force), SUTH (life-drain),
   KYR (time-slow), THUR (fire breath).
-- **Crafting**: smithing at forges (ore → ingots → steel and silvered weapons), **weapon
-  honing** (+8%/tier, three tiers), alchemy at benches (8 gatherable reagents grown by
-  biome), and **cooking** hunted meat at campfires — all perk- or skill-gated.
+- **Crafting, three pillars + two trades**: smithing at forges (ore → ingots → steel and
+  silvered weapons) with **weapon honing** (+8%/tier), alchemy at benches (9 gatherable
+  reagents grown by biome), **enchanting at Lampwright altars** (eleven ember-powered
+  workings: elemental brands, lifesteal, wards, vitality — potency scales with the skill),
+  and **cooking** hunted meat at campfires.
 - **Quick slot** (`T`), grave-searching (loot or angry tenants), drinkable wells,
   parry/heavy-hit **hit-stop**, low-health vignette, lost-ember compass beacon.
 - **~80 items** — weapons, armor sets (light/heavy with stealth and resist identities),
   shields, trinkets, consumables, bombs — every one carrying its own lore line.
 - **10 readable in-world books** of deep lore, sold by fitting vendors and found in chests.
-- **9 side quests + the main questline** with a journal, objective tracker, compass quest
-  markers, and a final binary choice that decides the fate of the First Ember (two endings).
+- **11 side quests + the main questline** with a journal, objective tracker, compass quest
+  markers, and a final binary choice over the First Ember — after which **the world goes
+  on**: keep playing in your changed March, or begin the **next cycle** (NG+) at any
+  shrine — the world renews and hardens, and you keep everything you are and carry.
+- **The Cinder Coast**: the Tidelost Strand, where Quartermaster Senn camps beside the
+  ribs of the GLAD PENNY and her drowned crew still keeps station — relieve the watch,
+  stand down Captain Veyra, and harvest tideglass pearls for the altars.
 - **The White Pass**: two armies frozen mid-charge for four hundred years — search the
   soldiers (some object), fell the Hymnkeeper, and sound the horn that ends their watch.
 - **The Gauntlet of Sparks**: Brann's wave-survival pit. Embers per wave, a champion's

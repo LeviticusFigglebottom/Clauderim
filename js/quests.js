@@ -68,6 +68,7 @@ const QS = {
       p.flask.max += r.flaskUp;
       p.flask.charges = p.flask.max;
     }
+    if (q.completeFlag) G.flags[q.completeFlag] = true;
     if (q.rewardText) G.msg(q.rewardText, "good");
     G.questToast("QUEST COMPLETE", q.name);
     Sfx.play("quest_done");

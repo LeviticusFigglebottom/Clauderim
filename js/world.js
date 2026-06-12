@@ -25,15 +25,16 @@ const D = {
   NONE: 0, TREE: 1, PINE: 2, DEADTREE: 3, ROCK: 4, BUSH: 5,
   SWAMPTREE: 6, BOULDER: 7, ANVIL: 8, ALCH: 9, WELL: 10, LAMP: 11,
   CAIRN: 12, GRAVE: 13, BARREL: 14, TABLE: 15, EMBERVAULT: 16, PILLAR: 17,
-  FROZEN: 18,
+  FROZEN: 18, WRECK: 19, ALTAR: 20,
 };
 const SOLID_DECO = new Set([D.TREE, D.PINE, D.DEADTREE, D.ROCK, D.SWAMPTREE, D.BOULDER,
-  D.ANVIL, D.ALCH, D.WELL, D.CAIRN, D.BARREL, D.TABLE, D.EMBERVAULT, D.PILLAR, D.FROZEN]);
+  D.ANVIL, D.ALCH, D.WELL, D.CAIRN, D.BARREL, D.TABLE, D.EMBERVAULT, D.PILLAR, D.FROZEN,
+  D.WRECK, D.ALTAR]);
 
 /* biome ids */
 const B = { HEART: 0, FOREST: 1, MIRE: 2, FROST: 3, ASHLAND: 4, COAST: 5 };
 const BIOME_NAMES = ["The Heartlands", "The Greywood", "Mirkfen Mire", "The Frostpeaks", "The Ashlands", "The Cinder Coast"];
-const BIOME_TABLE_KEYS = ["heartlands", "forest", "mire", "frostpeaks", "ashlands", "heartlands"];
+const BIOME_TABLE_KEYS = ["heartlands", "forest", "mire", "frostpeaks", "ashlands", "coast"];
 
 const GATHER_BY_BIOME = {
   0: ["marrowroot", "glowcap", "wolfsbane"],
@@ -41,7 +42,7 @@ const GATHER_BY_BIOME = {
   2: ["mireweed", "glowcap", "ghost_fern"],
   3: ["frostmoss", "wolfsbane"],
   4: ["emberbloom", "marrowroot"],
-  5: ["glowcap"],
+  5: ["tide_pearl", "glowcap"],
 };
 
 const World = {
@@ -131,6 +132,7 @@ const World = {
       { id: "camp_gallows", name: "Gallows Hill", kind: "camp", tx: 158, ty: 262 },
       { id: "camp_shiver", name: "Shiverwatch Ruin", kind: "camp", tx: 226, ty: 96 },
       { id: "white_pass", name: "The White Pass", kind: "battlefield", tx: 230, ty: 72 },
+      { id: "strand", name: "Tidelost Strand", kind: "camp", tx: 152, ty: 382 },
       { id: "gauntlet", name: "The Gauntlet of Sparks", kind: "dungeon", tx: 216, ty: 226, interior: "gauntlet" },
     ];
 
@@ -139,6 +141,7 @@ const World = {
     this.stampFrosthollow(map);
     this.stampWatchtower(map);
     this.stampWhitePass(map, rng);
+    this.stampStrand(map, rng);
     for (const p of map.poiList) if (p.interior) this.stampDungeonMouth(map, p);
 
     /* ---- roads ---- */
@@ -277,6 +280,8 @@ const World = {
     this.stampBuilding(map, cx - 4, cy - 12, 9, 7, {});                     // the Guttered Candle (inn)
     this.stampBuilding(map, cx + 5, cy + 3, 6, 5, {});                      // Ralka's lodge
     this.stampBuilding(map, cx - 10, cy + 3, 6, 5, {});                     // lamp-house (Serah)
+    this.setDeco(map, cx - 9, cy + 4, D.ALTAR);
+    map.stations.push({ kind: "enchant", x: (cx - 9) * TILE + 16, y: (cy + 4) * TILE + 16 });
 
     this.setDeco(map, cx, cy, D.WELL);
     this.setDeco(map, cx - 3, cy + 2, D.LAMP);
@@ -364,6 +369,8 @@ const World = {
     map.safeZones.push({ x: cx * TILE, y: cy * TILE, r: 240 });
     this.stampBuilding(map, cx - 3, cy - 3, 7, 7, { wall: T.WALL_STONE, floor: T.FLOOR_STONE });
     this.placeNpc(map, "caldus", cx, cy);
+    this.setDeco(map, cx + 2, cy - 2, D.ALTAR);
+    map.stations.push({ kind: "enchant", x: (cx + 2) * TILE + 16, y: (cy - 2) * TILE + 16 });
   },
 
   /* ---- bandit camp ---- */
@@ -406,6 +413,48 @@ const World = {
     map.spawners.push({ x: cx * TILE, y: cy * TILE, r: 280, table: "whitepass", max: 4, members: [], cd: 0 });
     this.placeChest(map, cx - 11, cy + 6, "chest_rare");
   }, 
+
+  /* ---- Tidelost Strand: a wreck, a castaway, and a drowned crew ---- */
+  stampStrand(map, rng) {
+    const cx = 152, cy = 382;
+    // carve the cove: sand up from the surf
+    for (let y = cy - 6; y <= cy + 8; y++) {
+      for (let x = cx - 14; x <= cx + 14; x++) {
+        if (!this.inBounds(map, x, y)) continue;
+        const i = y * map.w + x;
+        if (y > cy + 5) { map.tiles[i] = T.WATER; map.deco[i] = D.NONE; continue; }
+        map.tiles[i] = T.SAND;
+        map.deco[i] = D.NONE;
+        map.biome[i] = B.COAST;
+      }
+    }
+    // the GLAD PENNY, what's left of her
+    for (const [dx, dy] of [[-6, 3], [-4, 4], [-2, 4], [0, 4], [2, 4], [4, 3]]) {
+      this.setDeco(map, cx + dx, cy + dy, D.WRECK);
+    }
+    this.setDeco(map, cx - 1, cy + 2, D.BARREL);
+    this.setDeco(map, cx + 3, cy + 2, D.BARREL);
+    // Senn's camp above the tide line
+    map.safeZones.push({ x: cx * TILE, y: (cy - 4) * TILE, r: 200 });
+    map.stations.push({ kind: "campfire", x: cx * TILE + 16, y: (cy - 4) * TILE + 16 });
+    map.lights.push({ x: cx * TILE + 16, y: (cy - 4) * TILE + 16, r: 110, color: "255,150,60", flicker: true });
+    this.placeNpc(map, "senn", cx + 2, cy - 4, cx + 2, cy - 4);
+    // her crew keeps station offshore... and ashore
+    map.spawners.push({ x: (cx - 8) * TILE, y: cy * TILE, r: 240, table: "coast", max: 4, members: [], cd: 0 });
+    map.spawners.push({ x: (cx + 9) * TILE, y: (cy - 2) * TILE, r: 240, table: "coast", max: 3, members: [], cd: 0 });
+    // the Captain holds the wreck
+    map.encounters.push({ idx: "veyra", type: "captain_veyra", x: (cx - 2) * TILE + 16, y: (cy + 3) * TILE + 16, unlessFlag: "tide_at_rest" });
+    // pearls glint along the surf line
+    for (let n = 0; n < 7; n++) {
+      const px2 = cx - 12 + U.randi(rng, 0, 24), py2 = cy + 4 + U.randi(rng, 0, 1);
+      if (!this.inBounds(map, px2, py2)) continue;
+      if (map.tiles[py2 * map.w + px2] !== T.SAND) continue;
+      map.pickups.push({ id: "pearl" + n, item: "tide_pearl", n: 1, x: px2 * TILE + 16, y: py2 * TILE + 16 });
+    }
+    this.placeChest(map, cx + 8, cy + 1, "chest_rare");
+    map.shrines.push({ id: "shrine_strand", name: "Strand Shrine", x: (cx - 9) * TILE + 16, y: (cy - 4) * TILE + 16 });
+    map.lights.push({ x: (cx - 9) * TILE + 16, y: (cy - 4) * TILE + 16, r: 120, color: "255,150,60", flicker: true });
+  },
 
   /* ---- stone mouth of a dungeon, with portal ---- */
   stampDungeonMouth(map, poi) {

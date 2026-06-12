@@ -145,6 +145,12 @@ const ITEMS = {
     scale: { str: "D", fin: "A" }, edmg: { frost: 8 },
     lore: "Carried at the White Pass by a soldier whose name the song forgot. It makes no sound when swung — the quiet goes ahead of the edge, and arrives first."
   },
+  undertow: {
+    name: "Undertow", type: "weapon", wclass: "1h", skill: "onehand",
+    dmg: 24, spd: 1.65, reach: 54, stam: 11, poiseDmg: 16, weight: 4, value: 1100, rarity: "unique",
+    scale: { str: "E", fin: "A" }, edmg: { frost: 5 }, leech: 0.08,
+    lore: "Captain Veyra's cutlass, which drank with her crew for thirty years and never learned to stop. What it takes from others, it gives to the hand that holds it."
+  },
 
   /* =================== BOWS =================== */
 
@@ -362,6 +368,10 @@ const ITEMS = {
     lore: "A moment of deep winter, paused." },
   ember_residue: { name: "Ember Residue", type: "material", weight: 0.1, value: 50, rarity: "rare",
     lore: "What remains when something refuses to stop burning." },
+  tide_pearl: { name: "Tideglass Pearl", type: "material", weight: 0.1, value: 55, rarity: "rare",
+    lore: "The sea makes these of whatever it regrets. The Lampwrights prize them for enchanting; the tide always wants them back." },
+  salt_cod: { name: "Salt Cod", type: "consumable", weight: 0.3, value: 9, rarity: "common",
+    use: { hp: 16, stam: 10 }, lore: "The coast's answer to every question, including several nobody asked." },
 
   /* =================== KEYS & QUEST ITEMS =================== */
 
@@ -438,6 +448,69 @@ const HONE_TIERS = [
   { gold: 180, mats: { steel_ingot: 2 } },
   { gold: 420, mats: { silver_dust: 1, ember_residue: 1 } },
 ];
+
+/* =================== ENCHANTING (Lampwright altars) ===========
+   Embers power the working; materials shape it. Potency scales
+   with the Enchanting skill and its perks. Slots: 'weapon'
+   applies to weapons/bows/staves, 'armor' to armor/shields.   */
+const ENCHANTS = {
+  flamebrand: {
+    name: "Flamebrand", slot: "weapon", edmg: { fire: 7 },
+    mats: { ember_residue: 2 }, embers: 280,
+    desc: "The edge remembers the forge and holds a grudge.",
+  },
+  frostbrand: {
+    name: "Frostbrand", slot: "weapon", edmg: { frost: 7 },
+    mats: { frost_crystal: 1, frostmoss: 2 }, embers: 280,
+    desc: "A sliver of the White Pass quiet, set in steel.",
+  },
+  stormbrand: {
+    name: "Stormbrand", slot: "weapon", edmg: { shock: 7 },
+    mats: { silver_dust: 2 }, embers: 320,
+    desc: "It gossips with the sky, the way Stormcaller taught.",
+  },
+  venombrand: {
+    name: "Venombrand", slot: "weapon", edmg: { poison: 6 },
+    mats: { mireweed: 3, ghost_fern: 1 }, embers: 260,
+    desc: "The Mire's smallest ambassador, given a blade for a desk.",
+  },
+  hungering: {
+    name: "Hungering", slot: "weapon", leech: 0.1,
+    mats: { tide_pearl: 2 }, embers: 420,
+    desc: "What it takes from others it gives to the hand that holds it. The Tidelost knew this working well — too well.",
+  },
+  grave_oath: {
+    name: "Grave-Oath", slot: "weapon", bonusVs: "undead",
+    mats: { silver_dust: 3, old_bone: 2 }, embers: 300,
+    desc: "Moonlight, sworn against the restless. The dead find it more than impolite.",
+  },
+  warding: {
+    name: "Warding", slot: "armor", edef: { fire: 12, frost: 12, shock: 12, poison: 12 },
+    mats: { ghost_fern: 2, tide_pearl: 1 }, embers: 320,
+    desc: "A lattice of lamplight under the surface, turning all four tempers aside.",
+  },
+  stonehide: {
+    name: "Stonehide", slot: "armor", armor: 8,
+    mats: { troll_fat: 2, iron_ore: 2 }, embers: 260,
+    desc: "The mountain's opinion of blades, made portable.",
+  },
+  emberheart: {
+    name: "Emberheart", slot: "armor", maxHp: 22,
+    mats: { emberbloom: 2, ember_residue: 1 }, embers: 360,
+    desc: "A coal sewn over the breastbone. The blood remembers being warm.",
+  },
+  deepcurrent: {
+    name: "Deepcurrent", slot: "armor", maxMag: 26,
+    mats: { tide_pearl: 2, glowcap: 2 }, embers: 360,
+    desc: "The mind runs deeper, the way water under ice runs deeper.",
+  },
+  swiftblood: {
+    name: "Swiftblood", slot: "armor", stamRegen: 5,
+    mats: { marrowroot: 3, wolf_pelt: 1 }, embers: 300,
+    desc: "Wolf-lessons, written into the weave: the second wind arrives first.",
+  },
+};
+for (const id in ENCHANTS) ENCHANTS[id].id = id;
 
 /* =================== ALCHEMY RECIPES =================== */
 const RECIPES_ALCH = [

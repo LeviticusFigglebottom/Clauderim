@@ -172,6 +172,25 @@ One more thing, found written on the survey's last page in a different hand:
 He is still down there. The first one. The king who went down to argue. We heard him through the stone, on the long watches — not words, just warmth, pacing. Whatever you do at the bottom of the world, do it respectfully. You will be standing in the middle of the oldest conversation there is.`,
   },
 
+  tidelost_book: {
+    title: "The Tidelost",
+    author: "Quartermaster Senn, written on sailcloth, salt-stained",
+    text:
+`The sea does not keep what it drowns. Everyone knows this and everyone is wrong.
+
+The Cinder Coast eats ships the way the Mire eats footsteps — patiently, and on a schedule only it can read. The wreckers light false lamps on the headlands; the reefs do the rest; and what comes ashore afterward is cargo, timber, and crews.
+
+Here is what they don't tell you in port: the crews come ashore LAST. Days later. Weeks. Walking out of the surf at low tide with their boots full and their orders unfinished. We call them the Tidelost. They are not angry, any more than the Hollowed are angry. They are just still aboard, in every way that matters — still hauling, still standing watch, still waiting on the captain's word.
+
+And the captains are the worst of it, because drowned captains keep command. A crew of the Tidelost will walk in a circle on the sand for a year. A crew with a Tidelost captain will form up.
+
+My ship was the GLAD PENNY out of no port that exists anymore. My captain was Veyra, who pulled me from the water with one hand and the ship's ledger with the other, because she was that kind of captain. She is down there now, off the strand, keeping the whole crew at stations on the seabed.
+
+I am writing this between two fires, because the dark over the water has a shape some nights.
+
+If you read this and you are the kind that helps: they cannot dismiss themselves. Someone has to relieve the watch. Someone always has to relieve the watch.`,
+  },
+
   citadel_book: {
     title: "The Vault Beneath the Hollows",
     author: "final page of the Citadel chamberlain's ledger, recovered scorched",
