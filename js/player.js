@@ -37,6 +37,8 @@ class Player extends Entity {
     this.flask = { max: 3, charges: 3, heal: 60 };
     this.quickItem = null;   // consumable bound to [T]
     this.honing = {};        // weaponId -> forge tier (0-3)
+    this.fpPitch = 0;        // first-person look pitch
+    this.stepT = 0;          // footstep cadence
 
     // starting gear
     for (const slot in o.gear) {
@@ -437,6 +439,12 @@ class Player extends Entity {
       World.moveCircle(map, this, Math.cos(this.moveAng) * sp, 0);
       World.moveCircle(map, this, 0, Math.sin(this.moveAng) * sp);
       this.bobT += dt * (this.sprinting ? 13 : 8);
+      // footsteps
+      this.stepT -= dt;
+      if (this.stepT <= 0 && !this.crouched) {
+        this.stepT = this.sprinting ? 0.27 : 0.4;
+        Sfx.play("step");
+      }
     }
 
     // face the cursor

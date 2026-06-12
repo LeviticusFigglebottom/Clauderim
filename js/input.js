@@ -49,7 +49,8 @@ const Input = {
       // pointer-locked first person: relative mouse turns the head
       if (typeof document !== "undefined" && document.pointerLockElement === canvas) {
         if (G.player && G.viewMode === "fp" && G.state === "play") {
-          G.player.facing += (e.movementX || 0) * 0.0032;
+          G.player.facing += (e.movementX || 0) * 0.0028;
+          G.player.fpPitch = U.clamp((G.player.fpPitch || 0) - (e.movementY || 0) * 0.0017, -0.3, 0.3);
         }
         return;
       }

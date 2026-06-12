@@ -33,6 +33,7 @@ const SaveSys = {
       seed: G.seed,
       time: G.time,
       mapId: G.map.id,
+      viewMode: G.viewMode,
       regionName: World.regionNameAt(G.map, G.player.x, G.player.y),
       player: G.player.serialize(),
       flags: G.flags,
@@ -76,6 +77,7 @@ const SaveSys = {
 
     G.seed = data.seed;
     G.time = data.time;
+    G.viewMode = data.viewMode || "fp";
     G.flags = data.flags || {};
     G.openedChests = data.openedChests || {};
     G.slainBosses = data.slainBosses || {};

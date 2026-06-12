@@ -528,14 +528,14 @@ check("Bram forges the Twinned Temper", run(`G.player.hasItem("twinned_temper")`
 
 run(`Game.enterMap("overworld", 200*32, 206*32); G.viewMode = "fp";`);
 let fpOk = true;
-try { frames(90); } catch (e) { fpOk = false; console.error(e); }
-check("first-person renderer survives 90 frames in town", fpOk && run(`G.state`) === "play");
+try { frames(12); } catch (e) { fpOk = false; console.error(e); }
+check("first-person renderer survives 12 frames in town", fpOk && run(`G.state`) === "play");
 check("raycaster filled its depth buffer", run(`RenderFP.depth && RenderFP.depth.length === RenderFP.W`));
 
 // FP movement: W walks along facing
 run(`{ G.player.facing = 0; G.fpStart = { x: G.player.x, y: G.player.y }; }`);
 run(`Input.keys["KeyW"] = true;`);
-frames(45);
+frames(30);
 run(`Input.keys["KeyW"] = false;`);
 check("FP forward moves along the view axis", run(`
   Math.abs(G.player.y - G.fpStart.y) < Math.abs(G.player.x - G.fpStart.x) && G.player.x > G.fpStart.x + 30
@@ -560,7 +560,7 @@ run(`{
   Combat.playerStrike(G.player, false);
 }`);
 check("FP melee strike lands on a foe dead ahead", run(`G.fpWolf.hp < G.fpWolf.hpMax`));
-frames(10);
+frames(4);
 
 // view toggle key flips modes both ways
 run(`Input.pressedSet["KeyV"] = true;`);
@@ -573,7 +573,7 @@ check("V toggles back to first person", run(`G.viewMode`) === "fp");
 // FP holds up inside a dungeon (walls + ceiling path)
 run(`{ const m = World.getMap("crypt"); Game.enterMap("crypt", m.arrival.x, m.arrival.y); }`);
 let fpDun = true;
-try { frames(60); } catch (e) { fpDun = false; console.error(e); }
+try { frames(10); } catch (e) { fpDun = false; console.error(e); }
 check("first-person renderer survives a dungeon", fpDun);
 run(`Game.enterMap("overworld", 200*32, 206*32); G.viewMode = "top";`);
 

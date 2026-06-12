@@ -451,6 +451,7 @@ const UI = {
       ${slots}
       <hr style="border-color:#2c2719">
       ${chk("music", "Music")}${chk("sfx", "Sound effects")}${chk("screenShake", "Screen shake")}${chk("showDamage", "Damage numbers")}
+      <button class="act-btn" id="sys-view">View: ${G.viewMode === "fp" ? "First person" : "Top-down"} (switch — or press V in game)</button>
       <button class="act-btn" id="sys-help">Manual & Controls</button>
       <button class="act-btn danger" id="sys-quit">Quit to title (unsaved progress is lost)</button>
     </div>
@@ -467,6 +468,11 @@ const UI = {
       G.settings[el.dataset.set] = el.checked;
       if (el.dataset.set === "music") { const m = Music.mood; Music.mood = null; Music.setMood(el.checked ? (m || "world") : null); }
     });
+    U.el("sys-view").onclick = () => {
+      G.viewMode = G.viewMode === "fp" ? "top" : "fp";
+      Sfx.play("ui");
+      this.renderMenu();
+    };
     U.el("sys-help").onclick = () => this.showHelp();
     U.el("sys-quit").onclick = () => location.reload();
   },
@@ -853,8 +859,10 @@ const UI = {
     G.setState("help");
     U.el("help-content").innerHTML = `
       <h3>View & movement</h3>
-      <p><b>V</b> toggles first-person / top-down. In first person: <b>mouse</b> (click to capture)
-      or <b>←/→</b> turn, <b>W/S</b> walk, <b>A/D</b> strafe. In top-down: <b>WASD</b> moves, cursor aims.</p>
+      <p><b>V</b> toggles first-person / top-down at any time (also in System; your choice is saved).
+      In first person: <b>mouse</b> looks and pitches (click to capture; Esc releases),
+      <b>←/→</b> also turn, <b>W/S</b> walk, <b>A/D</b> strafe, and <b>E</b> uses whatever you're looking at.
+      In top-down: <b>WASD</b> moves, cursor aims.</p>
       <p><b>Shift</b> sprint · <b>Space</b> dodge roll (i-frames) · <b>Ctrl/X</b> sneak</p>
       <h3>Combat</h3>
       <p><b>LMB tap</b> light attack · <b>LMB hold</b> heavy attack</p>

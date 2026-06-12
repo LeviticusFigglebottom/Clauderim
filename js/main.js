@@ -201,10 +201,19 @@ const Game = {
 
   findInteractable() {
     const p = G.player, map = G.map;
+    const fp = G.viewMode === "fp";
     let best = null, bestD = 1e9;
     const consider = (x, y, range, kind, obj, prompt) => {
       const d = U.dist(p.x, p.y, x, y);
-      if (d < range && d < bestD) { bestD = d; best = { kind, obj, prompt }; }
+      if (d >= range + (fp ? 26 : 0)) return;
+      let score = d;
+      if (fp) {
+        // first person: you interact with what you're LOOKING at
+        const rel = Math.abs(U.angDiff(p.facing, U.angTo(p.x, p.y, x, y)));
+        if (rel > 0.95 && d > 36) return; // behind you and not underfoot
+        score = d * (0.45 + rel);
+      }
+      if (score < bestD) { bestD = score; best = { kind, obj, prompt }; }
     };
     for (const s of map.shrines) consider(s.x, s.y, 52, "shrine", s, "Kneel at the " + s.name);
     for (const e of G.entities) {

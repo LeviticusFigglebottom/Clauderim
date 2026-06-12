@@ -7,19 +7,20 @@ ember economy, telegraphed bosses, "you died").
 
 Zero dependencies. Zero build step. Pure vanilla JavaScript + Canvas + WebAudio.
 
-**Play it in first person** — a software raycaster renders the whole world from inside it
-(mouse-look, click to capture) — or press **V** any time for the classic top-down view.
-Same world, same systems, both perspectives.
+**Play it in first person** — a software raycaster renders the whole world from inside it:
+mouse-look with pitch, head-bob, an animated viewmodel for every weapon, sun and moon,
+cloud banks, starfields, and firelight pooling on the ground. Press **V** any time for the
+classic top-down view. Same world, same systems, both perspectives — your choice is saved.
 
 ![genre](https://img.shields.io/badge/genre-open--world%20ARPG-8b6f3a)
 ![deps](https://img.shields.io/badge/dependencies-none-2d6a2d)
 ![engine](https://img.shields.io/badge/engine-vanilla%20JS%20%2B%20canvas-555)
 
 <p align="center">
-  <img src="docs/screenshots/fp2_town.png" width="49%">
-  <img src="docs/screenshots/fp4_combat.png" width="49%">
-  <img src="docs/screenshots/fp6_boss.png" width="49%">
-  <img src="docs/screenshots/fp3_crypt.png" width="49%">
+  <img src="docs/screenshots/fpv1_town.png" width="49%">
+  <img src="docs/screenshots/fpv4_bow.png" width="49%">
+  <img src="docs/screenshots/fpv6_night.png" width="49%">
+  <img src="docs/screenshots/fpv5_crypt.png" width="49%">
   <img src="docs/screenshots/01_title.png" width="49%">
   <img src="docs/screenshots/04_emberfall.png" width="49%">
   <img src="docs/screenshots/10_duskmere_night.png" width="49%">

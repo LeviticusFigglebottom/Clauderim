@@ -36,6 +36,7 @@ const SFX_TABLE = {
   guardbreak:   ["sawtooth", 300, 60, 0.4, 0.32, 0.6],
   stagger:      ["square", 240, 90, 0.18, 0.25, 0.4],
   roll:         ["triangle", 150, 70, 0.16, 0.12, 0.5],
+  step:         ["triangle", 70, 45, 0.07, 0.05, 0.85],
   bow:          ["triangle", 600, 180, 0.14, 0.2, 0.3],
   cast_charge:  ["sine", 220, 480, 0.3, 0.12, 0],
   cast:         ["sine", 700, 280, 0.2, 0.2, 0.15],
