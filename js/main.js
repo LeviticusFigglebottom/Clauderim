@@ -55,9 +55,11 @@ const Game = {
     U.hide("title-screen");
     U.show("hud-dom");
     this.enterMap("overworld", G.player.x, G.player.y, true);
+    G.viewMode = "fp";
     G.setState("play");
     G.banner("THE SHATTERED MARCH", "the Ember gutters · the March remembers");
     G.msg("You wake with ash on your tongue. A woman in lamplight watches you. [E] to speak, [Tab] for your pack.", "good");
+    G.msg("Click to capture the mouse and look around — [V] toggles the top-down view.", "");
     this.lastRegion = "";
   },
 
@@ -364,6 +366,7 @@ const Game = {
     let dt = Math.min(0.05, (t - this.last) / 1000);
     this.last = t;
     G.dt = dt;
+    G.rdt = dt; // real frame dt — survives hit-stop, for render-side easing
     G.elapsed += dt;
     G.frame++;
 
@@ -381,7 +384,8 @@ const Game = {
     }
     if (G.state !== "title" && G.state !== "chargen" && G.map) {
       this.updateCamera(dt);
-      Render.draw();
+      if (G.viewMode === "fp" && G.player) RenderFP.draw();
+      else Render.draw();
       UI.updateBossBar();
     }
 
@@ -389,6 +393,14 @@ const Game = {
   },
 
   handleMetaKeys() {
+    if (G.state === "play" && Input.pressed("toggleview")) {
+      G.viewMode = G.viewMode === "fp" ? "top" : "fp";
+      if (G.viewMode !== "fp" && document.exitPointerLock) document.exitPointerLock();
+      G.msg(G.viewMode === "fp"
+        ? "First person. Click to capture the mouse — V returns to top-down."
+        : "Top-down view. V returns to first person.", "");
+      Sfx.play("ui");
+    }
     if (G.state === "play") {
       if (Input.pressed("menu")) UI.openMenu("inventory");
       else if (Input.pressed("map")) UI.openMenu("map");

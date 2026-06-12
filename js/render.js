@@ -139,8 +139,10 @@ const Render = {
   draw() {
     const ctx = G.ctx, map = G.map, p = G.player;
     if (!map) return;
-    const camX = G.camera.x, camY = G.camera.y;
+    // integer camera: fractional blits bleed at chunk seams
+    const camX = Math.floor(G.camera.x), camY = Math.floor(G.camera.y);
 
+    ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = "#070708";
     ctx.fillRect(0, 0, G.W, G.H);
 
@@ -607,6 +609,16 @@ const Render = {
 
   /* ---------------- characters ---------------- */
 
+  // render-only eased facing: combat reads e.facing, eyes read this.
+  // Without it, heads snap with every wander turn / cursor twitch.
+  visFacing(e) {
+    if (e._fpFace !== undefined) return e._fpFace; // first-person billboard override
+    const rdt = G.rdt || 0.016;
+    if (e._vf === undefined) e._vf = e.facing;
+    e._vf = U.angApproach(e._vf, e.facing, (e === G.player ? 17 : 8) * rdt);
+    return e._vf;
+  },
+
   drawEntity(ctx, e, camX, camY) {
     const x = e.x - camX, y = e.y - camY;
     if (x < -80 || x > G.W + 80 || y < -80 || y > G.H + 80) return;
@@ -623,6 +635,7 @@ const Render = {
     const look = e.def.look || { shape: "humanoid", body: "#888", trim: "#555", size: 1 };
     const s = (look.size || 1);
     const isNpc = e instanceof NPC;
+    const vf = this.visFacing(e);
 
     // telegraph: flash red during windup
     let tint = null;
@@ -652,7 +665,7 @@ const Render = {
     ctx.translate(x, y + bob * 0.4);
 
     if (look.shape === "beast") {
-      ctx.rotate(e.facing);
+      ctx.rotate(vf);
       // little legs paddle while moving
       const stride = (e.state === "chase" || e.state === "flee" || e.state === "patrol")
         ? Math.sin(G.elapsed * 14 + e.bobT) * 4 * s : 0;
@@ -682,7 +695,7 @@ const Render = {
       ctx.strokeStyle = look.body; ctx.lineWidth = 2.5 * s;
       ctx.beginPath(); ctx.moveTo(-12 * s, 0); ctx.lineTo(-18 * s, -3 * s); ctx.stroke();
     } else if (look.shape === "crawler") {
-      ctx.rotate(e.facing);
+      ctx.rotate(vf);
       // eight scuttling legs
       const skit = Math.sin(G.elapsed * 18 + e.bobT);
       ctx.strokeStyle = look.trim; ctx.lineWidth = 1.8;
@@ -710,7 +723,7 @@ const Render = {
       ctx.beginPath(); ctx.ellipse(0, 2 * s, 7 * s, 5 * s, 0, 0, TAU); ctx.fill();
       // eyes
       ctx.fillStyle = "#ffd34a";
-      const ex = Math.cos(e.facing) * 4 * s, ey = Math.sin(e.facing) * 4 * s;
+      const ex = Math.cos(vf) * 4 * s, ey = Math.sin(vf) * 4 * s;
       ctx.beginPath(); ctx.arc(ex - 2, ey - 2 * s, 1.5, 0, TAU); ctx.arc(ex + 3, ey - 2 * s, 1.5, 0, TAU); ctx.fill();
     } else if (look.shape === "wisp") {
       ctx.save();
@@ -726,7 +739,7 @@ const Render = {
       ctx.restore();
       // eyes
       ctx.fillStyle = "#fff";
-      const ex = Math.cos(e.facing) * 3, ey = Math.sin(e.facing) * 2;
+      const ex = Math.cos(vf) * 3, ey = Math.sin(vf) * 2;
       ctx.fillRect(ex - 3, ey - 6 * s, 2, 3);
       ctx.fillRect(ex + 2, ey - 6 * s, 2, 3);
       // the Echo wears what the kings refused
@@ -738,15 +751,15 @@ const Render = {
       }
     } else {
       // humanoid
-      const fx = Math.cos(e.facing), fy = Math.sin(e.facing);
+      const fx = Math.cos(vf), fy = Math.sin(vf);
       // shuffling feet while moving
       const eMoving = (e.state === "chase" || e.state === "patrol" || e.state === "flee" || (e instanceof NPC && e.moving));
       if (eMoving) {
         const step = Math.sin(G.elapsed * 11 + e.bobT) * 3.5 * s;
         ctx.fillStyle = "rgba(20,16,12,0.85)";
         ctx.beginPath();
-        ctx.ellipse(-3 * s + Math.cos(e.facing) * step, 8 * s + Math.sin(e.facing) * step * 0.4, 2.4 * s, 1.6 * s, 0, 0, TAU);
-        ctx.ellipse(3 * s - Math.cos(e.facing) * step, 8 * s - Math.sin(e.facing) * step * 0.4, 2.4 * s, 1.6 * s, 0, 0, TAU);
+        ctx.ellipse(-3 * s + fx * step, 8 * s + fy * step * 0.4, 2.4 * s, 1.6 * s, 0, 0, TAU);
+        ctx.ellipse(3 * s - fx * step, 8 * s - fy * step * 0.4, 2.4 * s, 1.6 * s, 0, 0, TAU);
         ctx.fill();
       }
       // body
@@ -781,7 +794,7 @@ const Render = {
         if (e.attackPhase === "wind") swing = -1.1;
         else if (e.attackPhase === "strike") swing = 0.9;
         ctx.save();
-        ctx.rotate(e.facing + swing);
+        ctx.rotate(vf + swing);
         ctx.strokeStyle = "#b8b4a8"; ctx.lineWidth = 2.5 * Math.min(s, 1.4);
         const wl = (look.weapon === "sword2h" || look.weapon === "maul" || look.weapon === "axe2h") ? 26 * s : 18 * s;
         ctx.beginPath(); ctx.moveTo(6 * s, 4); ctx.lineTo(6 * s + wl, 4); ctx.stroke();
@@ -797,7 +810,7 @@ const Render = {
       // shield
       if (look.shield) {
         ctx.save();
-        ctx.rotate(e.facing);
+        ctx.rotate(vf);
         ctx.fillStyle = "#5d5a52";
         ctx.beginPath(); ctx.ellipse(7 * s, -5 * s, 3 * s, 6.5 * s, 0, 0, TAU); ctx.fill();
         ctx.restore();
@@ -873,7 +886,8 @@ const Render = {
     if (p.flashT > 0) { ctx.globalAlpha = 0.6 + 0.4 * Math.sin(G.elapsed * 60); }
     if (p.iframes > 0) ctx.globalAlpha = 0.55;
 
-    const fx = Math.cos(p.facing), fy = Math.sin(p.facing);
+    const vf = this.visFacing(p);
+    const fx = Math.cos(vf), fy = Math.sin(vf);
 
     // cloak
     ctx.fillStyle = "#3c2f22";
@@ -895,7 +909,7 @@ const Render = {
     const sh = p.shield();
     if (sh) {
       ctx.save();
-      ctx.rotate(p.facing + (p.blocking ? 0 : -0.8));
+      ctx.rotate(vf + (p.blocking ? 0 : -0.8));
       ctx.fillStyle = "#5d5a52";
       ctx.strokeStyle = trimCol; ctx.lineWidth = 1.4;
       const sx = p.blocking ? 10 : 6;
@@ -908,7 +922,7 @@ const Render = {
     const bow = p.bow();
     if (p.draw && bow) {
       ctx.save();
-      ctx.rotate(p.facing);
+      ctx.rotate(vf);
       ctx.strokeStyle = "#8a6a3a"; ctx.lineWidth = 2.4;
       ctx.beginPath(); ctx.arc(9, 0, 10, -1.25, 1.25); ctx.stroke();
       const pull = U.clamp(p.draw.t / 0.8, 0, 1) * 6;
@@ -929,7 +943,7 @@ const Render = {
         else swing = 0.4;
       }
       ctx.save();
-      ctx.rotate(p.facing + swing);
+      ctx.rotate(vf + swing);
       const isStaff = w.type === "staff";
       const two = w.twoHanded;
       ctx.strokeStyle = isStaff ? "#6a5236" : "#c8c4b8";

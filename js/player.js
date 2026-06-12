@@ -401,9 +401,24 @@ class Player extends Entity {
     }
 
     /* ---- movement ---- */
-    const ix = (Input.act("right") ? 1 : 0) - (Input.act("left") ? 1 : 0);
-    const iy = (Input.act("down") ? 1 : 0) - (Input.act("up") ? 1 : 0);
-    this.moving = (ix !== 0 || iy !== 0);
+    const fp = G.viewMode === "fp";
+    let ix, iy;
+    if (fp) {
+      // first person: W/S along the view, A/D strafe, arrows (or mouse) turn
+      const turn = (Input.act("turnR") ? 1 : 0) - (Input.act("turnL") ? 1 : 0);
+      if (turn) this.facing += turn * 2.7 * dt;
+      const fwd = (Input.act("up") ? 1 : 0) - (Input.act("down") ? 1 : 0);
+      const strafe = (Input.act("right") ? 1 : 0) - (Input.act("left") ? 1 : 0);
+      this.moving = (fwd !== 0 || strafe !== 0);
+      if (this.moving) {
+        const a = this.facing + Math.atan2(strafe, fwd);
+        ix = Math.cos(a); iy = Math.sin(a);
+      } else { ix = 0; iy = 0; }
+    } else {
+      ix = (Input.act("right") ? 1 : 0) - (Input.act("left") ? 1 : 0);
+      iy = (Input.act("down") ? 1 : 0) - (Input.act("up") ? 1 : 0);
+      this.moving = (ix !== 0 || iy !== 0);
+    }
     this.crouched = Input.act("crouch");
     this.sprinting = Input.act("sprint") && this.moving && this.stam > 1 && !this.crouched;
 
@@ -468,6 +483,8 @@ class Player extends Entity {
         this.rollDir = this.moving ? this.moveAng : this.facing + Math.PI;
         this.iframes = prof.iframes;
         this.blocking = false;
+        this.draw = null;          // rolling lets the bowstring go slack
+        G.slowmoAim = false;
         Sfx.play("roll");
         FX.burst(this.x, this.y, "#aaa08a", 6, 60);
       }

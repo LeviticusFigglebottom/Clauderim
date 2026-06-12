@@ -60,6 +60,7 @@ const G = {
   slowmo: 0,            // seconds of time-dilation remaining (Edict of KYR)
   hitstop: 0,           // frozen impact frames
   slowmoAim: false,     // Steady Draw perk while drawing a bow
+  viewMode: "fp",       // "fp" first-person | "top" top-down — V toggles
   saveSlot: 1,
 
   /* ---------- messaging ---------- */

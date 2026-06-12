@@ -7,11 +7,19 @@ ember economy, telegraphed bosses, "you died").
 
 Zero dependencies. Zero build step. Pure vanilla JavaScript + Canvas + WebAudio.
 
+**Play it in first person** — a software raycaster renders the whole world from inside it
+(mouse-look, click to capture) — or press **V** any time for the classic top-down view.
+Same world, same systems, both perspectives.
+
 ![genre](https://img.shields.io/badge/genre-open--world%20ARPG-8b6f3a)
 ![deps](https://img.shields.io/badge/dependencies-none-2d6a2d)
 ![engine](https://img.shields.io/badge/engine-vanilla%20JS%20%2B%20canvas-555)
 
 <p align="center">
+  <img src="docs/screenshots/fp2_town.png" width="49%">
+  <img src="docs/screenshots/fp4_combat.png" width="49%">
+  <img src="docs/screenshots/fp6_boss.png" width="49%">
+  <img src="docs/screenshots/fp3_crypt.png" width="49%">
   <img src="docs/screenshots/01_title.png" width="49%">
   <img src="docs/screenshots/04_emberfall.png" width="49%">
   <img src="docs/screenshots/10_duskmere_night.png" width="49%">
@@ -47,7 +55,9 @@ node test/smoke.js
 
 | Input | Action |
 |---|---|
-| **WASD** | Move |
+| **V** | Toggle first-person / top-down view |
+| **Mouse / ←→** | Look & turn (first person; click to capture the mouse) |
+| **WASD** | Move (FP: W/S walk, A/D strafe) |
 | **Shift** | Sprint (drains stamina) |
 | **Space** | Dodge roll (i-frames; speed scales with equip load) |
 | **Ctrl / X** | Sneak |
@@ -142,6 +152,7 @@ Ember has left: *burn again, or rest?*
 | `js/audio.js` | procedural WebAudio SFX + generative mood score |
 | `js/save.js` | localStorage save slots |
 | `js/render.js` | chunk-cached terrain, vector characters, lighting, weather, HUD |
+| `js/render_fp.js` | first-person raycaster: walls, cast floors, sky, billboards |
 | `js/ui.js` | every DOM interface: menus, dialogue, shops, crafting, shrine, endings |
 | `js/main.js` | boot, game loop, transitions, interaction, death/respawn, clock |
 | `test/smoke.js` | headless full-lifecycle test harness (60+ assertions) |

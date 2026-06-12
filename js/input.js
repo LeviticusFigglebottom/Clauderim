@@ -8,8 +8,11 @@
 const BINDS = {
   up: ["KeyW", "ArrowUp"],
   down: ["KeyS", "ArrowDown"],
-  left: ["KeyA", "ArrowLeft"],
-  right: ["KeyD", "ArrowRight"],
+  left: ["KeyA"],
+  right: ["KeyD"],
+  turnL: ["ArrowLeft"],   // first-person: turn (mouse-look does this too)
+  turnR: ["ArrowRight"],
+  toggleview: ["KeyV"],
   sprint: ["ShiftLeft", "ShiftRight"],
   roll: ["Space"],
   interact: ["KeyE"],
@@ -43,12 +46,24 @@ const Input = {
     window.addEventListener("blur", () => { this.keys = {}; this.mouse.down = false; this.mouse.rdown = false; });
 
     canvas.addEventListener("mousemove", e => {
+      // pointer-locked first person: relative mouse turns the head
+      if (typeof document !== "undefined" && document.pointerLockElement === canvas) {
+        if (G.player && G.viewMode === "fp" && G.state === "play") {
+          G.player.facing += (e.movementX || 0) * 0.0032;
+        }
+        return;
+      }
       const r = canvas.getBoundingClientRect();
       this.mouse.x = (e.clientX - r.left) * (G.W / r.width);
       this.mouse.y = (e.clientY - r.top) * (G.H / r.height);
     });
     canvas.addEventListener("mousedown", e => {
       audioInit();
+      // first click in first-person captures the mouse
+      if (G.viewMode === "fp" && G.state === "play" &&
+          canvas.requestPointerLock && document.pointerLockElement !== canvas) {
+        try { canvas.requestPointerLock(); } catch (err) { /* unsupported */ }
+      }
       if (e.button === 0) { this.mouse.down = true; this.mouse.pressed = true; }
       if (e.button === 2) { this.mouse.rdown = true; this.mouse.rpressed = true; }
     });
@@ -73,8 +88,15 @@ const Input = {
     return false;
   },
 
-  worldX() { return this.mouse.x + G.camera.x; },
-  worldY() { return this.mouse.y + G.camera.y; },
+  // world-space aim point: cursor in top-down, dead ahead in first person
+  worldX() {
+    if (G.viewMode === "fp" && G.player) return G.player.x + Math.cos(G.player.facing) * 220;
+    return this.mouse.x + G.camera.x;
+  },
+  worldY() {
+    if (G.viewMode === "fp" && G.player) return G.player.y + Math.sin(G.player.facing) * 220;
+    return this.mouse.y + G.camera.y;
+  },
 
   endFrame() {
     this.pressedSet = {};

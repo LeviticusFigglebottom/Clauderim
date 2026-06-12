@@ -469,6 +469,7 @@ const Combat = {
     const sp = SPELLS[spellId];
     const cost = this.spellCost(p, sp);
     if (p.mag < cost) { G.msg("Not enough magicka.", "bad"); Sfx.play("deny"); return; }
+    p.blocking = false;
     p.cast = { spell: spellId, t: sp.cast };
     Sfx.play("cast_charge");
   },

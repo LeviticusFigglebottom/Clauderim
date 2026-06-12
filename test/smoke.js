@@ -96,7 +96,7 @@ const windowStub = {
 
 const sandbox = {
   console, Math, JSON, Date, Set, Map, Object, Array, Uint8Array, Int32Array,
-  Uint8ClampedArray, Infinity, NaN, parseInt, parseFloat, String, Number, Boolean,
+  Float32Array, Uint8ClampedArray, Infinity, NaN, parseInt, parseFloat, String, Number, Boolean,
   isNaN, isFinite, Error, Promise, Proxy, Reflect,
   setTimeout: (fn, ms) => 0, // UI timeouts are irrelevant headlessly
   clearTimeout: () => {},
@@ -523,6 +523,59 @@ run(`
 check("masterpiece quest reaches the talk stage", run(`QS.stage("sq_masterpiece")`) === 2);
 run(`QS.complete("sq_masterpiece")`);
 check("Bram forges the Twinned Temper", run(`G.player.hasItem("twinned_temper")`));
+
+/* ---------------- first-person mode ---------------- */
+
+run(`Game.enterMap("overworld", 200*32, 206*32); G.viewMode = "fp";`);
+let fpOk = true;
+try { frames(90); } catch (e) { fpOk = false; console.error(e); }
+check("first-person renderer survives 90 frames in town", fpOk && run(`G.state`) === "play");
+check("raycaster filled its depth buffer", run(`RenderFP.depth && RenderFP.depth.length === RenderFP.W`));
+
+// FP movement: W walks along facing
+run(`{ G.player.facing = 0; G.fpStart = { x: G.player.x, y: G.player.y }; }`);
+run(`Input.keys["KeyW"] = true;`);
+frames(45);
+run(`Input.keys["KeyW"] = false;`);
+check("FP forward moves along the view axis", run(`
+  Math.abs(G.player.y - G.fpStart.y) < Math.abs(G.player.x - G.fpStart.x) && G.player.x > G.fpStart.x + 30
+`));
+
+// FP aim point sits dead ahead
+check("FP aim point projects ahead of the player", run(`
+  Math.abs(Input.worldX() - (G.player.x + Math.cos(G.player.facing) * 220)) < 0.01
+`));
+
+// projection helper returns sane values for a point ahead
+check("FP projection maps a forward point on-screen", run(`{
+  const pr = RenderFP.project(G.player.x + Math.cos(G.player.facing) * 200, G.player.y + Math.sin(G.player.facing) * 200);
+  pr && pr.x > 0 && pr.x < G.W && pr.perp > 4 && pr.perp < 9;
+}`));
+
+// FP combat: strike a wolf dead ahead
+run(`{
+  const e = new Enemy("wolf", G.player.x + Math.cos(G.player.facing) * 40, G.player.y + Math.sin(G.player.facing) * 40);
+  G.entities.push(e);
+  G.fpWolf = e;
+  Combat.playerStrike(G.player, false);
+}`);
+check("FP melee strike lands on a foe dead ahead", run(`G.fpWolf.hp < G.fpWolf.hpMax`));
+frames(10);
+
+// view toggle key flips modes both ways
+run(`Input.pressedSet["KeyV"] = true;`);
+frames(1);
+check("V toggles to top-down", run(`G.viewMode`) === "top");
+run(`Input.pressedSet["KeyV"] = true;`);
+frames(1);
+check("V toggles back to first person", run(`G.viewMode`) === "fp");
+
+// FP holds up inside a dungeon (walls + ceiling path)
+run(`{ const m = World.getMap("crypt"); Game.enterMap("crypt", m.arrival.x, m.arrival.y); }`);
+let fpDun = true;
+try { frames(60); } catch (e) { fpDun = false; console.error(e); }
+check("first-person renderer survives a dungeon", fpDun);
+run(`Game.enterMap("overworld", 200*32, 206*32); G.viewMode = "top";`);
 
 /* ---------------- ending ---------------- */
 

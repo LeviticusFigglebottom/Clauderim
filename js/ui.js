@@ -129,6 +129,9 @@ const UI = {
 
   openMenu(tab) {
     if (G.state !== "play") return;
+    const p = G.player;
+    if (p) { p.draw = null; G.slowmoAim = false; p.holding = false; p.holdT = 0; }
+    if (document.exitPointerLock) document.exitPointerLock();
     this.menuTab = tab || this.menuTab;
     G.setState("menu");
     U.show("menu-screen");
@@ -849,8 +852,10 @@ const UI = {
   showHelp() {
     G.setState("help");
     U.el("help-content").innerHTML = `
-      <h3>Movement</h3>
-      <p><b>WASD</b> move · <b>Shift</b> sprint · <b>Space</b> dodge roll (i-frames) · <b>Ctrl/X</b> sneak</p>
+      <h3>View & movement</h3>
+      <p><b>V</b> toggles first-person / top-down. In first person: <b>mouse</b> (click to capture)
+      or <b>←/→</b> turn, <b>W/S</b> walk, <b>A/D</b> strafe. In top-down: <b>WASD</b> moves, cursor aims.</p>
+      <p><b>Shift</b> sprint · <b>Space</b> dodge roll (i-frames) · <b>Ctrl/X</b> sneak</p>
       <h3>Combat</h3>
       <p><b>LMB tap</b> light attack · <b>LMB hold</b> heavy attack</p>
       <p><b>RMB hold</b> block with shield — raise it at the last instant to <b>parry</b></p>
