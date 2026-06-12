@@ -37,6 +37,7 @@ const Game = {
     G.flags = {}; G.openedChests = {}; G.slainBosses = {};
     G.discoveredShrines = {}; G.discoveredPois = {};
     G.lostEmbers = null; G.maps = {}; G.overworld = null; G.bossFight = null;
+    G.gauntletActive = false;
     G.time = { day: 1, hour: 8.5 };
     G.weather = { kind: "clear", t: 0, next: 70, intensity: 0 };
     Render.chunkCache.clear();
@@ -235,6 +236,10 @@ const Game = {
         consider(st.x, st.y, 46, "station", st, "Cook at the fire");
       } else if (st.kind === "waylamp") {
         if (!G.flags[st.flag]) consider(st.x, st.y, 46, "waylamp", st, "Light the cold way-lamp");
+      } else if (st.kind === "passcairn") {
+        if (!G.flags.pass_at_rest) consider(st.x, st.y, 50, "passcairn", st, "Sound the charge at the great cairn");
+      } else if (st.kind === "gauntlet") {
+        if (!G.gauntletActive) consider(st.x, st.y, 50, "gauntlet", st, `Light the brazier — wave ${(G.flags.gauntlet_wave || 0) + 1}`);
       } else {
         consider(st.x, st.y, 46, "station", st, st.kind === "smith" ? "Use the forge" : "Use the alchemy bench");
       }
@@ -242,6 +247,11 @@ const Game = {
     if (map.graves) {
       for (const g of map.graves) {
         if (!G.flags["searched_" + g.id]) consider(g.x, g.y, 40, "grave", g, "Search the grave");
+      }
+    }
+    if (map.statues) {
+      for (const st of map.statues) {
+        if (!G.flags["searched_" + st.id]) consider(st.x, st.y, 40, "statue", st, "Search the frozen soldier");
       }
     }
     if (G.lostEmbers && G.lostEmbers.mapId === map.id) {
@@ -313,6 +323,54 @@ const Game = {
         G.questToast("WAY-LAMP LIT", lit + " of 3 burn in the deep");
         break;
       }
+      case "statue": {
+        const st = t.obj;
+        G.flags["searched_" + st.id] = true;
+        Sfx.play("door");
+        const roll = Math.random();
+        if (!G.flags.pass_at_rest && roll < 0.28) {
+          G.msg("The ice cracks. The soldier finishes a four-hundred-year-old stride.", "bad");
+          // the statue steps out of itself
+          const tx = (st.x / TILE) | 0, ty = (st.y / TILE) | 0;
+          if (World.decoAtTile(G.map, tx, ty) === D.FROZEN) G.map.deco[ty * G.map.w + tx] = D.NONE;
+          const e = new Enemy("thawed_soldier", st.x, st.y + 20);
+          e.enterChase();
+          G.entities.push(e);
+          FX.burst(st.x, st.y, "#bfeaff", 18, 110);
+          Sfx.play("moan");
+        } else if (roll < 0.62 || G.flags.pass_at_rest && roll < 0.5) {
+          if (!G.flags.found_passwarden && Math.random() < 0.07) {
+            G.flags.found_passwarden = true;
+            p.addItem("passwarden_cloak", 1);
+            G.msg("Beneath the rime: the Passwarden's Cloak, warm as the day it failed to matter.", "good");
+          } else {
+            const finds = [["gold", U.randi(Math.random, 12, 50)], ["frost_crystal", 1], ["silver_dust", 1], ["frostmoss", 2]];
+            const f = finds[(Math.random() * finds.length) | 0];
+            p.addItem(f[0], f[1]);
+            G.msg(f[0] === "gold" ? `Frozen purse: ${f[1]} gold` : `Recovered: ${ITEMS[f[0]].name}${f[1] > 1 ? " ×" + f[1] : ""}`, "good");
+          }
+        } else {
+          G.msg("A face under the ice, mid-shout. You leave it its dignity.", "");
+        }
+        break;
+      }
+      case "passcairn": {
+        if (!p.hasItem("pass_warhorn")) {
+          G.msg("The cairn waits for a signal four hundred years overdue. You have no horn to sound.", "bad");
+          Sfx.play("deny");
+          break;
+        }
+        p.removeItem("pass_warhorn", 1);
+        G.flags.pass_at_rest = true;
+        Sfx.play("edict");
+        G.shake(6, 0.8);
+        G.banner("THE CHARGE SOUNDS", "and two thousand spears come to rest");
+        G.msg("One long note. The wind through the frozen lines sings it back — and then, at last, quiet.", "good");
+        FX.ring(t.obj.x, t.obj.y, 300, "#bfeaff");
+        QS.update();
+        break;
+      }
+      case "gauntlet": this.startGauntletWave(); break;
       case "grave": {
         const g = t.obj;
         G.flags["searched_" + g.id] = true;
@@ -342,6 +400,62 @@ const Game = {
         G.questToast("EMBERS RECLAIMED", U.fmt(t.obj.amount) + " returned to you");
         break;
       }
+    }
+  },
+
+  /* ---------------- the Gauntlet of Sparks ---------------- */
+
+  startGauntletWave() {
+    const wave = (G.flags.gauntlet_wave || 0) + 1;
+    const set = GAUNTLET_WAVES[(wave - 1) % GAUNTLET_WAVES.length];
+    const cycle = Math.floor((wave - 1) / GAUNTLET_WAVES.length);
+    G.gauntletActive = true;
+    this.gauntletWave = wave;
+    this.gauntletMembers = [];
+    const cx = 15 * TILE + 16, cy = 14 * TILE + 16;
+    let spawned = 0;
+    for (const pair of set) {
+      for (let i = 0; i < pair[1]; i++) {
+        const ang = Math.random() * TAU;
+        const r = (4 + Math.random() * 3.5) * TILE;
+        const ex = cx + Math.cos(ang) * r, ey = cy + Math.sin(ang) * r;
+        if (World.circleBlocked(G.map, ex, ey, 14)) continue;
+        const e = new Enemy(pair[0], ex, ey);
+        // deeper waves cycle harder: tougher stock, more ashen
+        if (cycle > 0) { e.hpMax = Math.round(e.hpMax * (1 + cycle * 0.35)); e.hp = e.hpMax; e.dmgMult *= 1 + cycle * 0.2; }
+        if (Math.random() < Math.min(0.6, cycle * 0.25 + (wave > 5 ? 0.15 : 0))) e.makeElite();
+        e.enterChase();
+        G.entities.push(e);
+        this.gauntletMembers.push(e);
+        spawned++;
+      }
+    }
+    Sfx.play("roar");
+    G.shake(4, 0.3);
+    G.banner("WAVE " + wave, spawned + " enter the sand");
+    Music.setMood("boss");
+  },
+
+  updateGauntlet() {
+    if (!G.gauntletActive) return;
+    if (!G.map || G.map.id !== "gauntlet" || G.state === "dead") {
+      // leaving (or dying out of) the pit forfeits the wave
+      G.gauntletActive = false;
+      this.gauntletMembers = [];
+      return;
+    }
+    this.gauntletMembers = this.gauntletMembers.filter(e => !e.dead);
+    if (this.gauntletMembers.length === 0) {
+      G.gauntletActive = false;
+      const wave = this.gauntletWave;
+      G.flags.gauntlet_wave = wave;
+      const cycle = Math.floor((wave - 1) / GAUNTLET_WAVES.length);
+      const purse = Math.round(120 * wave * (1 + cycle * 0.5));
+      G.player.gainEmbers(purse);
+      G.questToast("WAVE " + wave + " CLEARED", "+" + U.fmt(purse) + " embers — the brazier waits");
+      Sfx.play("victory");
+      Music.setMood("dungeon");
+      if (wave >= 5 && !G.flags.gauntlet_w5) { G.flags.gauntlet_w5 = true; QS.update(); }
     }
   },
 
@@ -461,6 +575,7 @@ const Game = {
 
     // quests poll
     if (G.frame % 30 === 0) QS.update();
+    if (G.frame % 10 === 0) this.updateGauntlet();
 
     // ambient life: fireflies, drifting embers, frost glints, marsh spores
     this.ambientT = (this.ambientT || 0) - dt;

@@ -63,6 +63,11 @@ const NPC_DEFS = {
     shop: { stock: ["small_hp_potion", "big_hp_potion", "warming_salve", "frostmoss", "troll_fat", "honey_mead", "frostplate_helm"] },
     bark: "Keep your blood moving, southerner.",
   },
+  brann: {
+    name: "Brann the Pitmaster", town: "gauntlet", role: "pitmaster",
+    look: { body: "#5d4632", trim: "#c4502a", hair: "#2c2620" },
+    bark: "Blood warms faster than mead.",
+  },
   caldus: {
     name: "Caldus the Unlit", town: "watchtower", role: "hermit",
     look: { body: "#3a3a44", trim: "#8888a8", hair: "#909090" },
@@ -243,6 +248,8 @@ const DIALOGUES = {
         choices: [
           { text: "Food and drink.", next: null, action: () => UI.openShop("tobbe") },
           { text: "A bed. (Rest until morning — 10 gold)", next: "rest", cond: p => p.gold >= 10 },
+          { text: "Surely the crypt-clearer drinks and sleeps free here.", next: "rest_free", cls: "persuade",
+            cond: p => p.canPersuade() && QS.stage("sq_crypt") === 999 },
           { text: "You look like a man with a problem.", next: "crypt_ask", cond: () => QS.stage("sq_crypt") === -1 },
           { text: "Nothing tonight.", next: null },
         ],
@@ -250,6 +257,10 @@ const DIALOGUES = {
       rest: {
         text: "Top of the stairs, second door. Mind the floorboard that screams — no, that's its name, we've given up fixing it.",
         choices: [{ text: "(Sleep until morning)", next: null, action: p => { p.gold -= 10; G.restAtInn(); } }],
+      },
+      rest_free: {
+        text: "*Tobbe opens his mouth, closes it, and slides the key across the bar.* ...Aye. Aye, fair's fair — quiet floorboards cost less than quiet dead. House rate for you is nothing, forever. Just stop saying it so LOUD, you'll give every sellsword in the March ideas.",
+        choices: [{ text: "(Sleep until morning — free)", next: null, action: p => { p.gainSkill("speech", 20); G.restAtInn(); } }],
       },
       crypt_ask: {
         text: "...You can hear it too, can't you. The scratching. Under the cellar. The old crypt runs beneath half the town, and lately the tenants have been — active. I've the key, the guard won't go, and Serah says you're harder to discourage than most. Permanently harder.",
@@ -311,7 +322,15 @@ const DIALOGUES = {
       },
       wolves_done: {
         text: "Eight, and clean kills by the look of your edge. The wall sleeps easier. Here's the coin — and take the spare bow. I made it for my brother. He won't mind. He's a barrow now, east of here.",
-        choices: [{ text: "(Receive reward)", next: "hub", action: () => QS.complete("sq_wolves") }],
+        choices: [
+          { text: "Eight wolves at town rates? The guild charges per fang.", next: "wolves_haggle", cls: "persuade", cond: p => p.canPersuade() },
+          { text: "(Receive reward)", next: "hub", action: () => QS.complete("sq_wolves") },
+        ],
+      },
+      wolves_haggle: {
+        text: "*Ralka stares at you the way she stares at weather.* ...There is no guild. There is no per-fang. But that was brazen enough to be worth watching. Sixty extra, and we never speak of the guild again.",
+        choices: [{ text: "(Receive the bounty, plus sixty)", next: "hub",
+          action: p => { QS.complete("sq_wolves"); p.gold += 60; p.gainSkill("speech", 20); G.msg("+60 gold, talked up", "good"); } }],
       },
     },
   },
@@ -379,15 +398,30 @@ const DIALOGUES = {
 
   /* ============ EIRIK ============ */
   eirik: {
-    entry: [{ cond: () => true, node: "hub" }],
+    entry: [
+      { cond: p => QS.stage("sq_pass") === 2, node: "pass_done" },
+      { cond: () => true, node: "hub" },
+    ],
     nodes: {
       hub: {
         text: "A southerner, above the snowline, on purpose. Sit by the fire, then — stupidity that determined deserves warming. I am Eirik. This hollow is mine to keep.",
         choices: [
           { text: "Tell me of the Frost-Tyrant.", next: "lore_hrolgar", cond: () => QS.stage("mq_ember") >= 1 },
           { text: "What should I know about the peaks?", next: "lore_peaks" },
+          { text: "Sing me the whole song of White Pass.", next: "pass_ask", cond: () => QS.stage("sq_pass") === -1 },
           { text: "Stay warm, chief.", next: null },
         ],
+      },
+      pass_ask: {
+        text: "*Eirik is quiet a long moment, then sets down his cup.* The verses we don't sing for guests: my forefathers stand in that snow. Two thousand men, ours and theirs, an arm's length apart, held mid-charge by the Tyrant's word — and the herald walks their lines still, the Hymnkeeper, horn raised, waiting four hundred years for permission to sound it. East of the keep road. If you've the steel... cut the herald down, take the horn, and blow the charge at the great cairn. Let them finish. Let them rest. Either way it ends.",
+        choices: [
+          { text: "I'll dismiss the armies. (Quest: The Song of the Pass)", next: null, action: () => { QS.start("sq_pass"); World.revealPoi("white_pass"); } },
+          { text: "Some songs should stay unfinished.", next: null },
+        ],
+      },
+      pass_done: {
+        text: "*You tell him. The hall goes still; even the fire listens.* One note, and then quiet... A quiet that CHOSE to be quiet — not the Tyrant's, ours. *He pulls an old blade from beneath the high seat.* Stillsong. My forefather's. He stands at rest in that snow because of you; he'd want this carried by whoever ended his watch.",
+        choices: [{ text: "(Receive Stillsong)", next: "hub", action: () => QS.complete("sq_pass") }],
       },
       lore_hrolgar: {
         text: "Hrolgar. My line carried his banners once — spear-hand of the March, the Marshal of the North. He spoke the Still Word at White Pass and stopped a battle like a held breath... then decided the whole world was improved by stopping. He keeps the high keep past the third cairn. Bring fire. Bring more fire than that. And if he offers you the quiet — and he will, he offers everyone the quiet — keep talking.",
@@ -427,6 +461,48 @@ const DIALOGUES = {
   },
 
   /* ============ CALDUS ============ */
+  brann: {
+    entry: [
+      { cond: p => QS.stage("sq_arena") === 1, node: "champion" },
+      { cond: () => true, node: "hub" },
+    ],
+    nodes: {
+      hub: {
+        text: "Welcome to the Gauntlet, pilgrim. Rules are short: I light the brazier, the sand fills with teeth, and you stop being boring. Survivors get embers. Champions get remembered.",
+        choices: [
+          { text: "How does it work?", next: "rules" },
+          { text: "Who are you?", next: "lore_brann" },
+          { text: "Pay me double for wave five and I'll make it look good.", next: "persuade_purse", cls: "persuade",
+            cond: p => p.canPersuade() && QS.stage("sq_arena") === -1 },
+          { text: "Light it. (Quest: The Gauntlet of Sparks)", next: "start", cond: () => QS.stage("sq_arena") === -1 },
+          { text: "Another time.", next: null },
+        ],
+      },
+      rules: {
+        text: "The brazier at the pit's heart starts a wave. Clear the sand, claim your embers, breathe, light it again. Each wave bites harder than the last. Die, and the shrine takes you home like always — embers in the sand stay in the sand. Five waves makes you a champion. Past five... past five I start betting against you.",
+        choices: [{ text: "Understood.", next: "hub" }],
+      },
+      lore_brann: {
+        text: "Frosthollow-born, Emberfall-banished, pit-raised. I fought in this sand twenty years before I bought it. Now I sell the only honest thing the March has left: a fight with rules.",
+        choices: [{ text: "Fair enough.", next: "hub" }],
+      },
+      persuade_purse: {
+        text: "*Brann squints, then barks a laugh.* You've got a pit-crier's tongue on you. Fine — double gold on the champion's purse, and you'd BETTER bleed entertainingly.",
+        choices: [{ text: "Watch me. (Quest: The Gauntlet of Sparks — purse doubled)", next: null,
+          action: p => { QS.start("sq_arena"); G.flags.gauntlet_double = true; p.gainSkill("speech", 25); } }],
+      },
+      start: {
+        text: "Ha! Brazier's at the pit's heart — light it when your nerve's ready. And pilgrim: the crowd is two ravens and me, but give us a show anyway.",
+        choices: [{ text: "(Begin)", next: null, action: () => QS.start("sq_arena") }],
+      },
+      champion: {
+        text: "FIVE. *He spits into the brazier, which is how pit-folk applaud.* Twenty years I've watched that sand eat better-armored fools. A champion's due, as promised" + "—" + "and the pit's open to you whenever the road feels too polite.",
+        choices: [{ text: "(Receive the champion's due)", next: "hub",
+          action: p => { QS.complete("sq_arena"); if (G.flags.gauntlet_double) { p.gold += 300; G.msg("Brann doubles the purse, as persuaded. +300 gold", "good"); } } }],
+      },
+    },
+  },
+
   caldus: {
     entry: [
       { cond: p => QS.stage("sq_blooms") === 1, node: "blooms_done" },

@@ -164,7 +164,7 @@ const owStats = run(`
 `);
 check(`overworld ${owStats.w}x${owStats.h}, ${owStats.shrines} shrines`, owStats.shrines === 9);
 check(`overworld has ${owStats.npcs} npcs (10 expected)`, owStats.npcs === 10);
-check(`overworld portals (7 dungeon mouths + crypt door): ${owStats.portals}`, owStats.portals === 8);
+check(`overworld portals (8 dungeon mouths + crypt door): ${owStats.portals}`, owStats.portals === 9);
 check(`chests=${owStats.chests} pickups=${owStats.pickups} spawners=${owStats.spawners}`,
   owStats.chests > 15 && owStats.pickups > 200 && owStats.spawners > 50);
 
@@ -523,6 +523,92 @@ run(`
 check("masterpiece quest reaches the talk stage", run(`QS.stage("sq_masterpiece")`) === 2);
 run(`QS.complete("sq_masterpiece")`);
 check("Bram forges the Twinned Temper", run(`G.player.hasItem("twinned_temper")`));
+
+/* ---------------- third-pass content ---------------- */
+
+// White Pass: statues, cairn, the Hymnkeeper, its own spawn table
+const wp = run(`{
+  const ow = World.getMap("overworld");
+  const enc = ow.encounters.find(e => e.type === "hymnkeeper");
+  ({ statues: (ow.statues || []).length,
+     cairn: ow.stations.some(s => s.kind === "passcairn"),
+     hymn: !!enc,
+     spawner: ow.spawners.some(s => s.table === "whitepass"),
+     poi: !!World.poiById("white_pass") });
+}`);
+check(`White Pass: ${wp.statues} frozen soldiers, cairn=${wp.cairn}, hymnkeeper=${wp.hymn}`,
+  wp.statues > 20 && wp.cairn && wp.hymn && wp.spawner && wp.poi);
+
+// statue searching sets flags and resolves
+run(`{
+  Game.enterMap("overworld", 230*32, 76*32);
+  const st = G.overworld.statues[0];
+  Game.interact({ kind: "statue", obj: st });
+  G.statueFlag = !!G.flags["searched_" + st.id];
+}`);
+check("searching a frozen soldier marks it", run(`G.statueFlag`) === true);
+
+// Hymnkeeper quest chain: kill -> horn -> cairn -> rest
+run(`{
+  QS.start("sq_pass");
+  const hk = new Enemy("hymnkeeper", G.player.x + 60, G.player.y);
+  hk.engaged = true;
+  G.entities.push(hk);
+  let guard = 0;
+  while (!hk.dead && guard++ < 60) Combat.applyDamage(hk, {amount: 80, dtype: "phys", poiseDmg: 10, attacker: G.player});
+}`);
+check("Hymnkeeper falls and yields the war-horn", run(`G.player.hasItem("pass_warhorn")`));
+check("pass quest advances to the cairn", run(`QS.stage("sq_pass")`) === 1);
+run(`{
+  const cairn = G.overworld.stations.find(s => s.kind === "passcairn");
+  Game.interact({ kind: "passcairn", obj: cairn });
+}`);
+check("sounding the horn lays the armies to rest", run(`G.flags.pass_at_rest === true && QS.stage("sq_pass") === 2`));
+run(`QS.complete("sq_pass")`);
+check("Eirik grants Stillsong", run(`G.player.hasItem("stillsong")`));
+
+// the Gauntlet: map, Brann, wave flow
+run(`{
+  const gm = World.getMap("gauntlet");
+  Game.enterMap("gauntlet", gm.arrival.x, gm.arrival.y);
+  G.brannThere = G.entities.some(e => e.npcId === "brann");
+  QS.start("sq_arena");
+  Game.startGauntletWave();
+}`);
+check("Brann keeps the pit", run(`G.brannThere`) === true);
+check("wave one fills the sand", run(`G.gauntletActive === true && Game.gauntletMembers.length > 0`));
+run(`{
+  const before = G.player.embers;
+  for (const e of Game.gauntletMembers.slice()) {
+    let guard = 0;
+    while (!e.dead && guard++ < 40) Combat.applyDamage(e, {amount: 60, dtype: "phys", poiseDmg: 10, attacker: G.player});
+  }
+  Game.updateGauntlet();
+  G.wavePaid = G.player.embers > before;
+}`);
+check("clearing the wave pays the purse", run(`G.wavePaid && G.flags.gauntlet_wave === 1 && !G.gauntletActive`));
+run(`{ for (let w = 2; w <= 5; w++) { Game.startGauntletWave(); for (const e of Game.gauntletMembers.slice()) { let g2 = 0; while (!e.dead && g2++ < 80) Combat.applyDamage(e, {amount: 120, dtype: "phys", poiseDmg: 10, attacker: G.player}); } Game.updateGauntlet(); } }`);
+check("five waves crowns a champion", run(`G.flags.gauntlet_w5 === true && QS.stage("sq_arena")`) === 1);
+run(`QS.complete("sq_arena")`);
+check("champion's ring claimed", run(`G.player.hasItem("champions_ring")`));
+
+// Speech: prices move with skill, xp flows from trade
+run(`{
+  const it = ITEMS.iron_sword;
+  G.player.skills.speech.lvl = 5;
+  const b0 = G.player.buyPrice(it), s0 = G.player.sellPrice(it);
+  G.player.skills.speech.lvl = 80;
+  G.player.perks.sp_3 = true;
+  G.speechCheck = G.player.buyPrice(it) < b0 && G.player.sellPrice(it) > s0 && G.player.canPersuade() === true;
+  delete G.player.perks.sp_3;
+}`);
+check("speech moves the market and unlocks persuasion", run(`G.speechCheck`) === true);
+check("quest target star resolves a poi", run(`{
+  const t = QS.currentTargetPoi();
+  t === null || (typeof t.tx === "number" && typeof t.ty === "number");
+}`));
+run(`Game.enterMap("overworld", 200*32, 206*32);`);
+frames(10);
 
 /* ---------------- first-person mode ---------------- */
 

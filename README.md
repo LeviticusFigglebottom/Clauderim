@@ -102,9 +102,9 @@ and a living spawn ecology.
 - **Resting wakes the world**: shrines restore you and respawn every non-boss enemy.
 - **Six attributes** (Vigor, Endurance, Mind, Strength, Finesse, Will), Dark Souls level
   costs, weapon **scaling letters** (S/A/B/…) per attribute.
-- **11 use-based skills** (One-/Two-Handed, Archery, Block, Light/Heavy Armor, Destruction,
-  Restoration, Sneak, Smithing, Alchemy), each with a 4-perk tree; a perk point every 5th
-  skill level.
+- **12 use-based skills** (One-/Two-Handed, Archery, Block, Light/Heavy Armor, Destruction,
+  Restoration, Sneak, Smithing, Alchemy, **Speech**), each with a 4-perk tree; a perk point
+  every 5th skill level. Speech moves shop prices and unlocks **persuasion** in dialogue.
 - **Equip load** sets your roll: fast / medium / fat / none.
 - **Poise & stagger**, parry → riposte windows, guard breaks, backstab sneak multipliers,
   shield-bearing enemies that block.
@@ -120,8 +120,12 @@ and a living spawn ecology.
 - **~80 items** — weapons, armor sets (light/heavy with stealth and resist identities),
   shields, trinkets, consumables, bombs — every one carrying its own lore line.
 - **10 readable in-world books** of deep lore, sold by fitting vendors and found in chests.
-- **7 side quests + the main questline** with a journal, objective tracker, and a final
-  binary choice that decides the fate of the First Ember (two endings).
+- **9 side quests + the main questline** with a journal, objective tracker, compass quest
+  markers, and a final binary choice that decides the fate of the First Ember (two endings).
+- **The White Pass**: two armies frozen mid-charge for four hundred years — search the
+  soldiers (some object), fell the Hymnkeeper, and sound the horn that ends their watch.
+- **The Gauntlet of Sparks**: Brann's wave-survival pit. Embers per wave, a champion's
+  ring at five, and no upper limit on how deep the sand gets.
 - **3 save slots** (localStorage), autosave at every shrine rest, full world-state
   persistence from a regenerating seed.
 

@@ -264,6 +264,15 @@ const Combat = {
           G.msg(`Looted ${ITEMS[roll.id].name}${n > 1 ? " ×" + n : ""}`, "");
         }
       }
+      // named foes carry guaranteed spoils
+      if (def.drops && !def.boss) {
+        for (const pair of def.drops) {
+          if (def.dropsOnce && (p.hasItem(pair[0]) || G.flags["dropped_" + pair[0]])) continue;
+          G.flags["dropped_" + pair[0]] = true;
+          p.addItem(pair[0], pair[1]);
+          G.msg(`Obtained ${ITEMS[pair[0]].name}`, "good");
+        }
+      }
       QS.onKill(def.id);
     }
 
@@ -538,7 +547,7 @@ const Combat = {
       return;
     }
     if (p.atk || p.cast || p.rollT > 0) return;
-    p.edictCds[edictId] = e.cooldown;
+    p.edictCds[edictId] = e.cooldown * (p.hasPerk("sp_4") ? 0.8 : 1);
     Sfx.play("edict");
     G.shake(7, 0.4);
     G.float(p.x, p.y - 34, e.name.split(" — ")[0], e.color, 26);

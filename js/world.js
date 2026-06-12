@@ -25,9 +25,10 @@ const D = {
   NONE: 0, TREE: 1, PINE: 2, DEADTREE: 3, ROCK: 4, BUSH: 5,
   SWAMPTREE: 6, BOULDER: 7, ANVIL: 8, ALCH: 9, WELL: 10, LAMP: 11,
   CAIRN: 12, GRAVE: 13, BARREL: 14, TABLE: 15, EMBERVAULT: 16, PILLAR: 17,
+  FROZEN: 18,
 };
 const SOLID_DECO = new Set([D.TREE, D.PINE, D.DEADTREE, D.ROCK, D.SWAMPTREE, D.BOULDER,
-  D.ANVIL, D.ALCH, D.WELL, D.CAIRN, D.BARREL, D.TABLE, D.EMBERVAULT, D.PILLAR]);
+  D.ANVIL, D.ALCH, D.WELL, D.CAIRN, D.BARREL, D.TABLE, D.EMBERVAULT, D.PILLAR, D.FROZEN]);
 
 /* biome ids */
 const B = { HEART: 0, FOREST: 1, MIRE: 2, FROST: 3, ASHLAND: 4, COAST: 5 };
@@ -129,12 +130,15 @@ const World = {
       { id: "camp_redwater", name: "Redwater Camp", kind: "camp", tx: 234, ty: 244 },
       { id: "camp_gallows", name: "Gallows Hill", kind: "camp", tx: 158, ty: 262 },
       { id: "camp_shiver", name: "Shiverwatch Ruin", kind: "camp", tx: 226, ty: 96 },
+      { id: "white_pass", name: "The White Pass", kind: "battlefield", tx: 230, ty: 72 },
+      { id: "gauntlet", name: "The Gauntlet of Sparks", kind: "dungeon", tx: 216, ty: 226, interior: "gauntlet" },
     ];
 
     this.stampEmberfall(map);
     this.stampDuskmere(map);
     this.stampFrosthollow(map);
     this.stampWatchtower(map);
+    this.stampWhitePass(map, rng);
     for (const p of map.poiList) if (p.interior) this.stampDungeonMouth(map, p);
 
     /* ---- roads ---- */
@@ -374,6 +378,35 @@ const World = {
     map.stations.push({ kind: "campfire", x: tx * TILE + 16, y: ty * TILE + 16 });
   },
 
+  /* ---- the White Pass: two armies, frozen an arm's length apart ---- */
+  stampWhitePass(map, rng) {
+    const cx = 230, cy = 72;
+    this.clearArea(map, cx, cy, 12, T.SNOW);
+    map.statues = map.statues || [];
+    // two opposing ranks, mid-charge
+    let n = 0;
+    for (let file = 0; file < 2; file++) {
+      for (let row = 0; row < 2; row++) {
+        for (let x = cx - 10; x <= cx + 10; x += 2) {
+          if (rng() < 0.25) continue;
+          const ty = cy + (file === 0 ? -(2 + row * 2) : (2 + row * 2)) + U.randi(rng, -1, 0);
+          const tx = x + U.randi(rng, 0, 1);
+          if (!this.inBounds(map, tx, ty)) continue;
+          this.setDeco(map, tx, ty, D.FROZEN);
+          map.statues.push({ id: "wp" + (n++), x: tx * TILE + 16, y: ty * TILE + 16 });
+        }
+      }
+    }
+    // the great cairn between the lines, where the horn must sound
+    this.setDeco(map, cx, cy, D.CAIRN);
+    map.stations.push({ kind: "passcairn", x: cx * TILE + 16, y: cy * TILE + 16 });
+    // the Hymnkeeper paces the line
+    map.encounters.push({ idx: "hymnkeeper", type: "hymnkeeper", x: (cx + 2) * TILE + 16, y: cy * TILE + 16, unlessFlag: "pass_at_rest" });
+    // its own spawn ecology until the armies rest
+    map.spawners.push({ x: cx * TILE, y: cy * TILE, r: 280, table: "whitepass", max: 4, members: [], cd: 0 });
+    this.placeChest(map, cx - 11, cy + 6, "chest_rare");
+  }, 
+
   /* ---- stone mouth of a dungeon, with portal ---- */
   stampDungeonMouth(map, poi) {
     const { tx, ty } = poi;
@@ -529,6 +562,7 @@ const World = {
         boss: "boss_maerodric", vault: true, gather: ["ghost_fern"],
         ambient: "keep",
       });
+      case "gauntlet": return this.genGauntlet();
       case "undermarch": return this.genCaveDungeon(rng, {
         id, name: "The Undermarch", w: 78, h: 78,
         floor: T.FLOOR_STONE, exit: { map: "overworld", poi: "undermarch" },
@@ -539,6 +573,34 @@ const World = {
       });
     }
     throw new Error("unknown interior: " + id);
+  },
+
+  /* the Gauntlet of Sparks: a fighting pit with a pitmaster */
+  genGauntlet() {
+    const w = 30, h = 30;
+    const map = {
+      id: "gauntlet", name: "The Gauntlet of Sparks", w, h, outdoor: false, ambient: "keep",
+      tiles: new Uint8Array(w * h).fill(T.WALL_STONE),
+      deco: new Uint8Array(w * h), biome: null,
+      portals: [], shrines: [], chests: [], pickups: [], npcs: [],
+      spawners: [], encounters: [], encDead: {}, safeZones: [], lights: [], stations: [],
+      bossArena: null,
+    };
+    this.carveCircle(map, 15, 14, 10, T.FLOOR_STONE);
+    map.arrival = { x: 15 * TILE + 16, y: 24 * TILE + 16 };
+    this.carveCircle(map, 15, 24, 2, T.FLOOR_STONE);
+    map.portals.push({
+      id: "exit", x: 15 * TILE + 16, y: 25 * TILE + 16,
+      to: "overworld", toPoi: "gauntlet", name: "Leave the Gauntlet", exit: true,
+    });
+    map.stations.push({ kind: "gauntlet", x: 15 * TILE + 16, y: 14 * TILE + 16 });
+    map.npcs.push({ id: "brann", x: 15 * TILE + 16, y: 8 * TILE + 16, homeX: 15 * TILE + 16, homeY: 8 * TILE + 16 });
+    for (const [lx, ly] of [[8, 10], [22, 10], [8, 19], [22, 19]]) {
+      this.setDeco(map, lx, ly, D.LAMP);
+      map.lights.push({ x: lx * TILE + 16, y: ly * TILE + 16, r: 140, color: "255,160,70", flicker: true });
+    }
+    map.lights.push({ x: 15 * TILE + 16, y: 14 * TILE + 16, r: 150, color: "255,140,60", flicker: true });
+    return map;
   },
 
   /* rooms-and-corridors generator */
@@ -958,6 +1020,7 @@ const World = {
       const d = U.dist(p.x, p.y, s.x, s.y);
       if (d < 380 || d > 1000) continue;
       if (this.nearSafeZone(map, s.x, s.y, 0)) continue;
+      if (s.table === "whitepass" && G.flags.pass_at_rest) continue; // the armies sleep now
       const table = SPAWN_TABLES[s.table];
       if (!table) continue;
       const pick = U.weighted(Math.random, table);

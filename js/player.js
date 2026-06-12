@@ -172,6 +172,21 @@ class Player extends Entity {
     return it && it.bonus ? it.bonus[key] || 0 : 0;
   }
 
+  /* Speech moves the market */
+  buyPrice(it) {
+    let m = 1 - this.skills.speech.lvl * 0.002;
+    if (this.hasPerk("sp_3")) m -= 0.2;
+    else if (this.hasPerk("sp_1")) m -= 0.1;
+    return Math.max(1, Math.round(it.value * Math.max(0.5, m)));
+  }
+  sellPrice(it) {
+    let m = 0.4 * (1 + this.skills.speech.lvl * 0.003);
+    if (this.hasPerk("sp_3")) m *= 1.2;
+    else if (this.hasPerk("sp_1")) m *= 1.1;
+    return Math.max(1, Math.floor(it.value * Math.min(0.8, m)));
+  }
+  canPersuade() { return this.hasPerk("sp_2") || this.skills.speech.lvl >= 40; }
+
   sneakBonus() {
     let b = 0;
     for (const slot of ["head", "body", "legs"]) {
@@ -579,6 +594,8 @@ class Player extends Entity {
     Object.assign(p.attrs, d.attrs);
     p.level = d.level; p.embers = d.embers; p.gold = d.gold;
     p.skills = d.skills; p.perks = d.perks; p.perkPoints = d.perkPoints;
+    // older saves predate newer skills — backfill them
+    for (const id in SKILL_DEFS) if (!p.skills[id]) p.skills[id] = { lvl: 5, xp: 0 };
     p.inventory = d.inventory; p.equip = d.equip;
     p.spells = d.spells; p.equippedSpell = d.equippedSpell; p.edicts = d.edicts;
     p.flask = d.flask;

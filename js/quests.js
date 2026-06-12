@@ -174,6 +174,23 @@ const QS = {
     return txt;
   },
 
+  /* the place your current task points to, for compass/map stars */
+  currentTargetPoi() {
+    const p = G.player;
+    if (!p) return null;
+    // main quest first, then sides
+    for (const en of this.journalEntries()) {
+      if (en.st.done) continue;
+      const obj = this.currentObjective(en.id);
+      if (!obj) continue;
+      const poiId = obj.targetPoi || (obj.kind === "reach" ? obj.poi : null);
+      if (!poiId) continue;
+      const poi = World.poiById(poiId);
+      if (poi && (!poi.hidden || G.discoveredPois[poiId])) return poi;
+    }
+    return null;
+  },
+
   /* sorted entries for the journal tab */
   journalEntries() {
     const p = G.player;

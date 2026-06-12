@@ -443,7 +443,8 @@ const UI = {
       slots += `<div style="display:flex;gap:8px;align-items:center">
         <span style="flex:1;color:${info ? "#d8d0c0" : "#5d574c"}">Slot ${s}: ${info ? `${U.esc(info.name)} lv${info.level}, day ${info.day}` : "empty"}</span>
         <button class="act-btn" data-save="${s}">Save</button>
-        ${info ? `<button class="act-btn" data-load2="${s}">Load</button>` : ""}</div>`;
+        ${info ? `<button class="act-btn" data-load2="${s}">Load</button>
+        <button class="act-btn danger" data-del="${s}">✕</button>` : ""}</div>`;
     }
     const chk = (key, label) => `<label style="display:flex;justify-content:space-between;cursor:pointer">
       <span>${label}</span><input type="checkbox" data-set="${key}" ${G.settings[key] ? "checked" : ""}></label>`;
@@ -463,6 +464,16 @@ const UI = {
     c.querySelectorAll("[data-load2]").forEach(b => b.onclick = () => {
       this.closeMenu();
       Game.loadGame(parseInt(b.dataset.load2));
+    });
+    c.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+      if (b.dataset.confirm) {
+        localStorage.removeItem(SaveSys.slotKey(parseInt(b.dataset.del)));
+        Sfx.play("ui");
+        this.renderMenu();
+      } else {
+        b.dataset.confirm = "1";
+        b.textContent = "sure?";
+      }
     });
     c.querySelectorAll("[data-set]").forEach(el => el.onchange = () => {
       G.settings[el.dataset.set] = el.checked;
@@ -618,9 +629,10 @@ const UI = {
     if (tab === "buy") {
       for (const id of (def.shop.stock || [])) {
         const it = ITEMS[id];
-        const afford = p.gold >= it.value;
+        const price = p.buyPrice(it);
+        const afford = p.gold >= price;
         rows += `<div class="craft-row"><span class="c-name r-${it.rarity}">${U.esc(it.name)} <span style="color:#6a665e;font-size:12px">${this.itemMeta(it)}</span></span>
-          <span><span class="c-req ${afford ? "have" : "lack"}">${it.value} g</span>
+          <span><span class="c-req ${afford ? "have" : "lack"}">${price} g</span>
           <button class="act-btn" data-buy="${id}" ${afford ? "" : "disabled"}>Buy</button></span></div>`;
       }
       for (const sid of (def.shop.spells || [])) {
@@ -636,7 +648,7 @@ const UI = {
       for (const s of p.inventory) {
         const it = ITEMS[s.id];
         if (it.type === "key" || !it.value) continue;
-        const price = Math.max(1, Math.floor(it.value * 0.4));
+        const price = p.sellPrice(it);
         rows += `<div class="craft-row"><span class="c-name r-${it.rarity}">${U.esc(it.name)}${s.n > 1 ? " ×" + s.n : ""}</span>
           <span><span class="c-req have">${price} g</span>
           <button class="act-btn" data-sell="${s.id}">Sell</button></span></div>`;
@@ -653,9 +665,11 @@ const UI = {
     U.el("shop-close").onclick = () => this.closeStation();
     panel.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => {
       const it = ITEMS[b.dataset.buy];
-      if (p.gold < it.value) return;
-      p.gold -= it.value;
+      const price = p.buyPrice(it);
+      if (p.gold < price) return;
+      p.gold -= price;
       p.addItem(it.id, 1);
+      p.gainSkill("speech", U.clamp(price / 12, 2, 14));
       Sfx.play("coin");
       this.renderShop(npcId, "buy");
     });
@@ -670,8 +684,10 @@ const UI = {
     });
     panel.querySelectorAll("[data-sell]").forEach(b => b.onclick = () => {
       const it = ITEMS[b.dataset.sell];
+      const price = p.sellPrice(it);
       p.removeItem(it.id, 1);
-      p.gold += Math.max(1, Math.floor(it.value * 0.4));
+      p.gold += price;
+      p.gainSkill("speech", U.clamp(price / 12, 2, 14));
       Sfx.play("coin");
       this.renderShop(npcId, "sell");
     });
@@ -881,6 +897,11 @@ const UI = {
       <p>Enemies telegraph in <b style="color:#d89090">red</b>. Sneak attacks from behind unaware foes deal brutal damage — approach from behind and they notice far less.</p>
       <p><b>Hone weapons</b> at any forge (+8% damage a tier, three tiers). <b>Cook</b> hunted meat at campfires. Beware <b style="color:#ff7a3a">ashen elites</b> — they burn brighter and hit harder, but carry triple embers.</p>
       <p>Hunt deer and hares for meat and hides. Search old graves if you dare; the tenants object roughly one time in four.</p>
+      <h3>Words & wagers</h3>
+      <p><b>Speech</b> grows with every trade: better prices, and (with Silver Tongue) <b>persuasion</b>
+      options in conversation. <b>Brann's Gauntlet</b> south of the crossroads pays embers per survived
+      wave — five waves makes you champion. The <b>White Pass</b> holds two frozen armies; search the
+      soldiers if you dare, and listen to Eirik before you go.</p>
       <h3>The road</h3>
       <p>Speak with <b>Serah the Lampwright</b> in Emberfall. Claim the four Sigils of the Wardens.
       Open the Citadel of Hollows. Decide what the light does next.</p>`;

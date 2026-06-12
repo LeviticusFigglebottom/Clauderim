@@ -42,6 +42,7 @@ const G = {
   lostEmbers: null,     // { mapId, x, y, amount } — souls dropped on death
 
   bossFight: null,      // active boss entity or null
+  gauntletActive: false,
   pendingTransition: null,
 
   // settings

@@ -597,6 +597,24 @@ const Render = {
         ctx.fillRect(x - 7, y - 30, 14, 5);
         break;
       }
+      case D.FROZEN: {
+        // a soldier, mid-stride, iced over
+        ctx.fillStyle = "rgba(0,0,0,0.25)";
+        ctx.beginPath(); ctx.ellipse(x, y + 6, 9, 4, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = "#aebfc8";
+        ctx.beginPath(); ctx.ellipse(x, y - 4, 7, 9, h > 0.5 ? 0.15 : -0.15, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + (h > 0.5 ? 2 : -2), y - 14, 4.6, 0, TAU); ctx.fill();
+        // raised spear, never landing
+        ctx.strokeStyle = "#8fa2ad"; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + (h > 0.5 ? 6 : -6), y + 2);
+        ctx.lineTo(x + (h > 0.5 ? 13 : -13), y - 22);
+        ctx.stroke();
+        // rime glint
+        ctx.fillStyle = "rgba(220,240,255,0.5)";
+        ctx.fillRect(x - 2 + h * 4, y - 12, 2, 2);
+        break;
+      }
       case D.EMBERVAULT: {
         ctx.fillStyle = "#393733";
         ctx.beginPath(); ctx.arc(x, y, 14, 0, TAU); ctx.fill();
@@ -1255,6 +1273,20 @@ const Render = {
         }
       }
     }
+    // current quest target, when it lives on this map
+    if (G.map.outdoor) {
+      const tgt = QS.currentTargetPoi();
+      if (tgt) {
+        const ang = U.angTo(p.x, p.y, tgt.tx * TILE, tgt.ty * TILE);
+        const rel = U.angDiff(heading, ang);
+        if (Math.abs(rel) < 1.6) {
+          ctx.fillStyle = "#ffe9a8";
+          ctx.font = "11px serif"; ctx.textAlign = "center";
+          ctx.fillText("✦", G.W / 2 + rel * (cw / 3.2), cy0 + 9);
+          ctx.textAlign = "left";
+        }
+      }
+    }
     // lost embers beckon from where you fell
     if (G.lostEmbers && G.lostEmbers.mapId === G.map.id) {
       const ang = U.angTo(p.x, p.y, G.lostEmbers.x, G.lostEmbers.y);
@@ -1322,11 +1354,18 @@ const Render = {
       ctx.arc(mx + (G.lostEmbers.x / TILE - sx) * scale, my + (G.lostEmbers.y / TILE - sy) * scale, 2.6, 0, TAU);
       ctx.fill();
     }
-    // player
+    // player, with heading
+    const pxm = mx + (ptx - sx) * scale, pym = my + (pty - sy) * scale;
     ctx.fillStyle = "#fff";
     ctx.beginPath();
-    ctx.arc(mx + (ptx - sx) * scale, my + (pty - sy) * scale, 2.6, 0, TAU);
+    ctx.arc(pxm, pym, 2.4, 0, TAU);
     ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(pxm, pym);
+    ctx.lineTo(pxm + Math.cos(p.facing) * 7, pym + Math.sin(p.facing) * 7);
+    ctx.stroke();
     ctx.restore();
     ctx.globalAlpha = 1;
     ctx.strokeStyle = "rgba(74,64,48,0.9)";

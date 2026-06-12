@@ -139,6 +139,12 @@ const ITEMS = {
     scale: { str: "C", fin: "B" }, edmg: { fire: 6, frost: 6 },
     lore: "Bram's masterpiece: a blade quenched twice, once in glacier-melt and once in ember-bath. The two tempers have never agreed about anything, including whom to cut."
   },
+  stillsong: {
+    name: "Stillsong", type: "weapon", wclass: "1h", skill: "onehand",
+    dmg: 27, spd: 1.55, reach: 56, stam: 12, poiseDmg: 18, weight: 4, value: 1300, rarity: "unique",
+    scale: { str: "D", fin: "A" }, edmg: { frost: 8 },
+    lore: "Carried at the White Pass by a soldier whose name the song forgot. It makes no sound when swung — the quiet goes ahead of the edge, and arrives first."
+  },
 
   /* =================== BOWS =================== */
 
@@ -275,6 +281,11 @@ const ITEMS = {
     lore: "Worn smooth by four hundred years of a dead king turning it on a dead finger. It remembers how to be patient, and lends the knack." },
   circlet_first: { name: "Circlet of the First", type: "armor", slot: "head", kind: "light", armor: 12, weight: 1, value: 1400, rarity: "unique", edef: { shock: 20, fire: 20 },
     lore: "Ald's coronal, a ring of cold gold and one ember-bead. Thirty-one kings refused to wear it after him; they said it listened." },
+  passwarden_cloak: { name: "Passwarden's Cloak", type: "armor", slot: "body", kind: "light", armor: 14, weight: 3, value: 800, rarity: "rare", edef: { frost: 35 },
+    lore: "Pulled gently from a frozen shoulder at the White Pass. Four hundred winters could not get through it; whoever wore it died of something else entirely." },
+  champions_ring: { name: "Spark-Champion's Ring", type: "trinket", slot: "trinket", weight: 0, value: 900, rarity: "unique",
+    bonus: { stamRegen: 4, maxHp: 10, poise: 10 },
+    lore: "Brann's prize for those who outlast his Gauntlet. The band is forge-slag from a hundred broken blades — everything that didn't survive, holding together the one that did." },
 
   /* =================== CONSUMABLES =================== */
 
@@ -370,6 +381,8 @@ const ITEMS = {
     lore: "Maren's fever-cure, wax-sealed against the cold and the curious. Frosthollow is waiting." },
   drowned_bell_clapper: { name: "Bell Clapper", type: "key", weight: 2, value: 0, rarity: "rare",
     lore: "Torn from the Drowned Bell. Without it the chapel is finally, mercifully, silent." },
+  pass_warhorn: { name: "War-Horn of the Pass", type: "key", weight: 2, value: 0, rarity: "unique",
+    lore: "The Hymnkeeper held it for four hundred years, never sounding it — a held breath made of brass. The charge it was meant to signal is still waiting, an arm's length from the enemy." },
 
   /* =================== MISC =================== */
 

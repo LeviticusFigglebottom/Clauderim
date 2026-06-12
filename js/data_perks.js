@@ -122,6 +122,16 @@ const SKILL_DEFS = {
       { id: "al_4", name: "Panacea", req: 70, desc: "Brewed potions are 50% stronger and weigh nothing." },
     ],
   },
+  speech: {
+    name: "Speech", attr: "wil",
+    desc: "The March runs on iron and embers, but it turns on words.",
+    perks: [
+      { id: "sp_1", name: "Haggler", req: 10, desc: "Buy for 10% less, sell for 10% more." },
+      { id: "sp_2", name: "Silver Tongue", req: 25, desc: "Unlock persuasion in conversation." },
+      { id: "sp_3", name: "Market Presence", req: 45, desc: "Buy for 20% less, sell for 20% more." },
+      { id: "sp_4", name: "Old Tongue Cadence", req: 70, desc: "Edicts recharge 20% faster — even power listens to delivery." },
+    ],
+  },
 };
 
 const ATTR_DEFS = {

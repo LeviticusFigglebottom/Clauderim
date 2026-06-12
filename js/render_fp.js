@@ -21,7 +21,7 @@
 "use strict";
 
 const FP_WALLS = new Set([T.WALL_WOOD, T.WALL_STONE, T.VOID, T.SNOWROCK]);
-const FP_MAXDIST = 34;     // tiles
+const FP_MAXDIST = 48;     // tiles
 const FP_WALL_H = 1.6;     // wall height in tiles
 const FP_EYE = 0.62;       // eye height in tiles
 
@@ -31,7 +31,7 @@ const FP_DECO_H = {
   [D.ROCK]: 0.9, [D.BOULDER]: 1.25, [D.BUSH]: 0.55, [D.ANVIL]: 0.85,
   [D.ALCH]: 0.95, [D.WELL]: 0.95, [D.LAMP]: 2.0, [D.CAIRN]: 1.05,
   [D.GRAVE]: 1.05, [D.BARREL]: 0.95, [D.TABLE]: 0.85, [D.EMBERVAULT]: 1.35,
-  [D.PILLAR]: 2.2,
+  [D.PILLAR]: 2.2, [D.FROZEN]: 1.5,
 };
 
 const RenderFP = {
@@ -119,7 +119,7 @@ const RenderFP = {
     const unit = this.H / perp; // pixels per tile at this depth
     return {
       x: sx * scale,
-      ground: (this.lastHorizon + FP_EYE * unit) * scale,
+      ground: (this.lastHorizon + (this.lastEye || FP_EYE) * unit) * scale,
       h: unit * scale, perp, col: U.clamp(sx | 0, 0, this.W - 1),
     };
   },
@@ -139,17 +139,23 @@ const RenderFP = {
     const plX = -dirY * this.fov, plY = dirX * this.fov;
     const tm = G.elapsed;
 
-    /* camera: pitch shear + head bob + crouch/roll dips */
+    /* camera: pitch shears the horizon; head-bob, crouch and roll
+       lower the EYE instead — near ground sways, the horizon holds still */
     const pitch = p.fpPitch || 0;
-    let bobY = 0;
-    if (p.moving && p.rollT <= 0) bobY = Math.sin(p.bobT * 0.95) * (p.sprinting ? 5 : 3);
-    if (p.crouched) bobY += 16;
+    let eye = FP_EYE;
+    if (p.moving && p.rollT <= 0) eye += Math.sin(p.bobT * 0.95) * (p.sprinting ? 0.022 : 0.013);
+    if (p.crouched) eye -= 0.17;
     if (p.rollT > 0 && p._rollProf) {
       const ph = 1 - p.rollT / p._rollProf.dur;
-      bobY += Math.sin(ph * Math.PI) * 34;
+      eye -= Math.sin(ph * Math.PI) * 0.3;
     }
-    const horizon = U.clamp((H * (0.5 - pitch) + bobY) | 0, 48, H - 48);
+    eye = Math.max(0.2, eye);
+    this.lastEye = eye;
+    const horizon = U.clamp((H * (0.5 - pitch)) | 0, 48, H - 48);
     this.lastHorizon = horizon;
+    // sprint stretches the view a touch
+    const fovTarget = p.sprinting ? 0.78 : 0.7;
+    this.fov += (fovTarget - this.fov) * Math.min(1, (G.rdt || 0.016) * 7);
 
     /* ---- ambient, fog, sky ---- */
     const dark = map.outdoor ? G.darkness() : 1;
@@ -195,21 +201,21 @@ const RenderFP = {
        functions of the screen row alone — compute them once ---- */
     const glowK = 0.55 * (1 - amb);
     for (let y = horizon + 1; y < H; y++) {
-      const rd = (FP_EYE * H) / (y - horizon);
+      const rd = (eye * H) / (y - horizon);
       this.rowRD[y] = rd;
       if (rd > FP_MAXDIST) { this.rowFog[y] = 1; this.rowB[y] = 0; continue; }
       const f = Math.min(1, rd / FP_MAXDIST);
-      this.rowFog[y] = Math.min(1, Math.pow(f, 1.6));
-      this.rowB[y] = amb / (1 + rd * 0.06) + Math.max(0, 1 - rd / 5) * glowK;
+      this.rowFog[y] = Math.min(1, f * f * Math.sqrt(f) * 1.02); // ~pow 2.5: clear mid-range, late fade
+      this.rowB[y] = amb / (1 + rd * 0.05) + Math.max(0, 1 - rd / 5) * glowK;
     }
-    const ceilH = FP_WALL_H - FP_EYE;
+    const ceilH = FP_WALL_H - eye;
     if (!map.outdoor) {
       for (let y = 0; y < horizon; y++) {
         const rd = (ceilH * H) / Math.max(1, horizon - y);
         this.ceilRD[y] = rd;
         if (rd > FP_MAXDIST) { this.ceilFog[y] = 1; this.ceilB[y] = 0; continue; }
         const f = Math.min(1, rd / FP_MAXDIST);
-        this.ceilFog[y] = Math.min(1, Math.pow(f, 1.6));
+        this.ceilFog[y] = Math.min(1, f * f * Math.sqrt(f) * 1.02);
         this.ceilB[y] = amb * 0.5 / (1 + rd * 0.08) + Math.max(0, 1 - rd / 5) * 0.4 * (1 - amb);
       }
     } else {
@@ -248,7 +254,7 @@ const RenderFP = {
       if (rdy < 0) { stepY = -1; sideY = (py - mapY) * dDy; } else { stepY = 1; sideY = (mapY + 1 - py) * dDy; }
 
       let hit = 0, side = 0, tile = 0, steps = 0;
-      while (steps++ < 80) {
+      while (steps++ < 130) {
         if (sideX < sideY) { sideX += dDx; mapX += stepX; side = 0; }
         else { sideY += dDy; mapY += stepY; side = 1; }
         tile = World.tileAt(map, mapX, mapY);
@@ -260,8 +266,8 @@ const RenderFP = {
       if (hit) {
         perp = Math.max(0.06, side === 0 ? sideX - dDx : sideY - dDy);
         const unit = unitFor(perp);
-        const topF = horizon - (FP_WALL_H - FP_EYE) * unit;
-        const botF = horizon + FP_EYE * unit;
+        const topF = horizon - (FP_WALL_H - eye) * unit;
+        const botF = horizon + eye * unit;
         top = Math.max(0, topF | 0);
         bot = Math.min(H - 1, botF | 0);
 
@@ -269,9 +275,10 @@ const RenderFP = {
         const wallX = side === 0 ? py + perp * rdy : px + perp * rdx;
         const u = wallX - Math.floor(wallX);
         const cellJ = this.jit(mapX, mapY);
-        let br = amb * (side === 1 ? 0.76 : 1) / (1 + perp * 0.06);
+        let br = amb * (side === 1 ? 0.76 : 1) / (1 + perp * 0.05);
         br += Math.max(0, 1 - perp / 5) * 0.5 * (1 - amb);
-        const fogT = Math.pow(Math.min(1, perp / FP_MAXDIST), 1.6);
+        const ff = Math.min(1, perp / FP_MAXDIST);
+        const fogT = Math.min(1, ff * ff * Math.sqrt(ff) * 1.02);
 
         const vStep = FP_WALL_H / (botF - topF);
         let v = (top - topF) * vStep;
@@ -509,7 +516,7 @@ const RenderFP = {
     const sx = (0.5 + Math.tan(rel) / (2 * this.fov)) * this.W;
     if (sx < -80 || sx > this.W + 80) return null;
     const unit = this.H / perp;
-    return { x: sx, ground: horizon + FP_EYE * unit, unit, perp, col: U.clamp(sx | 0, 0, this.W - 1) };
+    return { x: sx, ground: horizon + (this.lastEye || FP_EYE) * unit, unit, perp, col: U.clamp(sx | 0, 0, this.W - 1) };
   },
 
   /* ------------------------------------------------------ */
@@ -558,8 +565,8 @@ const RenderFP = {
       }, 1.6);
     }
 
-    const tx0 = Math.max(0, ((p.x / TILE) | 0) - 24), tx1 = Math.min(map.w - 1, ((p.x / TILE) | 0) + 24);
-    const ty0 = Math.max(0, ((p.y / TILE) | 0) - 24), ty1 = Math.min(map.h - 1, ((p.y / TILE) | 0) + 24);
+    const tx0 = Math.max(0, ((p.x / TILE) | 0) - 32), tx1 = Math.min(map.w - 1, ((p.x / TILE) | 0) + 32);
+    const ty0 = Math.max(0, ((p.y / TILE) | 0) - 32), ty1 = Math.min(map.h - 1, ((p.y / TILE) | 0) + 32);
     for (let ty = ty0; ty <= ty1; ty++) {
       for (let tx = tx0; tx <= tx1; tx++) {
         const d = map.deco[ty * map.w + tx];
@@ -734,7 +741,7 @@ const RenderFP = {
 
     for (const sp of sprites) {
       const unit = H / sp.perp;
-      const groundY = horizon + FP_EYE * unit - sp.yLift * unit;
+      const groundY = horizon + (this.lastEye || FP_EYE) * unit - sp.yLift * unit;
       let sH = sp.hTiles * unit * (176 / 128);
       if (sH < 3) continue;
       // point-blank: bound the silhouette so it towers instead of smearing
@@ -771,7 +778,8 @@ const RenderFP = {
       }
 
       // fog TINTS the sprite (it stays opaque — no ghost trees)
-      const fogT = Math.pow(Math.min(1, sp.perp / FP_MAXDIST), 1.6);
+      const ffs = Math.min(1, sp.perp / FP_MAXDIST);
+      const fogT = Math.min(1, ffs * ffs * Math.sqrt(ffs) * 1.02);
       if (fogT > 0.03) {
         tctx.save();
         tctx.globalCompositeOperation = "source-atop";

@@ -195,6 +195,25 @@ const ENEMY_TYPES = {
     loot: [{ w: 3, id: "silver_dust", n: [1, 2] }, { w: 2, id: "frost_crystal", n: [1, 1] }, { w: 1, id: "ember_core", n: [1, 1] }],
     voice: "whisper",
   },
+  thawed_soldier: {
+    name: "Thawed Soldier", hp: 70, dmg: 17, spd: 95, r: 13, reach: 46,
+    windup: 0.5, strike: 0.12, recover: 0.6, poise: 45, poiseDmg: 24,
+    armor: 9, resist: { frost: 100, poison: 100, fire: -25 }, edmg: { frost: 6 },
+    aggro: 240, deaggro: 999, embers: 58, behavior: "melee", canBlock: 0.35,
+    tags: ["undead", "frost"], look: { shape: "humanoid", body: "#aebfc8", trim: "#6d8290", size: 1.05, weapon: "sword", shield: true },
+    loot: [{ w: 3, id: "frostmoss", n: [1, 2] }, { w: 2, gold: [8, 26] }, { w: 1, id: "frost_crystal", n: [1, 1] }, { w: 3 }],
+    voice: "moan",
+  },
+  hymnkeeper: {
+    name: "The Hymnkeeper", hp: 320, dmg: 26, spd: 105, r: 17, reach: 54,
+    windup: 0.5, strike: 0.12, recover: 0.5, poise: 130, poiseDmg: 34,
+    armor: 10, resist: { frost: 100, poison: 100, fire: -20 }, edmg: { frost: 10 },
+    aggro: 300, deaggro: 999, embers: 700, behavior: "melee", canBlock: 0.3,
+    drops: [["pass_warhorn", 1]], dropsOnce: true,
+    tags: ["undead", "frost"], look: { shape: "humanoid", body: "#c4d2da", trim: "#8a9aa8", size: 1.6, weapon: "sword2h", banner: true },
+    loot: [{ w: 1, id: "frost_crystal", n: [2, 3] }],
+    voice: "whisper",
+  },
   pale_knight: {
     name: "Pale Knight", hp: 130, dmg: 26, spd: 105, r: 14, reach: 50,
     windup: 0.45, strike: 0.11, recover: 0.55, poise: 70, poiseDmg: 32,
@@ -423,4 +442,18 @@ const SPAWN_TABLES = {
     { w: 1, id: "bandit_brute", pack: [1, 1] },
     { w: 2, id: "ash_revenant", pack: [1, 1] },
   ],
+  whitepass: [
+    { w: 6, id: "thawed_soldier", pack: [1, 2] },
+    { w: 3, id: "grave_wisp", pack: [1, 2] },
+    { w: 1, id: "frost_troll", pack: [1, 1] },
+  ],
 };
+
+/* the Gauntlet of Sparks: wave composition (cycles, elites scale beyond) */
+const GAUNTLET_WAVES = [
+  [["wolf", 4]],
+  [["bandit", 3], ["bandit_archer", 1]],
+  [["hollow_thrall", 4], ["barrow_sentinel", 1]],
+  [["dire_wolf", 2], ["bandit_brute", 2], ["mire_hag", 1]],
+  [["pale_knight", 2], ["wraith", 1]],
+];

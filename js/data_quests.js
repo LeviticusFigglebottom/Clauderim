@@ -178,7 +178,7 @@ const QUESTS = {
     stages: [
       {
         journal: "Serah says the Lampwrights once kept way-lamps burning even in the Undermarch — the drowned-dark beneath the realm, where the Great Sink swallows the light east of the crossroads. Three lamps stand cold down there. Carry her fire to them.",
-        objective: { kind: "flags", prefix: "waylamp_um_", count: 3, hint: "Light the way-lamps in the Undermarch (0/3)" },
+        objective: { kind: "flags", prefix: "waylamp_um_", count: 3, hint: "Light the way-lamps in the Undermarch (0/3)", targetPoi: "undermarch" },
       },
       {
         journal: "Three flames burn under the world where no flame has burned in living memory. Serah will feel them from her lamp-house, but she'll want to hear it said aloud.",
@@ -203,6 +203,42 @@ const QUESTS = {
     ],
     rewards: { embers: 1200, gold: 400 },
     rewardText: "Caldus was silent a long time. 'So even the first fire wanted permission to rest. Remember that, when yours asks.'",
+  },
+
+  sq_pass: {
+    name: "The Song of the Pass", type: "side",
+    stages: [
+      {
+        journal: "Eirik finally sang the whole song: two thousand men stand frozen at the White Pass, an arm's length from each other's throats, held by Hrolgar's Still Word for four hundred years. Something walks their lines — the Hymnkeeper, the herald who never got to sound the charge. Eirik wants his ancestors dismissed from duty. Cut down the Hymnkeeper and take the war-horn it has carried all this time.",
+        objective: { kind: "kill", enemy: "hymnkeeper", count: 1, hint: "Fell the Hymnkeeper at the White Pass (0/1)", targetPoi: "white_pass" },
+      },
+      {
+        journal: "The Hymnkeeper is down and the war-horn is in my hands, cold as the day it was raised. There is a great cairn between the frozen lines. The charge was never sounded; the soldiers were never released. Sound it now.",
+        objective: { kind: "flag", flag: "pass_at_rest", hint: "Sound the war-horn at the great cairn", targetPoi: "white_pass" },
+      },
+      {
+        journal: "I blew the horn between the armies, and the wind through two thousand frozen spears sang one long note — and then, for the first time in four hundred years, the Pass was quiet. Eirik should hear how it ended.",
+        objective: { kind: "talk", npc: "eirik", hint: "Tell Eirik the Pass is at rest" },
+      },
+    ],
+    rewards: { items: [["stillsong", 1]], embers: 600 },
+    rewardText: "Eirik wept without apology and gave you Stillsong — 'It was my forefather's. He'd want it carried by whoever ended his watch.'",
+  },
+
+  sq_arena: {
+    name: "The Gauntlet of Sparks", type: "side",
+    stages: [
+      {
+        journal: "Brann the Pitmaster keeps a fighting pit south of the crossroads, and pays in embers for entertainment. Light the brazier, hold the sand, and survive five waves of whatever he lets in.",
+        objective: { kind: "flag", flag: "gauntlet_w5", hint: "Survive five waves in the Gauntlet", targetPoi: "gauntlet" },
+      },
+      {
+        journal: "Five waves, and the sand is mine. Brann owes me a champion's due.",
+        objective: { kind: "talk", npc: "brann", hint: "Claim your prize from Brann" },
+      },
+    ],
+    rewards: { items: [["champions_ring", 1]], gold: 300 },
+    rewardText: "Brann slid the Spark-Champion's Ring across the rail. 'Forge-slag of a hundred broken blades. Wear what didn't survive you.'",
   },
 
   sq_blooms: {
