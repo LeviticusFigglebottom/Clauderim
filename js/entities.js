@@ -477,6 +477,65 @@ class Enemy extends Entity {
   }
 }
 
+/* ---------------- conjured allies ---------------- */
+
+class Ally extends Entity {
+  constructor(kind, dur, power) {
+    super(G.player ? G.player.x : 0, G.player ? G.player.y : 0, 8);
+    this.kind = kind;          // 'sprite' | 'lantern'
+    this.life = dur;
+    this.power = power || 1;
+    this.orbit = Math.random() * TAU;
+    this.fireCd = 1;
+    this.lightR = kind === "lantern" ? 150 : 80;
+    this.lightColor = kind === "lantern" ? "255,233,168" : "255,150,60";
+  }
+  update(dt) {
+    const p = G.player;
+    if (!p || p.dead) { this.dead = true; return; }
+    this.life -= dt;
+    if (this.life <= 0) {
+      this.dead = true;
+      FX.burst(this.x, this.y, this.kind === "lantern" ? "#ffe9a8" : "#ffb060", 14, 80);
+      return;
+    }
+    // drift at the shoulder
+    this.orbit += dt * (this.kind === "sprite" ? 1.7 : 1.0);
+    const tx = p.x + Math.cos(this.orbit) * 36;
+    const ty = p.y + Math.sin(this.orbit) * 36;
+    this.x += (tx - this.x) * Math.min(1, dt * 6);
+    this.y += (ty - this.y) * Math.min(1, dt * 6);
+    if (Math.random() < 2.2 * dt) FX.sparkle(this.x, this.y, this.kind === "lantern" ? "#ffe9a8" : "#ffb060");
+
+    // the sprite has opinions about your enemies
+    if (this.kind === "sprite") {
+      this.fireCd -= dt;
+      if (this.fireCd <= 0) {
+        let best = null, bd = 260 * 260;
+        for (const e of G.entities) {
+          if (!e.isEnemy || e.dead) continue;
+          if (e.def.behavior === "flee") continue; // it does not bully deer
+          const d2 = U.dist2(this.x, this.y, e.x, e.y);
+          if (d2 < bd && World.lineClear(G.map, this.x, this.y, e.x, e.y)) { bd = d2; best = e; }
+        }
+        if (best) {
+          this.fireCd = 1.5;
+          const ang = U.angTo(this.x, this.y, best.x, best.y);
+          Projectile.spawn({
+            x: this.x, y: this.y, ang, speed: 420,
+            dmg: 11 * this.power, dtype: "fire",
+            color: "#ffb060", from: "player", r: 4, life: 1.4, spell: "ember_sprite",
+          });
+          Sfx.play("cast");
+        } else {
+          this.fireCd = 0.4;
+        }
+      }
+    }
+  }
+  get isEnemy() { return false; }
+}
+
 /* ---------------- NPC ---------------- */
 
 class NPC extends Entity {
@@ -525,7 +584,9 @@ class NPC extends Entity {
       this.barkT -= dt;
       if (this.barkT <= 0) {
         this.barkT = U.randf(Math.random, 10, 25);
-        if (this.def.bark && G.state === "play") G.float(this.x, this.y - 24, this.def.bark, "#d8d0c0", 12);
+        const b = this.def.bark;
+        const line = Array.isArray(b) ? b[(Math.random() * b.length) | 0] : b;
+        if (line && G.state === "play") G.float(this.x, this.y - 24, line, "#d8d0c0", 12);
       }
     }
   }

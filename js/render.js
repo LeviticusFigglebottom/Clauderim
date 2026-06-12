@@ -175,6 +175,40 @@ const Render = {
       ctx.restore();
     }
 
+    /* birds cross the high air */
+    if (G.birds) {
+      for (const b of G.birds) {
+        for (let i = 0; i < b.n; i++) {
+          const bx = b.x - camX + i * 16 + Math.sin(b.phase + i) * 4;
+          const by = b.y - camY + Math.cos(b.phase * 0.7 + i * 1.3) * 6 + i * 5;
+          if (bx < -20 || bx > G.W + 20 || by < -20 || by > G.H + 20) continue;
+          const flap = Math.sin(b.phase + i * 0.8) * 3;
+          ctx.strokeStyle = "rgba(30,28,24,0.7)";
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.moveTo(bx - 5, by - flap);
+          ctx.lineTo(bx, by + 1.5);
+          ctx.lineTo(bx + 5, by - flap);
+          ctx.stroke();
+        }
+      }
+    }
+
+    /* the fishing line */
+    if (G.fishing) {
+      const f = G.fishing;
+      const bx = f.x - camX, by = f.y - camY;
+      const bob = f.state === "bite" ? 4 : Math.sin(G.elapsed * 2.2) * 1.5;
+      ctx.strokeStyle = "rgba(220,215,200,0.5)";
+      ctx.lineWidth = 1;
+      const p2 = G.player;
+      ctx.beginPath(); ctx.moveTo(p2.x - camX, p2.y - camY - 6); ctx.lineTo(bx, by + bob); ctx.stroke();
+      ctx.fillStyle = "#c44";
+      ctx.beginPath(); ctx.arc(bx, by + bob, 3.2, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#eee";
+      ctx.beginPath(); ctx.arc(bx, by + bob - 2.5, 2.2, 0, TAU); ctx.fill();
+    }
+
     /* deco above ground but below entities? trees drawn after entities for canopy depth —
        simpler: draw trunk+canopy with entities sorted; here draw smaller deco first */
     this.drawDecoLayer(ctx, map, camX, camY, false);
@@ -649,6 +683,18 @@ const Render = {
         ctx.restore();
         break;
       }
+      case D.BOARD: {
+        ctx.strokeStyle = "#3a2c1e"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(x - 7, y + 6); ctx.lineTo(x - 7, y - 18); ctx.moveTo(x + 7, y + 6); ctx.lineTo(x + 7, y - 18); ctx.stroke();
+        ctx.fillStyle = "#5d4a32";
+        ctx.fillRect(x - 11, y - 22, 22, 14);
+        ctx.fillStyle = "#d8d0c0";
+        ctx.fillRect(x - 8, y - 20, 6, 8);
+        ctx.fillRect(x + 1, y - 19, 6, 9);
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        ctx.fillRect(x - 7, y - 18, 4, 1.5); ctx.fillRect(x + 2, y - 17, 4, 1.5);
+        break;
+      }
       case D.EMBERVAULT: {
         ctx.fillStyle = "#393733";
         ctx.beginPath(); ctx.arc(x, y, 14, 0, TAU); ctx.fill();
@@ -676,6 +722,25 @@ const Render = {
     if (x < -80 || x > G.W + 80 || y < -80 || y > G.H + 80) return;
 
     if (e instanceof Player) { this.drawPlayer(ctx, e, x, y); return; }
+    if (e instanceof Ally) {
+      const col = e.kind === "lantern" ? "#ffe9a8" : "#ffb060";
+      const fl = 0.7 + 0.3 * Math.sin(G.elapsed * 7 + e.orbit);
+      ctx.save();
+      ctx.shadowColor = col; ctx.shadowBlur = 16;
+      ctx.fillStyle = col;
+      ctx.globalAlpha = 0.55 + fl * 0.4;
+      ctx.beginPath(); ctx.arc(x, y - 10, e.kind === "lantern" ? 6 : 5 + fl * 1.5, 0, TAU); ctx.fill();
+      if (e.kind === "sprite") {
+        ctx.beginPath();
+        ctx.moveTo(x, y - 20 - fl * 3);
+        ctx.quadraticCurveTo(x + 4, y - 14, x, y - 9);
+        ctx.quadraticCurveTo(x - 4, y - 14, x, y - 20 - fl * 3);
+        ctx.fill();
+      }
+      ctx.restore();
+      ctx.globalAlpha = 1;
+      return;
+    }
     if (e instanceof Hazard) {
       ctx.globalAlpha = 0.3 + 0.1 * Math.sin(G.elapsed * 3);
       ctx.fillStyle = e.color;
@@ -1095,6 +1160,9 @@ const Render = {
     }
     const p = G.player;
     if (p) punch(p.x - camX, p.y - camY, 150, 0.85); // the Emberborn carries a faint glow
+    for (const e of G.entities) {
+      if (e.lightR && !e.dead) punch(e.x - camX, e.y - camY, e.lightR, 0.9);
+    }
     // burning things glow
     for (const e of G.entities) {
       if (e.status && e.status.burn > 0) punch(e.x - camX, e.y - camY, 70, 0.7);
@@ -1187,9 +1255,9 @@ const Render = {
       ctx.lineWidth = 1;
       ctx.strokeRect(x - 1.5, y - 1.5, w + 3, h + 3);
     };
-    bar(18, 18, 250 * (p.hpMax / 300), 12, p.hp / p.hpMax, "#a8392f");
-    bar(18, 36, 230 * (p.stamMax / 250), 9, p.stam / p.stamMax, "#5d8a42");
-    bar(18, 51, 210 * (p.magMax / 250), 9, p.mag / p.magMax, "#3a6ea8");
+    bar(18, 18, Math.min(420, 250 * (p.hpMax / 300)), 12, p.hp / p.hpMax, "#a8392f");
+    bar(18, 36, Math.min(380, 230 * (p.stamMax / 250)), 9, p.stam / p.stamMax, "#5d8a42");
+    bar(18, 51, Math.min(360, 210 * (p.magMax / 250)), 9, p.mag / p.magMax, "#3a6ea8");
 
     /* embers + gold */
     ctx.font = '15px "Palatino Linotype", Georgia, serif';

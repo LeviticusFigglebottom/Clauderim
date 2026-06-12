@@ -290,7 +290,15 @@ const UI = {
       <p class="sys-note">Click a slot to unequip. Equip from the Inventory tab.</p>`;
     c.querySelectorAll("[data-slot]").forEach(el => el.onclick = () => {
       const s = el.dataset.slot;
-      if (G.player.equip[s]) { G.player.equip[s] = null; Sfx.play("equip"); this.renderMenu(); }
+      const pl = G.player;
+      if (pl.equip[s]) {
+        pl.equip[s] = null;
+        // workings on the removed piece may have carried vitals
+        pl.hpMax = pl.calcHpMax(); pl.magMax = pl.calcMagMax();
+        pl.hp = Math.min(pl.hp, pl.hpMax); pl.mag = Math.min(pl.mag, pl.magMax);
+        Sfx.play("equip");
+        this.renderMenu();
+      }
     });
   },
 
@@ -388,6 +396,23 @@ const UI = {
       }
       if (!st.done) html += `<div class="q-obj">▸ ${U.esc(QS.objectiveText(id))}</div>`;
       html += `</div>`;
+    }
+
+    // the bestiary: what the March has thrown at you, and how it went
+    const p = G.player;
+    const known = Object.keys(p.bestiary || {});
+    if (known.length) {
+      const total = Object.keys(ENEMY_TYPES).length;
+      let rows = "";
+      known.sort((a, b) => (p.bestiary[b] - p.bestiary[a]));
+      for (const id2 of known) {
+        const def = ENEMY_TYPES[id2];
+        if (!def) continue;
+        rows += `<div style="display:inline-block;width:32%;padding:3px 0;font-size:13px">
+          <span style="color:${def.boss ? "#e8cf9a" : "#b8b0a0"}">${def.boss ? "✦ " : ""}${U.esc(def.name)}</span>
+          <span style="color:#6a665e"> ×${p.bestiary[id2]}</span></div>`;
+      }
+      html += `<h2 style="margin-top:22px">Bestiary — ${known.length} of ${total} known · ${U.fmt(p.statsKills)} felled · ${p.statsFish} fish landed</h2>${rows}`;
     }
     c.innerHTML = html;
   },
@@ -801,6 +826,69 @@ const UI = {
     });
   },
 
+  /* ============ the Wardens' Ledger (bounty board) ============ */
+
+  openBoard() {
+    G.setState("station");
+    U.show("station-screen");
+    this.renderBoard();
+  },
+
+  renderBoard() {
+    const p = G.player;
+    const panel = U.el("station-panel");
+    if (!G.bounties || !G.bounties.length) Game.refreshBounties();
+    let rows = "";
+    for (const b of G.bounties) {
+      const goldMult = p.hasPerk("sp_3") ? 1.2 : p.hasPerk("sp_1") ? 1.1 : 1;
+      const payGold = Math.round(b.gold * goldMult);
+      let status, action = "";
+      if (!b.taken) {
+        status = `<span class="c-req">pays ${payGold} g · ${b.embers} embers</span>`;
+        action = `<button class="act-btn" data-take="${b.uid}">Take</button>`;
+      } else if (b.kind === "gather") {
+        const have = p.countItem(b.item);
+        status = `<span class="c-req ${have >= b.need ? "have" : "lack"}">${Math.min(have, b.need)}/${b.need} in hand · ${payGold} g</span>`;
+        if (have >= b.need) action = `<button class="act-btn" data-claim="${b.uid}">Deliver</button>`;
+      } else if (b.progress >= b.need) {
+        status = `<span class="c-req have">fulfilled · ${payGold} g · ${b.embers} embers</span>`;
+        action = `<button class="act-btn" data-claim="${b.uid}">Claim</button>`;
+      } else {
+        status = `<span class="c-req">${b.progress}/${b.need} · ${payGold} g</span>`;
+      }
+      rows += `<div class="craft-row">
+        <span class="c-name">${U.esc(Game.bountyText(b))} ${b.taken ? '<span style="color:#b9d8a0;font-size:11px">[taken]</span>' : ""}</span>
+        <span>${status} ${action}</span></div>`;
+    }
+    panel.innerHTML = `<h2>The Wardens' Ledger${(G.cycle || 0) > 0 ? " — Cycle " + U.roman(G.cycle + 1) + " rates" : ""}</h2>
+      <p class="lore-text" style="margin-bottom:10px">Contracts posted by the wall-guard, paid on proof.
+      The board turns over each time you rest; contracts in hand stay pinned.</p>
+      ${rows}
+      <div style="margin-top:14px;text-align:right"><button class="act-btn" id="board-close">Step away</button></div>`;
+    U.el("board-close").onclick = () => this.closeStation();
+    panel.querySelectorAll("[data-take]").forEach(btn => btn.onclick = () => {
+      const b = G.bounties.find(q => q.uid === btn.dataset.take);
+      if (b) { b.taken = true; Sfx.play("quest"); G.msg("Contract taken: " + Game.bountyText(b), "good"); }
+      this.renderBoard();
+    });
+    panel.querySelectorAll("[data-claim]").forEach(btn => btn.onclick = () => {
+      const b = G.bounties.find(q => q.uid === btn.dataset.claim);
+      if (!b) return;
+      if (b.kind === "gather") {
+        if (p.countItem(b.item) < b.need) return;
+        p.removeItem(b.item, b.need);
+      } else if (b.progress < b.need) return;
+      const goldMult = p.hasPerk("sp_3") ? 1.2 : p.hasPerk("sp_1") ? 1.1 : 1;
+      p.gold += Math.round(b.gold * goldMult);
+      p.gainEmbers(b.embers);
+      p.gainSkill("speech", 8);
+      b.claimed = true;
+      Sfx.play("quest_done");
+      G.msg(`The Ledger pays: ${Math.round(b.gold * goldMult)} gold, ${b.embers} embers.`, "good");
+      this.renderBoard();
+    });
+  },
+
   /* ============ enchanting (Lampwright's altar) ============ */
 
   openEnchant() {
@@ -1040,6 +1128,12 @@ const UI = {
       <p>Enemies telegraph in <b style="color:#d89090">red</b>. Sneak attacks from behind unaware foes deal brutal damage — approach from behind and they notice far less.</p>
       <p><b>Hone weapons</b> at any forge (+8% damage a tier, three tiers). <b>Cook</b> hunted meat at campfires. Beware <b style="color:#ff7a3a">ashen elites</b> — they burn brighter and hit harder, but carry triple embers.</p>
       <p>Hunt deer and hares for meat and hides. Search old graves if you dare; the tenants object roughly one time in four.</p>
+      <h3>The Ledger, the line & the conjured</h3>
+      <p>The <b>Wardens' Ledger</b> by the Emberfall inn posts rotating contracts — cull, gather, or
+      hunt the ashen — paid in gold and embers, refreshed each rest, scaled by cycle. Buy a
+      <b>fishing rod</b> (Petra, Senn), face open water and cast: strike on the bite with <b>E</b>.
+      <b>Conjuration</b> spells summon an ember sprite that fights beside you, or a lantern that
+      walks the dark with you. The <b>Bestiary</b> in your journal remembers everything you've felled.</p>
       <h3>The third craft & the next cycle</h3>
       <p><b>Enchanting</b> at a Lampwright's altar (Serah's lamp-house, the Unlit Tower) binds
       embers into gear: elemental brands, lifesteal, wards, and more — potency grows with the skill.

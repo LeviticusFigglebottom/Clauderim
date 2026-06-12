@@ -110,7 +110,7 @@ and a living spawn ecology.
 - **Poise & stagger**, parry → riposte windows, guard breaks, backstab sneak multipliers,
   shield-bearing enemies that block.
 - **Status effects**: burn, poison, frost-chill, bleed, shock — on both sides of the fight.
-- **11 spells** across Destruction and Restoration; staves amplify spell power.
+- **13 spells** across Destruction, Restoration and **Conjuration**; staves amplify spell power.
 - **4 Edicts** (shouts) taken from the Wardens' corpses: VAL (force), SUTH (life-drain),
   KYR (time-slow), THUR (fire breath).
 - **Crafting, three pillars + two trades**: smithing at forges (ore → ingots → steel and
@@ -118,6 +118,14 @@ and a living spawn ecology.
   reagents grown by biome), **enchanting at Lampwright altars** (eleven ember-powered
   workings: elemental brands, lifesteal, wards, vitality — potency scales with the skill),
   and **cooking** hunted meat at campfires.
+- **The Wardens' Ledger**: a radiant bounty board by the Emberfall inn — rotating cull /
+  gather / elite-hunt contracts, refreshed at every rest, paid in gold and embers, scaled
+  by cycle, sweetened by Speech.
+- **Fishing**: buy a rod, face open water, cast, and strike on the bite — biome fish
+  tables, cookable catches, and the occasional drowned purse or tideglass pearl.
+- **Conjuration**: summon an **ember sprite** that picks its own targets and opens fire,
+  or a **Lampwright's lantern** that walks the dark beside you.
+- **A bestiary** in the journal that remembers every foe the March has thrown at you.
 - **Quick slot** (`T`), grave-searching (loot or angry tenants), drinkable wells,
   parry/heavy-hit **hit-stop**, low-health vignette, lost-ember compass beacon.
 - **~80 items** — weapons, armor sets (light/heavy with stealth and resist identities),

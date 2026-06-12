@@ -31,7 +31,7 @@ const FP_DECO_H = {
   [D.ROCK]: 0.9, [D.BOULDER]: 1.25, [D.BUSH]: 0.55, [D.ANVIL]: 0.85,
   [D.ALCH]: 0.95, [D.WELL]: 0.95, [D.LAMP]: 2.0, [D.CAIRN]: 1.05,
   [D.GRAVE]: 1.05, [D.BARREL]: 0.95, [D.TABLE]: 0.85, [D.EMBERVAULT]: 1.35,
-  [D.PILLAR]: 2.2, [D.FROZEN]: 1.5, [D.WRECK]: 1.8, [D.ALTAR]: 1.4,
+  [D.PILLAR]: 2.2, [D.FROZEN]: 1.5, [D.WRECK]: 1.8, [D.ALTAR]: 1.4, [D.BOARD]: 1.6,
 };
 
 const RenderFP = {
@@ -403,6 +403,44 @@ const RenderFP = {
     /* ---- billboards ---- */
     this.drawBillboards(map, p, yaw, tm, horizon);
 
+    /* ---- birds in the high air ---- */
+    if (map.outdoor && G.birds && G.birds.length) {
+      const ctx2 = this.ctx;
+      for (const b of G.birds) {
+        for (let i = 0; i < b.n; i++) {
+          const wx = b.x + i * 16, wy2 = b.y + i * 5;
+          const prl = this.projectLocal(wx, wy2, p, horizon);
+          if (!prl) continue;
+          const alt = (b.alt + Math.cos(b.phase * 0.7 + i * 1.3) * 0.2) * prl.unit;
+          const by2 = prl.ground - alt;
+          if (by2 < -10 || by2 > H + 10) continue;
+          const sz = U.clamp(prl.unit * 0.07, 1.2, 7);
+          const flap = Math.sin(b.phase + i * 0.8) * sz * 0.8;
+          ctx2.strokeStyle = "rgba(30,28,24,0.75)";
+          ctx2.lineWidth = Math.max(1, sz * 0.3);
+          ctx2.beginPath();
+          ctx2.moveTo(prl.x - sz, by2 - flap);
+          ctx2.lineTo(prl.x, by2 + sz * 0.3);
+          ctx2.lineTo(prl.x + sz, by2 - flap);
+          ctx2.stroke();
+        }
+      }
+    }
+
+    /* ---- the bobber on the water ---- */
+    if (G.fishing) {
+      const f = G.fishing;
+      const prl = this.projectLocal(f.x, f.y, p, horizon);
+      if (prl && this.depth[prl.col] + 0.1 >= prl.perp) {
+        const bob = (f.state === "bite" ? 0.09 : Math.sin(tm * 2.2) * 0.03) * prl.unit;
+        const sz = U.clamp(prl.unit * 0.06, 2, 9);
+        this.ctx.fillStyle = "#c44";
+        this.ctx.beginPath(); this.ctx.arc(prl.x, prl.ground + bob, sz, 0, TAU); this.ctx.fill();
+        this.ctx.fillStyle = "#eee";
+        this.ctx.beginPath(); this.ctx.arc(prl.x, prl.ground + bob - sz * 0.7, sz * 0.65, 0, TAU); this.ctx.fill();
+      }
+    }
+
     /* ---- upscale (filtered — soft, not chunky) ---- */
     G.ctx.imageSmoothingEnabled = true;
     G.ctx.drawImage(this.canvas, 0, 0, W, H, 0, 0, G.W, G.H);
@@ -487,7 +525,11 @@ const RenderFP = {
     const ctx = this.ctx;
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    for (const l of map.lights) {
+    const carried = [];
+    for (const e of G.entities) {
+      if (e.lightR && !e.dead) carried.push({ x: e.x, y: e.y, r: e.lightR, color: e.lightColor || "255,200,120", flicker: true });
+    }
+    for (const l of map.lights.concat(carried)) {
       if (U.dist(p.x, p.y, l.x, l.y) > FP_MAXDIST * TILE * 0.8) continue;
       const pr = this.projectLocal(l.x, l.y, p, horizon);
       if (!pr || this.depth[pr.col] + 0.4 < pr.perp) continue;
@@ -535,6 +577,20 @@ const RenderFP = {
 
     for (const e of G.entities) {
       if (e.dead || e === p) continue;
+      if (e instanceof Ally) {
+        addIf(e.x, e.y, 0.45, 0.5, (c) => {
+          const col = e.kind === "lantern" ? "#ffe9a8" : "#ffb060";
+          const fl = 0.7 + 0.3 * Math.sin(tm * 7 + e.orbit);
+          c.save();
+          c.shadowColor = col; c.shadowBlur = 30;
+          c.fillStyle = col;
+          c.globalAlpha = 0.6 + fl * 0.4;
+          c.beginPath(); c.arc(64, 88, e.kind === "lantern" ? 13 : 10 + fl * 4, 0, TAU); c.fill();
+          c.restore();
+          c.globalAlpha = 1;
+        }, 1, 0.85);
+        continue;
+      }
       if (e instanceof Hazard) {
         addIf(e.x, e.y, 0.36, 0.62, (c) => {
           c.globalAlpha = 0.45 + 0.12 * Math.sin(tm * 3);
@@ -972,6 +1028,19 @@ const RenderFP = {
       rot = U.lerp(0.75, -0.95, prog);
     }
 
+    // a crescent of motion follows the strike
+    if (phase === "strike" && w && w.type !== "staff") {
+      ctx.save();
+      ctx.globalAlpha = 0.28 * Math.sin(prog * Math.PI);
+      ctx.strokeStyle = "#e8e0c8";
+      ctx.lineWidth = 26;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(G.W / 2, G.H + 140, 400, -2.2 + prog * 1.4, -1.5 + prog * 1.4);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     ctx.save();
     ctx.translate(wx2, wy2);
     ctx.rotate(rot);
@@ -1043,9 +1112,19 @@ const RenderFP = {
           ctx.beginPath(); ctx.moveTo(-14, -104); ctx.lineTo(-8, -len + 6); ctx.stroke();
           ctx.restore();
         }
-        if (w.edmg) {
-          const ecol = w.edmg.fire ? "rgba(255,120,40,0.30)" : w.edmg.frost ? "rgba(150,210,255,0.30)"
-            : w.edmg.shock ? "rgba(200,220,255,0.30)" : w.edmg.poison ? "rgba(140,220,140,0.30)" : null;
+        // workings and innate tempers both light the steel
+        const allEdmg = Object.assign({}, w.edmg);
+        let hasLeech = !!w.leech;
+        for (const eid of p.itemEnchants(w.id)) {
+          const en = ENCHANTS[eid];
+          if (!en) continue;
+          if (en.edmg) for (const t2 in en.edmg) allEdmg[t2] = (allEdmg[t2] || 0) + en.edmg[t2];
+          if (en.leech) hasLeech = true;
+        }
+        if (Object.keys(allEdmg).length || hasLeech) {
+          const ecol = allEdmg.fire ? "rgba(255,120,40,0.30)" : allEdmg.frost ? "rgba(150,210,255,0.30)"
+            : allEdmg.shock ? "rgba(200,220,255,0.30)" : allEdmg.poison ? "rgba(140,220,140,0.30)"
+            : hasLeech ? "rgba(140,255,160,0.25)" : null;
           if (ecol) {
             ctx.save();
             ctx.shadowColor = ecol; ctx.shadowBlur = 22;

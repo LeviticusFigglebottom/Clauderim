@@ -43,6 +43,7 @@ const SaveSys = {
       discoveredShrines: G.discoveredShrines,
       discoveredPois: G.discoveredPois,
       lostEmbers: G.lostEmbers,
+      bounties: G.bounties || [],
       // map mutable state: which pickups are taken, which encounters dead
       mapState: this.collectMapState(),
     };
@@ -86,6 +87,7 @@ const SaveSys = {
     G.discoveredShrines = data.discoveredShrines || {};
     G.discoveredPois = data.discoveredPois || {};
     G.lostEmbers = data.lostEmbers || null;
+    G.bounties = data.bounties || [];
     G.maps = {};
     G.overworld = null;
     G.bossFight = null;

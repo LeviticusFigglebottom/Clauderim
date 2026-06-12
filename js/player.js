@@ -80,6 +80,8 @@ class Player extends Entity {
     this.quests = {};         // questId -> {stage, counts:{}}
     this.readBooks = {};
     this.statsKills = 0; this.statsDeaths = 0;
+    this.statsFish = 0;
+    this.bestiary = {};      // enemyId -> kills
   }
 
   /* ---------------- derived stats ---------------- */
@@ -625,6 +627,7 @@ class Player extends Entity {
       respawn: this.respawn, quests: this.quests, readBooks: this.readBooks,
       undimmedUsed: this.undimmedUsed, statsKills: this.statsKills, statsDeaths: this.statsDeaths,
       quickItem: this.quickItem, honing: this.honing, enchants: this.enchants,
+      bestiary: this.bestiary, statsFish: this.statsFish,
     };
   }
 
@@ -649,6 +652,8 @@ class Player extends Entity {
     p.quickItem = d.quickItem || null;
     p.honing = d.honing || {};
     p.enchants = d.enchants || {};
+    p.bestiary = d.bestiary || {};
+    p.statsFish = d.statsFish || 0;
     p.hpMax = p.calcHpMax(); p.magMax = p.calcMagMax();
     return p;
   }

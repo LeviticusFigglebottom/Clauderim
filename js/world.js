@@ -25,11 +25,11 @@ const D = {
   NONE: 0, TREE: 1, PINE: 2, DEADTREE: 3, ROCK: 4, BUSH: 5,
   SWAMPTREE: 6, BOULDER: 7, ANVIL: 8, ALCH: 9, WELL: 10, LAMP: 11,
   CAIRN: 12, GRAVE: 13, BARREL: 14, TABLE: 15, EMBERVAULT: 16, PILLAR: 17,
-  FROZEN: 18, WRECK: 19, ALTAR: 20,
+  FROZEN: 18, WRECK: 19, ALTAR: 20, BOARD: 21,
 };
 const SOLID_DECO = new Set([D.TREE, D.PINE, D.DEADTREE, D.ROCK, D.SWAMPTREE, D.BOULDER,
   D.ANVIL, D.ALCH, D.WELL, D.CAIRN, D.BARREL, D.TABLE, D.EMBERVAULT, D.PILLAR, D.FROZEN,
-  D.WRECK, D.ALTAR]);
+  D.WRECK, D.ALTAR, D.BOARD]);
 
 /* biome ids */
 const B = { HEART: 0, FOREST: 1, MIRE: 2, FROST: 3, ASHLAND: 4, COAST: 5 };
@@ -300,6 +300,9 @@ const World = {
     this.placeNpc(map, "ralka", cx + 8, cy + 9, cx + 7, cy + 5);
     this.placeNpc(map, "serah", cx - 7, cy + 9, cx - 7, cy + 5);
 
+    // the Wardens' Ledger: contracts posted by the wall-guard
+    this.setDeco(map, cx - 2, cy - 4, D.BOARD);
+    map.stations.push({ kind: "board", x: (cx - 2) * TILE + 16, y: (cy - 4) * TILE + 16 });
     // hearth-fire by the inn for travellers' cooking, and the town well
     map.stations.push({ kind: "campfire", x: (cx + 2) * TILE + 16, y: (cy - 4) * TILE + 16 });
     map.lights.push({ x: (cx + 2) * TILE + 16, y: (cy - 4) * TILE + 16, r: 90, color: "255,150,60", flicker: true });

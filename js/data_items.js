@@ -373,6 +373,26 @@ const ITEMS = {
   salt_cod: { name: "Salt Cod", type: "consumable", weight: 0.3, value: 9, rarity: "common",
     use: { hp: 16, stam: 10 }, lore: "The coast's answer to every question, including several nobody asked." },
 
+  /* =================== FISHING =================== */
+  fishing_rod: { name: "Fishing Rod", type: "tool", weight: 2, value: 40, rarity: "common",
+    lore: "Hazel, horsehair, and a hook of honest iron. The March's waters keep more than fish, but they start with fish." },
+  river_perch: { name: "River Perch", type: "consumable", weight: 0.3, value: 8, rarity: "common",
+    use: { hp: 10 }, lore: "Speckled gold and stubborn to the last. The lakes of the Heartlands are full of opinions like this one." },
+  mire_eel: { name: "Mire Eel", type: "consumable", weight: 0.4, value: 12, rarity: "common",
+    use: { hp: 8, mag: 12 }, lore: "Duskmere's daily bread, if bread fought back. Petra would approve of your technique, or say so anyway." },
+  frost_char: { name: "Frost Char", type: "consumable", weight: 0.4, value: 14, rarity: "common",
+    use: { hp: 12, stam: 12 }, lore: "It swims under the ice all winter and tastes like the patience that takes." },
+  silver_herring: { name: "Silver Herring", type: "consumable", weight: 0.2, value: 7, rarity: "common",
+    use: { hp: 8 }, lore: "The sea's small change." },
+  tide_grouper: { name: "Tide Grouper", type: "consumable", weight: 0.8, value: 35, rarity: "fine",
+    use: { hp: 24, stam: 20 }, lore: "A fish the size of a grudge. The wreckers' lamps never fooled these — nothing fools a grouper twice." },
+  grilled_catch: { name: "Grilled Catch", type: "consumable", weight: 0.3, value: 20, rarity: "common",
+    use: { hp: 34, buff: { id: "hearty", dur: 60, stamRegen: 4 } },
+    lore: "Any fish, honest fire, a little salt if the coast owes you. The oldest good meal there is." },
+  eel_stew: { name: "Duskmere Eel Stew", type: "consumable", weight: 0.5, value: 30, rarity: "common",
+    use: { hp: 28, mag: 30, cure: "poison" },
+    lore: "The fen poisons you; the fen feeds you the cure in a bowl. The fen does well for itself." },
+
   /* =================== KEYS & QUEST ITEMS =================== */
 
   sigil_grave: { name: "Sigil of the Grave", type: "key", weight: 0, value: 0, rarity: "unique",
@@ -439,7 +459,21 @@ const RECIPES_COOK = [
   { out: "hunters_skewer", mats: { rabbit_meat: 2 }, skillReq: 0 },
   { out: "marsh_stew",     mats: { mireweed: 1, dried_meat: 1, glowcap: 1 }, skillReq: 0 },
   { out: "dried_meat",     mats: { raw_venison: 1, wolfsbane: 0 }, skillReq: 0, note: "smoke" },
+  { out: "grilled_catch",  mats: { river_perch: 1 }, skillReq: 0 },
+  { out: "grilled_catch",  mats: { frost_char: 1 }, skillReq: 0 },
+  { out: "grilled_catch",  mats: { silver_herring: 2 }, skillReq: 0 },
+  { out: "eel_stew",       mats: { mire_eel: 1, mireweed: 1 }, skillReq: 0 },
 ];
+
+/* what bites where: weighted fish tables by biome (B.* ids) */
+const FISH_TABLES = {
+  0: [{ w: 6, id: "river_perch" }, { w: 1, id: "mire_eel" }],
+  1: [{ w: 6, id: "river_perch" }],
+  2: [{ w: 6, id: "mire_eel" }, { w: 1, id: "river_perch" }],
+  3: [{ w: 6, id: "frost_char" }],
+  4: [{ w: 1, id: "river_perch" }],
+  5: [{ w: 5, id: "silver_herring" }, { w: 2, id: "tide_grouper" }, { w: 1, id: "salt_cod" }],
+};
 
 /* =================== WEAPON HONING (forge) ===================
    Per-tier costs; +8% weapon damage per tier, max +3.        */

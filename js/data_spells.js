@@ -79,6 +79,18 @@ const SPELLS = {
     color: "#d8ffd8", price: 220,
     desc: "Burn out the rot with a whisper of the old light.",
   },
+  ember_sprite: {
+    name: "Conjure Ember Sprite", school: "conjuration", skill: "destruction",
+    cost: 48, cast: 0.8, kind: "summon", summon: "sprite", dur: 30,
+    color: "#ffb060", price: 600,
+    desc: "Ask the Ember for company. A spark with opinions circles you and shares them, at speed, with your enemies.",
+  },
+  lantern_orb: {
+    name: "Lampwright's Lantern", school: "conjuration", skill: "restoration",
+    cost: 22, cast: 0.5, kind: "summon", summon: "lantern", dur: 180,
+    color: "#ffe9a8", price: 250,
+    desc: "A handful of patient light that follows at your shoulder. The old order never walked the dark alone, and neither should you.",
+  },
   ward: {
     name: "Ember Ward", school: "restoration", skill: "restoration",
     cost: 26, cast: 0.4, kind: "self", buff: { id: "ward", dur: 12, spellShield: 60 },

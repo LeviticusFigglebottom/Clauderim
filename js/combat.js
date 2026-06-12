@@ -269,6 +269,8 @@ const Combat = {
 
     if (p && !p.dead) {
       p.statsKills++;
+      p.bestiary[def.id] = (p.bestiary[def.id] || 0) + 1;
+      Game.onBountyKill(def.id, e.elite);
       p.gainEmbers(Math.round((def.embers || 0) * (e.elite ? 3 : 1) * (e.emberMult || 1)));
       if (e.elite) G.msg(`The ashen ${def.name} crumbles.`, "ember");
       // loot: one weighted roll
@@ -534,6 +536,14 @@ const Combat = {
         }
       }
       p.gainSkill("destruction", 4);
+    } else if (sp.kind === "summon") {
+      // one of each kind at a time — the new one relieves the old
+      for (const e of G.entities) {
+        if (e instanceof Ally && e.kind === sp.summon) e.dead = true;
+      }
+      G.entities.push(new Ally(sp.summon, sp.dur, power));
+      FX.burst(p.x, p.y, sp.color, 18, 100);
+      G.msg(sp.summon === "lantern" ? "A patient light takes your shoulder." : "The Ember sends a spark with opinions.", "good");
     } else if (sp.kind === "self") {
       if (sp.heal) {
         p.heal(sp.heal * power);

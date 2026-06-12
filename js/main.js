@@ -44,8 +44,12 @@ const Game = {
     Render.chunkCache.clear();
     Render.minimapCanvas = null;
 
+    G.bounties = [];
+    G.birds = [];
+    G.fishing = null;
     G.player = new Player(name, originId);
     const ow = World.getMap("overworld");
+    this.refreshBounties();
     const first = ow.shrines.find(s => s.id === "first_shrine");
     G.player.x = first.x + 20; G.player.y = first.y + 26;
     G.player.respawn = { map: "overworld", x: first.x + 20, y: first.y + 26, shrine: "first_shrine" };
@@ -75,6 +79,7 @@ const Game = {
     U.hide("station-screen");
     U.hide("ending-screen");
     U.show("hud-dom");
+    if (!G.bounties || !G.bounties.length) this.refreshBounties();
     this.enterMap(mapId, G.player.x, G.player.y, true);
     G.setState("play");
     G.banner(World.regionNameAt(G.map, G.player.x, G.player.y));
@@ -93,10 +98,13 @@ const Game = {
     G.discoveredPois = {};
     G.lostEmbers = null; G.maps = {}; G.overworld = null; G.bossFight = null;
     G.gauntletActive = false;
+    G.bounties = [];
+    G.fishing = null;
     G.time = { day: 1, hour: 8.5 };
     G.weather = { kind: "clear", t: 0, next: 70, intensity: 0 };
     Render.chunkCache.clear();
     Render.minimapCanvas = null;
+    this.refreshBounties();
 
     // the cycle reclaims its tokens; your strength, gear and words remain
     for (const key of ["sigil_grave", "sigil_mire", "sigil_frost", "sigil_ash",
@@ -187,6 +195,7 @@ const Game = {
     Sfx.play("shrine");
     FX.burst(s.x, s.y - 20, "#ff8c3a", 26, 120);
     G.banner("RESTED", "the flask is full · the slain return");
+    this.refreshBounties();
     SaveSys.save(G.saveSlot);
     G.msg("The world is saved. (slot " + G.saveSlot + ")", "good");
   },
@@ -283,6 +292,8 @@ const Game = {
         if (!G.gauntletActive) consider(st.x, st.y, 50, "gauntlet", st, `Light the brazier — wave ${(G.flags.gauntlet_wave || 0) + 1}`);
       } else if (st.kind === "enchant") {
         consider(st.x, st.y, 46, "station", st, "Work the Lampwright's altar");
+      } else if (st.kind === "board") {
+        consider(st.x, st.y, 46, "board", st, "Read the Wardens' Ledger");
       } else {
         consider(st.x, st.y, 46, "station", st, st.kind === "smith" ? "Use the forge" : "Use the alchemy bench");
       }
@@ -299,6 +310,14 @@ const Game = {
     }
     if (G.lostEmbers && G.lostEmbers.mapId === map.id) {
       consider(G.lostEmbers.x, G.lostEmbers.y, 40, "embers", G.lostEmbers, "Reclaim your lost embers");
+    }
+    // last resort: a quiet shore and a rod in the pack
+    if (!best && p.hasItem("fishing_rod") && !G.fishing) {
+      const bx = p.x + Math.cos(p.facing) * 60, by = p.y + Math.sin(p.facing) * 60;
+      const t = World.tileAt(map, (bx / TILE) | 0, (by / TILE) | 0);
+      if (t === T.WATER || t === T.DEEPWATER) {
+        best = { kind: "fish", obj: { x: bx, y: by }, prompt: "Cast a line" };
+      }
     }
     return best;
   },
@@ -418,6 +437,8 @@ const Game = {
         break;
       }
       case "gauntlet": this.startGauntletWave(); break;
+      case "fish": this.startFishing(t.obj.x, t.obj.y); break;
+      case "board": UI.openBoard(); break;
       case "grave": {
         const g = t.obj;
         G.flags["searched_" + g.id] = true;
@@ -447,6 +468,142 @@ const Game = {
         G.questToast("EMBERS RECLAIMED", U.fmt(t.obj.amount) + " returned to you");
         break;
       }
+    }
+  },
+
+  /* ---------------- fishing ---------------- */
+
+  startFishing(bx, by) {
+    G.fishing = { x: bx, y: by, t: 0, biteAt: 2 + Math.random() * 4, state: "wait" };
+    Sfx.play("splash");
+    G.msg("The line settles. Wait for the bite — [E] to strike, move to give up.", "");
+    const p = G.player;
+    p.blocking = false; p.draw = null; p.atk = null;
+  },
+
+  updateFishing(dt) {
+    const f = G.fishing;
+    if (!f) return;
+    const p = G.player;
+    // movement, combat or harm reels in empty
+    if (p.moving || p.atk || p.rollT > 0 || p.dead || p.flashT > 0.1) {
+      G.fishing = null;
+      G.msg("The line comes back empty.", "");
+      return;
+    }
+    f.t += dt;
+    if (f.state === "wait" && f.t >= f.biteAt) {
+      f.state = "bite";
+      f.t = 0;
+      Sfx.play("bite");
+      G.float(f.x, f.y - 14, "!", "#ffe9a8", 22);
+      FX.ring(f.x, f.y, 18, "#bcd8e8");
+    } else if (f.state === "bite" && f.t > 0.9) {
+      f.state = "wait";
+      f.t = 0;
+      f.biteAt = 1.5 + Math.random() * 3.5;
+    }
+    if (Input.pressed("interact")) {
+      if (f.state === "bite") {
+        // the catch
+        p.statsFish++;
+        const roll = Math.random();
+        if (roll < 0.07) {
+          // the water keeps more than fish
+          const tr = Math.random();
+          if (tr < 0.5) { const g = U.randi(Math.random, 15, 60); p.gold += g; G.msg(`The hook brings up a drowned purse: ${g} gold.`, "good"); }
+          else if (tr < 0.9) { p.addItem("tide_pearl", 1); G.msg("A tideglass pearl, cold and regretful.", "good"); }
+          else { p.addItem("ember_shard", 1); G.msg("Something warm from somewhere deep: an ember shard.", "good"); }
+        } else {
+          const b = World.biomeAtPx(G.map, f.x, f.y);
+          const table = FISH_TABLES[b] || FISH_TABLES[5];
+          const fish = U.weighted(Math.random, table);
+          p.addItem(fish.id, 1);
+          G.msg(`Caught: ${ITEMS[fish.id].name}`, "good");
+        }
+        Sfx.play("pickup");
+        FX.burst(f.x, f.y, "#bcd8e8", 14, 90);
+        G.fishing = null;
+      } else {
+        G.fishing = null;
+        G.msg("Too eager. The water keeps its counsel.", "");
+        Sfx.play("deny");
+      }
+    }
+  },
+
+  /* ---------------- the Wardens' Ledger (radiant bounties) ---------------- */
+
+  genBounty() {
+    const cyc = G.cycle || 0;
+    const mult = 1 + 0.6 * cyc;
+    const kindRoll = Math.random();
+    const uid = "b" + Date.now() + (Math.random() * 1e5 | 0);
+    if (kindRoll < 0.5) {
+      const culls = [
+        ["wolf", "the Heartlands", 6], ["bandit", "the roads", 5], ["hollow_thrall", "the old graves", 6],
+        ["mire_leech", "the Mire", 7], ["ash_imp", "the Ashlands", 6], ["dire_wolf", "the Greywood", 3],
+        ["thawed_soldier", "the White Pass", 4], ["tidelost_drowned", "the Strand", 5], ["grave_wisp", "the barrows", 4],
+      ];
+      const c = culls[(Math.random() * culls.length) | 0];
+      return { uid, kind: "cull", enemy: c[0], region: c[1], need: c[2], progress: 0,
+        gold: Math.round(c[2] * 18 * mult), embers: Math.round(c[2] * 14 * mult), taken: false, claimed: false };
+    } else if (kindRoll < 0.82) {
+      const gathers = [["glowcap", 6], ["mireweed", 6], ["frostmoss", 5], ["iron_ore", 5], ["emberbloom", 4], ["tide_pearl", 2]];
+      const g = gathers[(Math.random() * gathers.length) | 0];
+      return { uid, kind: "gather", item: g[0], need: g[1], progress: 0,
+        gold: Math.round(g[1] * 16 * mult), embers: Math.round(g[1] * 10 * mult), taken: false, claimed: false };
+    }
+    return { uid, kind: "elite", need: 1, progress: 0,
+      gold: Math.round(130 * mult), embers: Math.round(160 * mult), taken: false, claimed: false };
+  },
+
+  refreshBounties() {
+    if (!G.bounties) G.bounties = [];
+    // contracts in progress stay pinned; the rest turn over
+    G.bounties = G.bounties.filter(b => b.taken && !b.claimed);
+    while (G.bounties.length < 3) G.bounties.push(this.genBounty());
+  },
+
+  onBountyKill(typeId, elite) {
+    if (!G.bounties) return;
+    for (const b of G.bounties) {
+      if (!b.taken || b.claimed) continue;
+      if (b.kind === "cull" && b.enemy === typeId && b.progress < b.need) {
+        b.progress++;
+        G.msg(`Ledger: ${ENEMY_TYPES[typeId].name} ${b.progress}/${b.need}`, "good");
+        if (b.progress >= b.need) G.questToast("CONTRACT FULFILLED", "the Ledger will pay");
+      } else if (b.kind === "elite" && elite && b.progress < b.need) {
+        b.progress++;
+        G.questToast("CONTRACT FULFILLED", "an ashen one, crossed off");
+      }
+    }
+  },
+
+  bountyText(b) {
+    if (b.kind === "cull") return `Cull ${b.need} × ${ENEMY_TYPES[b.enemy].name} — ${b.region}`;
+    if (b.kind === "gather") return `Deliver ${b.need} ${ITEMS[b.item].name}`;
+    return "Put down an ashen elite — any road, any land";
+  },
+
+  /* ---------------- birds (the sky is alive) ---------------- */
+
+  updateBirds(dt) {
+    if (!G.birds) G.birds = [];
+    const p = G.player;
+    if (G.map && G.map.outdoor && G.darkness() < 0.55 && G.birds.length < 2 && Math.random() < dt * 0.05) {
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      G.birds.push({
+        x: p.x - dir * 900, y: p.y - 200 - Math.random() * 400,
+        vx: dir * (40 + Math.random() * 30), vy: (Math.random() - 0.5) * 8,
+        n: 3 + (Math.random() * 3 | 0), phase: Math.random() * TAU, alt: 3 + Math.random() * 1.5,
+      });
+    }
+    for (let i = G.birds.length - 1; i >= 0; i--) {
+      const b = G.birds[i];
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      b.phase += dt * 9;
+      if (!G.map || !G.map.outdoor || U.dist(b.x, b.y, p.x, p.y) > 1600) G.birds.splice(i, 1);
     }
   },
 
@@ -623,6 +780,8 @@ const Game = {
     // quests poll
     if (G.frame % 30 === 0) QS.update();
     if (G.frame % 10 === 0) this.updateGauntlet();
+    this.updateFishing(dt);
+    this.updateBirds(dt);
 
     // ambient life: fireflies, drifting embers, frost glints, marsh spores
     this.ambientT = (this.ambientT || 0) - dt;
@@ -665,7 +824,7 @@ const Game = {
     }
 
     // interact prompt
-    if (G.state === "play") {
+    if (G.state === "play" && !G.fishing) {
       const it = this.findInteractable();
       const prompt = U.el("interact-prompt");
       if (it) {

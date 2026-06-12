@@ -14,14 +14,14 @@ const NPC_DEFS = {
   serah: {
     name: "Serah the Lampwright", town: "emberfall", role: "guide",
     look: { body: "#7a5c30", trim: "#e8cf9a", hair: "#d8d0c0" },
-    shop: { stock: ["torch", "small_hp_potion", "ember_shard"], spells: ["frost_spike", "spark_lash", "lesser_heal", "cleanse", "stoneskin", "ward"] },
-    bark: "The lamps are low tonight.",
+    shop: { stock: ["torch", "small_hp_potion", "ember_shard"], spells: ["frost_spike", "spark_lash", "lesser_heal", "cleanse", "stoneskin", "ward", "lantern_orb"] },
+    bark: ["The lamps are low tonight.", "Kneel to every shrine you pass.", "The light looks after its own."],
   },
   bram: {
     name: "Bram the Smith", town: "emberfall", role: "smith",
     look: { body: "#5a4633", trim: "#8a6a3a", hair: "#3a3026" },
     shop: { stock: ["iron_sword", "iron_axe", "iron_mace", "iron_spear", "iron_helm", "iron_cuirass", "iron_greaves", "iron_kite", "wooden_shield", "iron_ore", "leather_strips", "steel_ingot"] },
-    bark: "Mind the sparks.",
+    bark: ["Mind the sparks.", "Good steel argues back.", "Ore\u2019s scarce. Bring me ore."],
   },
   maren: {
     name: "Maren the Alchemist", town: "emberfall", role: "alchemist",
@@ -33,7 +33,7 @@ const NPC_DEFS = {
     name: "Tobbe the Innkeeper", town: "emberfall", role: "innkeeper",
     look: { body: "#6a4a3a", trim: "#c8a878", hair: "#8a7050" },
     shop: { stock: ["bread", "dried_meat", "honey_mead"] },
-    bark: "Warm hearth, cold mead, thick walls.",
+    bark: ["Warm hearth, cold mead, thick walls.", "Mind the floorboard. It screams.", "No brawling. The chairs are older than you."],
   },
   ralka: {
     name: "Ralka the Huntress", town: "emberfall", role: "hunter",
@@ -49,7 +49,7 @@ const NPC_DEFS = {
   petra: {
     name: "Petra the Fisher", town: "duskmere", role: "merchant",
     look: { body: "#3c4a50", trim: "#88a8b0", hair: "#5a4a3a" },
-    shop: { stock: ["antidote", "mireweed", "glowcap", "dried_meat", "steel_dirk", "mirewalker_cowl", "mirewalker_coat", "mirewalker_waders", "torch"] },
+    shop: { stock: ["antidote", "mireweed", "glowcap", "dried_meat", "steel_dirk", "mirewalker_cowl", "mirewalker_coat", "mirewalker_waders", "torch", "fishing_rod"] },
     bark: "Eels are biting. Bite back.",
   },
   eirik: {
@@ -66,18 +66,18 @@ const NPC_DEFS = {
   senn: {
     name: "Quartermaster Senn", town: "strand", role: "castaway",
     look: { body: "#4a5a60", trim: "#c9a86a", hair: "#3a302a" },
-    shop: { stock: ["salt_cod", "antidote", "torch", "tide_pearl", "hunting_bow", "leather_strips"] },
-    bark: "Keep above the tide line after dark.",
+    shop: { stock: ["salt_cod", "antidote", "torch", "tide_pearl", "hunting_bow", "leather_strips", "fishing_rod"] },
+    bark: ["Keep above the tide line after dark.", "The PENNY was a good ship. Is. Was.", "The sea returns everything but apologies."],
   },
   brann: {
     name: "Brann the Pitmaster", town: "gauntlet", role: "pitmaster",
     look: { body: "#5d4632", trim: "#c4502a", hair: "#2c2620" },
-    bark: "Blood warms faster than mead.",
+    bark: ["Blood warms faster than mead.", "The sand drinks first. Pit rules.", "Give the ravens a show."],
   },
   caldus: {
     name: "Caldus the Unlit", town: "watchtower", role: "hermit",
     look: { body: "#3a3a44", trim: "#8888a8", hair: "#909090" },
-    shop: { spells: ["fireball", "glacial_burst", "soul_lance", "greater_heal"] },
+    shop: { spells: ["fireball", "glacial_burst", "soul_lance", "greater_heal", "ember_sprite"] },
     bark: "...",
   },
 };
