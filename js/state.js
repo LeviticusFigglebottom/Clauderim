@@ -46,12 +46,27 @@ const G = {
   gauntletActive: false,
   pendingTransition: null,
 
-  // settings
+  // settings (persisted separately from saves)
   settings: {
     music: true,
     sfx: true,
     screenShake: true,
     showDamage: true,
+    renderScale: "auto",   // auto | low | med | high
+    viewDist: "far",       // near | far | vfar
+    grain: true,           // per-pixel texture grain in first person
+    showFps: false,
+  },
+  lightning: 0,            // white-out timer during storms
+
+  saveSettings() {
+    try { localStorage.setItem("clauderim_settings", JSON.stringify(G.settings)); } catch (e) {}
+  },
+  loadSettings() {
+    try {
+      const raw = localStorage.getItem("clauderim_settings");
+      if (raw) Object.assign(G.settings, JSON.parse(raw));
+    } catch (e) {}
   },
 
   // runtime

@@ -11,8 +11,10 @@ const Game = {
   /* ---------------- boot ---------------- */
 
   boot() {
+    G.loadSettings();
     G.canvas = U.el("game");
     G.ctx = G.canvas.getContext("2d");
+    RenderFP.applySettings();
     Input.init(G.canvas);
     Render.init();
     UI.init();
@@ -671,6 +673,13 @@ const Game = {
 
     const w = G.weather;
     w.t += dt;
+    // storms argue with the sky
+    G.lightning = Math.max(0, G.lightning - dt);
+    if (w.kind === "rain" && w.intensity > 0.65 && G.map && G.map.outdoor && Math.random() < dt * 0.05) {
+      G.lightning = 0.14 + Math.random() * 0.1;
+      setTimeout(() => Sfx.play("thunder"), 250 + Math.random() * 900);
+      G.shake(3, 0.3);
+    }
     // intensity ramps toward target
     w.intensity = U.approach(w.intensity, w.kind === "clear" ? 0 : 1, dt * 0.3);
     if (w.t >= w.next) {
@@ -690,6 +699,7 @@ const Game = {
 
   loop(t) {
     requestAnimationFrame(tt => this.loop(tt));
+    const tLoop0 = performance.now();
     let dt = Math.min(0.05, (t - this.last) / 1000);
     this.last = t;
     G.dt = dt;
@@ -716,6 +726,24 @@ const Game = {
       UI.updateBossBar();
     }
 
+    // photo mode: this frame rendered clean — capture and hand it over
+    if (G.photoHide) {
+      G.photoHide = false;
+      try {
+        const url = G.canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `clauderim_${Date.now()}.png`;
+        a.click();
+        G.msg("Vista captured.", "good");
+      } catch (e) { G.msg("The light refused to be kept.", "bad"); }
+    }
+    if (G.state === "play" && Input.pressed("photo")) {
+      G.photoHide = true; // next..this frame? next frame renders clean, then saves
+      Sfx.play("shutter");
+    }
+
+    G.frameMsAll = (G.frameMsAll || 8) * 0.92 + (performance.now() - tLoop0) * 0.08;
     Input.endFrame();
   },
 

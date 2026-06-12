@@ -39,6 +39,8 @@ const SFX_TABLE = {
   step:         ["triangle", 70, 45, 0.07, 0.05, 0.85],
   splash:       ["sine", 300, 90, 0.3, 0.18, 0.85],
   bite:         ["sine", 700, 380, 0.18, 0.25, 0.3],
+  thunder:      ["sawtooth", 55, 22, 1.6, 0.4, 0.95],
+  shutter:      ["square", 900, 700, 0.05, 0.12, 0.3],
   bow:          ["triangle", 600, 180, 0.14, 0.2, 0.3],
   cast_charge:  ["sine", 220, 480, 0.3, 0.12, 0],
   cast:         ["sine", 700, 280, 0.2, 0.2, 0.15],

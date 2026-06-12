@@ -58,6 +58,7 @@ function makeEl(tag) {
     addEventListener() {},
     getBoundingClientRect() { return { left: 0, top: 0, width: 1280, height: 720 }; },
     getContext() { return makeCtx(); },
+    toDataURL() { return "data:image/png;base64,"; },
     click() { if (el.onclick) el.onclick(); },
     setAttribute() {},
     focus() {},
@@ -828,6 +829,80 @@ run(`{
 check("contracts ride along in the save", run(`G.bountySaved`) === true);
 run(`Game.enterMap("overworld", 200*32, 206*32);`);
 frames(10);
+
+/* ---------------- sixth pass: graphics settings, storms, photo ---------------- */
+
+// settings round-trip through localStorage
+run(`{
+  G.settings.renderScale = "high";
+  G.settings.viewDist = "vfar";
+  G.settings.grain = false;
+  G.saveSettings();
+  G.settings.renderScale = "auto"; G.settings.viewDist = "far"; G.settings.grain = true;
+  G.loadSettings();
+  G.setOk = G.settings.renderScale === "high" && G.settings.viewDist === "vfar" && G.settings.grain === false;
+}`);
+check("settings persist and reload", run(`G.setOk`) === true);
+
+// render scale presets drive the internal buffer
+run(`{
+  G.settings.renderScale = "low"; RenderFP.applySettings();
+  G.lowRes = RenderFP.W === 480 && RenderFP.H === 270;
+  G.settings.renderScale = "high"; RenderFP.applySettings();
+  G.highRes = RenderFP.W === 854 && RenderFP.H === 480;
+}`);
+check("render scale presets apply (480p low, 854p high)", run(`G.lowRes && G.highRes`));
+
+// view distance moves the fog ceiling
+run(`{
+  G.settings.viewDist = "near"; G.mdNear = RenderFP.maxDist;
+  G.settings.viewDist = "vfar"; G.mdFar = RenderFP.maxDist;
+  G.settings.viewDist = "far";
+}`);
+check("view distance setting spans 36..64 tiles", run(`G.mdNear === 36 && G.mdFar === 64`));
+
+// a frame renders without grain at high res (the expensive path, exercised)
+run(`{ Game.enterMap("overworld", 200*32, 206*32); G.settings.grain = false; }`);
+let hiOk = true;
+try { frames(3); } catch (e) { hiOk = false; console.error(e); }
+check("high-res grainless frame renders clean", hiOk);
+run(`{ G.settings.renderScale = "med"; RenderFP.applySettings(); G.settings.grain = true; G.saveSettings(); }`);
+frames(2);
+
+// adaptive only steers when set to auto
+run(`{
+  RenderFP.frameMs = 30; RenderFP.frameN = 89;
+  RenderFP.autoRes();
+  G.noSteer = RenderFP.W === 640; // 'med' pins the buffer
+  G.settings.renderScale = "auto";
+  RenderFP.frameMs = 30; RenderFP.frameN = 89;
+  RenderFP.autoRes();
+  G.steered = RenderFP.W === 480;
+  RenderFP.setRes(640, 360);
+  G.settings.renderScale = "med";
+}`);
+check("manual scale pins the buffer; auto adapts under load", run(`G.noSteer && G.steered`));
+
+// storms strike during heavy rain
+run(`{
+  G.weather.kind = "rain"; G.weather.intensity = 1;
+  G.lightning = 0;
+  let struck = false;
+  for (let i = 0; i < 4000 && !struck; i++) { Game.updateClock(0.05); if (G.lightning > 0) struck = true; }
+  G.struck = struck;
+  G.lightning = 0.1;
+  Game.updateClock(0.016);
+  G.decays = G.lightning < 0.1;
+  G.weather.kind = "clear"; G.weather.intensity = 0; G.lightning = 0;
+}`);
+check("lightning strikes in heavy rain and fades", run(`G.struck && G.decays`));
+
+// photo mode: clean frame, then capture
+run(`{ Input.pressedSet["KeyP"] = true; }`);
+frames(1);
+check("photo key arms a clean frame", run(`G.photoHide === true`));
+frames(1);
+check("the clean frame is captured and the flag resets", run(`G.photoHide === false`));
 
 /* ---------------- first-person mode ---------------- */
 

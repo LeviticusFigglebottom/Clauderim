@@ -8,9 +8,12 @@ ember economy, telegraphed bosses, "you died").
 Zero dependencies. Zero build step. Pure vanilla JavaScript + Canvas + WebAudio.
 
 **Play it in first person** — a software raycaster renders the whole world from inside it:
-mouse-look with pitch, head-bob, an animated viewmodel for every weapon, sun and moon,
-cloud banks, starfields, and firelight pooling on the ground. Press **V** any time for the
-classic top-down view. Same world, same systems, both perspectives — your choice is saved.
+mouse-look with pitch, head-bob, an animated viewmodel for every weapon, sun-lit wall faces
+that track the time of day, sky-mirroring water, ambient occlusion, travelling sun and moon,
+cloud banks, starfields, lightning storms, and firelight pooling on the ground. Press **V**
+any time for the classic top-down view. **Graphics settings** (render scale up to 854×480,
+view distance to 64 tiles, texture grain, frame meter) live in the System menu and persist.
+**P** captures a clean screenshot. Same world, same systems, both perspectives.
 
 ![genre](https://img.shields.io/badge/genre-open--world%20ARPG-8b6f3a)
 ![deps](https://img.shields.io/badge/dependencies-none-2d6a2d)

@@ -18,6 +18,7 @@ const BINDS = {
   interact: ["KeyE"],
   flask: ["KeyR"],
   quickuse: ["KeyT"],
+  photo: ["KeyP"],
   crouch: ["ControlLeft", "ControlRight", "KeyX"],
   cast: ["KeyQ"],
   aim: ["KeyF"],                  // hold to draw equipped bow

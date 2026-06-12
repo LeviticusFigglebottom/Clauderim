@@ -476,15 +476,24 @@ const UI = {
     }
     const chk = (key, label) => `<label style="display:flex;justify-content:space-between;cursor:pointer">
       <span>${label}</span><input type="checkbox" data-set="${key}" ${G.settings[key] ? "checked" : ""}></label>`;
+    const scaleNames = { auto: "Auto (adaptive)", low: "Low — 480×270", med: "Medium — 640×360", high: "High — 854×480" };
+    const distNames = { near: "Near — 36 tiles", far: "Far — 48 tiles", vfar: "Very far — 64 tiles" };
     c.innerHTML = `<h2>System</h2><div class="sys-rows">
       ${slots}
       <hr style="border-color:#2c2719">
-      ${chk("music", "Music")}${chk("sfx", "Sound effects")}${chk("screenShake", "Screen shake")}${chk("showDamage", "Damage numbers")}
+      <div style="color:#c9a86a;letter-spacing:.15em;font-size:13px">GRAPHICS</div>
+      <button class="act-btn" id="sys-scale">Render scale: ${scaleNames[G.settings.renderScale]}</button>
+      <button class="act-btn" id="sys-dist">View distance: ${distNames[G.settings.viewDist]}</button>
+      ${chk("grain", "Texture grain (first person)")}
+      ${chk("showFps", "Frame meter")}
+      ${chk("screenShake", "Screen shake")}${chk("showDamage", "Damage numbers")}
+      <div style="color:#c9a86a;letter-spacing:.15em;font-size:13px;margin-top:4px">SOUND & VIEW</div>
+      ${chk("music", "Music")}${chk("sfx", "Sound effects")}
       <button class="act-btn" id="sys-view">View: ${G.viewMode === "fp" ? "First person" : "Top-down"} (switch — or press V in game)</button>
       <button class="act-btn" id="sys-help">Manual & Controls</button>
       <button class="act-btn danger" id="sys-quit">Quit to title (unsaved progress is lost)</button>
     </div>
-    <p class="sys-note">The world is also saved automatically whenever you rest at a shrine.</p>`;
+    <p class="sys-note">Settings persist across sessions. The world saves automatically at every shrine rest. [P] captures a clean screenshot.</p>`;
     c.querySelectorAll("[data-save]").forEach(b => b.onclick = () => {
       if (SaveSys.save(parseInt(b.dataset.save))) { G.msg("Saved.", "good"); Sfx.play("quest"); }
       this.renderMenu();
@@ -506,7 +515,23 @@ const UI = {
     c.querySelectorAll("[data-set]").forEach(el => el.onchange = () => {
       G.settings[el.dataset.set] = el.checked;
       if (el.dataset.set === "music") { const m = Music.mood; Music.mood = null; Music.setMood(el.checked ? (m || "world") : null); }
+      G.saveSettings();
     });
+    U.el("sys-scale").onclick = () => {
+      const order = ["auto", "low", "med", "high"];
+      G.settings.renderScale = order[(order.indexOf(G.settings.renderScale) + 1) % order.length];
+      RenderFP.applySettings();
+      G.saveSettings();
+      Sfx.play("ui");
+      this.renderMenu();
+    };
+    U.el("sys-dist").onclick = () => {
+      const order = ["near", "far", "vfar"];
+      G.settings.viewDist = order[(order.indexOf(G.settings.viewDist) + 1) % order.length];
+      G.saveSettings();
+      Sfx.play("ui");
+      this.renderMenu();
+    };
     U.el("sys-view").onclick = () => {
       G.viewMode = G.viewMode === "fp" ? "top" : "fp";
       Sfx.play("ui");
@@ -902,6 +927,7 @@ const UI = {
   renderEnchant() {
     const p = G.player;
     const panel = U.el("station-panel");
+    if (this.enchSel && !p.hasItem(this.enchSel)) this.enchSel = null;
     const lvl = p.skills.enchanting.lvl;
     const pot = p.enchPotency();
     const emberMult = p.hasPerk("en_2") ? 0.5 : 1;
@@ -1115,7 +1141,7 @@ const UI = {
       <p><b>LMB tap</b> light attack · <b>LMB hold</b> heavy attack</p>
       <p><b>RMB hold</b> block with shield — raise it at the last instant to <b>parry</b></p>
       <p><b>F hold</b> draw bow, release to loose · <b>Q</b> cast equipped spell</p>
-      <p><b>1–4</b> speak Edicts of the Old Tongue · <b>R</b> drink the Ember Flask · <b>T</b> quick item</p>
+      <p><b>1–4</b> speak Edicts of the Old Tongue · <b>R</b> drink the Ember Flask · <b>T</b> quick item · <b>P</b> photo (clean screenshot)</p>
       <h3>World</h3>
       <p><b>E</b> interact — shrines, people, chests, herbs, doors, graves, campfires, wells</p>
       <p><b>Tab</b> menu · <b>M</b> map · <b>J</b> journal · <b>C</b> character · <b>Esc</b> close/system</p>

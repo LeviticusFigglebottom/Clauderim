@@ -86,11 +86,25 @@ const RenderFP = {
 
   // adaptive resolution: ease down on struggling machines, climb back when idle
   setRes(w, h) {
+    if (this.W === w && this.H === h) return;
     this.W = w; this.H = h;
     this.canvas = null; // full re-init next frame
     this.spriteCache.clear();
   },
+  // the player's word is law; 'auto' lets the frame budget decide
+  applySettings() {
+    const rs = G.settings.renderScale;
+    if (rs === "low") this.setRes(480, 270);
+    else if (rs === "med") this.setRes(640, 360);
+    else if (rs === "high") this.setRes(854, 480);
+    // 'auto' keeps whatever autoRes chose
+  },
+  get maxDist() {
+    const v = G.settings.viewDist;
+    return v === "near" ? 36 : v === "vfar" ? 64 : 48;
+  },
   autoRes() {
+    if (G.settings.renderScale !== "auto") return;
     this.frameN++;
     if (this.frameN < 90) return;
     this.frameN = 0;
@@ -138,6 +152,8 @@ const RenderFP = {
     const dirX = Math.cos(yaw), dirY = Math.sin(yaw);
     const plX = -dirY * this.fov, plY = dirX * this.fov;
     const tm = G.elapsed;
+    const md = this.maxDist;
+    const grain = G.settings.grain;
 
     /* camera: pitch shears the horizon; head-bob, crouch and roll
        lower the EYE instead — near ground sways, the horizon holds still */
@@ -182,6 +198,15 @@ const RenderFP = {
       }
       fog = [skyHor[0] * 0.92 | 0, skyHor[1] * 0.92 | 0, skyHor[2] * 0.92 | 0];
 
+      // where the sun stands, for wall faces (moon takes the watch at night)
+      {
+        const sunT = (h24 - 6) / 12;
+        const az = (sunT > 0 && sunT < 1)
+          ? U.lerp(-Math.PI, 0, sunT) - Math.PI / 2
+          : U.lerp(-Math.PI, 0, ((h24 + 12) % 24 - 6) / 12) - Math.PI / 2;
+        this._sunX = Math.cos(az); this._sunY = Math.sin(az);
+      }
+
       // cloud banks: one fBm sample per column, brightening a sky band
       const cloudAmt = G.weather.kind === "clear" ? 0.45 : 0.85;
       for (let col = 0; col < W; col++) {
@@ -191,8 +216,10 @@ const RenderFP = {
       }
     } else if (map.ambient === "undermarch") {
       amb = 0.5; fog = [7, 8, 14];
+      this._sunX = 0.4; this._sunY = -0.7;
     } else {
       amb = 0.62; fog = [10, 9, 8];
+      this._sunX = 0.4; this._sunY = -0.7;
     }
 
     const unitFor = perp => H / perp;
@@ -203,8 +230,8 @@ const RenderFP = {
     for (let y = horizon + 1; y < H; y++) {
       const rd = (eye * H) / (y - horizon);
       this.rowRD[y] = rd;
-      if (rd > FP_MAXDIST) { this.rowFog[y] = 1; this.rowB[y] = 0; continue; }
-      const f = Math.min(1, rd / FP_MAXDIST);
+      if (rd > md) { this.rowFog[y] = 1; this.rowB[y] = 0; continue; }
+      const f = Math.min(1, rd / md);
       this.rowFog[y] = Math.min(1, f * f * Math.sqrt(f) * 1.02); // ~pow 2.5: clear mid-range, late fade
       this.rowB[y] = amb / (1 + rd * 0.05) + Math.max(0, 1 - rd / 5) * glowK;
     }
@@ -213,8 +240,8 @@ const RenderFP = {
       for (let y = 0; y < horizon; y++) {
         const rd = (ceilH * H) / Math.max(1, horizon - y);
         this.ceilRD[y] = rd;
-        if (rd > FP_MAXDIST) { this.ceilFog[y] = 1; this.ceilB[y] = 0; continue; }
-        const f = Math.min(1, rd / FP_MAXDIST);
+        if (rd > md) { this.ceilFog[y] = 1; this.ceilB[y] = 0; continue; }
+        const f = Math.min(1, rd / md);
         this.ceilFog[y] = Math.min(1, f * f * Math.sqrt(f) * 1.02);
         this.ceilB[y] = amb * 0.5 / (1 + rd * 0.08) + Math.max(0, 1 - rd / 5) * 0.4 * (1 - amb);
       }
@@ -254,15 +281,16 @@ const RenderFP = {
       if (rdy < 0) { stepY = -1; sideY = (py - mapY) * dDy; } else { stepY = 1; sideY = (mapY + 1 - py) * dDy; }
 
       let hit = 0, side = 0, tile = 0, steps = 0;
-      while (steps++ < 130) {
+      const maxSteps = md * 2.4 + 24;
+      while (steps++ < maxSteps) {
         if (sideX < sideY) { sideX += dDx; mapX += stepX; side = 0; }
         else { sideY += dDy; mapY += stepY; side = 1; }
         tile = World.tileAt(map, mapX, mapY);
         if (FP_WALLS.has(tile)) { hit = 1; break; }
-        if ((side === 0 ? sideX - dDx : sideY - dDy) > FP_MAXDIST) break;
+        if ((side === 0 ? sideX - dDx : sideY - dDy) > md) break;
       }
 
-      let perp = FP_MAXDIST, top = horizon, bot = horizon;
+      let perp = md, top = horizon, bot = horizon;
       if (hit) {
         perp = Math.max(0.06, side === 0 ? sideX - dDx : sideY - dDy);
         const unit = unitFor(perp);
@@ -273,11 +301,15 @@ const RenderFP = {
 
         const rgb = this.TILE_RGB[tile] || [60, 60, 60];
         const wallX = side === 0 ? py + perp * rdy : px + perp * rdx;
-        const u = wallX - Math.floor(wallX);
+        const u = wallX - (wallX | 0);
         const cellJ = this.jit(mapX, mapY);
-        let br = amb * (side === 1 ? 0.76 : 1) / (1 + perp * 0.05);
+        // faces lit by where the sun actually stands
+        let faceLight;
+        if (side === 0) faceLight = 0.78 + 0.22 * Math.max(0, -stepX * this._sunX);
+        else faceLight = 0.74 + 0.26 * Math.max(0, -stepY * this._sunY);
+        let br = amb * faceLight / (1 + perp * 0.05);
         br += Math.max(0, 1 - perp / 5) * 0.5 * (1 - amb);
-        const ff = Math.min(1, perp / FP_MAXDIST);
+        const ff = Math.min(1, perp / md);
         const fogT = Math.min(1, ff * ff * Math.sqrt(ff) * 1.02);
 
         const vStep = FP_WALL_H / (botF - topF);
@@ -287,17 +319,17 @@ const RenderFP = {
         let wi = top * W + col;
         for (let y = top; y <= bot; y++, v += vStep, wi += W) {
           let tex = 1 + (cellJ - 0.5) * 0.14;
-          tex += ((((Math.imul((u * 24) | 0, 73856093) ^ Math.imul((v * 24) | 0, 19349663)) >>> 8) % 1000) / 1000 - 0.5) * 0.1;
+          if (grain) tex += ((((Math.imul((u * 24) | 0, 73856093) ^ Math.imul((v * 24) | 0, 19349663)) >>> 8) % 1000) / 1000 - 0.5) * 0.1;
           if (wood) {
             const plank = u * 4;
-            if (plank - Math.floor(plank) < 0.07) tex *= 0.7;
-            const grain = v * 9;
-            if (grain - Math.floor(grain) < 0.12) tex *= 0.92;
+            if (plank - (plank | 0) < 0.07) tex *= 0.7;
+            const gr = v * 9;
+            if (gr - (gr | 0) < 0.12) tex *= 0.92;
           } else {
             const course = v * 2.4;
-            if (course - Math.floor(course) < 0.055) tex *= 0.7;
-            const brick = u * 2 + (Math.floor(course) % 2) * 0.5;
-            if (brick - Math.floor(brick) < 0.045) tex *= 0.76;
+            if (course - (course | 0) < 0.055) tex *= 0.7;
+            const brick = u * 2 + ((course | 0) % 2) * 0.5;
+            if (brick - (brick | 0) < 0.045) tex *= 0.76;
           }
           if (tile === T.SNOWROCK && v < 0.3) tex *= 1.45;
           tex *= 0.86 + 0.2 * (1 - v / FP_WALL_H);
@@ -351,6 +383,8 @@ const RenderFP = {
 
       /* floor */
       const floorStart = hit ? bot + 1 : horizon + 1;
+      // walls seat into the ground: short occlusion ramp at their base
+      const aoRows = hit ? Math.min(14, Math.max(2, (H / perp * 0.22) | 0)) : 0;
       let wif = floorStart * W + col;
       for (let y = floorStart; y < H; y++, wif += W) {
         const fogT = rowFog[y];
@@ -359,16 +393,21 @@ const RenderFP = {
         const fx2 = px + rdx * rd, fy2 = py + rdy * rd;
         const txi = fx2 | 0, tyi = fy2 | 0;
         const t2 = (fx2 < 0 || fy2 < 0 || txi >= mw || tyi >= mh) ? 18 : tiles[tyi * mw + txi];
-        const j = jitL((fx2 * 3) | 0, (fy2 * 3) | 0);
-        let r = tileR[t2], g = tileG[t2], bch = tileB[t2];
-        if (t2 === 1 || t2 === 0) { // WATER / DEEPWATER
-          const sh = Math.sin(tm * 1.8 + fx2 * 2.2 + fy2 * 3.1) * 13;
-          r += sh; g += sh; bch += sh + 8;
+        let r, g, bch;
+        if (t2 === 1 || t2 === 0) { // WATER / DEEPWATER: the sky lies on the surface
+          const sh = Math.sin(tm * 1.8 + fx2 * 2.2 + fy2 * 3.1) * 11;
+          r = tileR[t2] * 0.6 + fog0 * 0.42 + sh;
+          g = tileG[t2] * 0.6 + fog1 * 0.42 + sh;
+          bch = tileB[t2] * 0.6 + fog2 * 0.42 + sh + 6;
         } else if (t2 === 17) {     // LAVA
           const pulse = 0.6 + 0.4 * Math.sin(tm * 2.5 + fx2 + fy2);
           r = 200 * pulse + 60; g = 80 * pulse + 30; bch = 25;
+        } else {
+          r = tileR[t2]; g = tileG[t2]; bch = tileB[t2];
         }
-        const b = rowB[y] * (1 + (j - 0.5) * 0.18);
+        let b = rowB[y];
+        if (grain) b *= 1 + (jitL((fx2 * 3) | 0, (fy2 * 3) | 0) - 0.5) * 0.18;
+        if (aoRows && y - bot <= aoRows) b *= 0.62 + 0.38 * ((y - bot) / aoRows);
         r *= b; g *= b; bch *= b;
         r = r + (fog0 - r) * fogT; if (r > 255) r = 255;
         g = g + (fog1 - g) * fogT; if (g > 255) g = 255;
@@ -464,7 +503,11 @@ const RenderFP = {
 
     /* ---- shared screen-space layers ---- */
     Render.weather(G.ctx, map, 0, 0);
-    if (G.state === "play" || G.state === "dialogue") {
+    if (G.lightning > 0) {
+      G.ctx.fillStyle = `rgba(235,240,255,${Math.min(0.85, G.lightning * 5)})`;
+      G.ctx.fillRect(0, 0, G.W, G.H);
+    }
+    if (!G.photoHide && (G.state === "play" || G.state === "dialogue")) {
       Render.hud(G.ctx);
       const cx = G.W / 2, cy = G.H / 2;
       G.ctx.strokeStyle = "rgba(232,207,154,0.75)";
@@ -530,7 +573,7 @@ const RenderFP = {
       if (e.lightR && !e.dead) carried.push({ x: e.x, y: e.y, r: e.lightR, color: e.lightColor || "255,200,120", flicker: true });
     }
     for (const l of map.lights.concat(carried)) {
-      if (U.dist(p.x, p.y, l.x, l.y) > FP_MAXDIST * TILE * 0.8) continue;
+      if (U.dist(p.x, p.y, l.x, l.y) > this.maxDist * TILE * 0.8) continue;
       const pr = this.projectLocal(l.x, l.y, p, horizon);
       if (!pr || this.depth[pr.col] + 0.4 < pr.perp) continue;
       const rad = Math.min(Math.max(8, (l.r / TILE) * pr.unit * 0.85), this.H * 0.45);
@@ -567,7 +610,7 @@ const RenderFP = {
     const list = [];
     const addIf = (wx, wy, hTiles, anchorFrac, paint, wFactor, yLift, key) => {
       const dist = U.dist(p.x, p.y, wx, wy) / TILE;
-      if (dist > FP_MAXDIST) return;
+      if (dist > this.maxDist) return;
       const rel = U.angDiff(p.facing, U.angTo(p.x, p.y, wx, wy));
       if (Math.abs(rel) > 1.05) return;
       const perp = dist * Math.cos(rel);
@@ -621,8 +664,8 @@ const RenderFP = {
       }, 1.6);
     }
 
-    const tx0 = Math.max(0, ((p.x / TILE) | 0) - 32), tx1 = Math.min(map.w - 1, ((p.x / TILE) | 0) + 32);
-    const ty0 = Math.max(0, ((p.y / TILE) | 0) - 32), ty1 = Math.min(map.h - 1, ((p.y / TILE) | 0) + 32);
+    const tx0 = Math.max(0, ((p.x / TILE) | 0) - (this.maxDist * 0.7 | 0)), tx1 = Math.min(map.w - 1, ((p.x / TILE) | 0) + (this.maxDist * 0.7 | 0));
+    const ty0 = Math.max(0, ((p.y / TILE) | 0) - (this.maxDist * 0.7 | 0)), ty1 = Math.min(map.h - 1, ((p.y / TILE) | 0) + (this.maxDist * 0.7 | 0));
     for (let ty = ty0; ty <= ty1; ty++) {
       for (let tx = tx0; tx <= tx1; tx++) {
         const d = map.deco[ty * map.w + tx];
@@ -792,6 +835,7 @@ const RenderFP = {
     let sprites = this.gatherSprites(map, p, tm);
     sprites.sort((a, b) => b.perp - a.perp);
     if (sprites.length > 260) sprites = sprites.slice(-260);
+    this._fogStrFrame = this._fogStr; // computed once, reused per sprite
     const ctx = this.ctx;
     ctx.imageSmoothingEnabled = true;
 
@@ -811,38 +855,52 @@ const RenderFP = {
 
       // close/large sprites repaint at 2x vector scale for crispness
       const useBig = sH > 290;
-      const tcv = useBig ? this.tmpBig : this.tmp;
-      const tctx = useBig ? this.tmpBigCtx : this.tmpCtx;
-      tctx.clearRect(0, 0, tcv.width, tcv.height);
-      if (sp.key && !useBig) {
-        // static sprites render once into a cache
-        let cached = this.spriteCache.get(sp.key);
-        if (!cached) {
-          cached = document.createElement("canvas");
-          cached.width = 128; cached.height = 176;
-          sp.paint(cached.getContext("2d"));
-          if (this.spriteCache.size > 240) this.spriteCache.clear();
-          this.spriteCache.set(sp.key, cached);
-        }
-        tctx.drawImage(cached, 0, 0);
-      } else if (useBig) {
-        tctx.save(); tctx.scale(2, 2);
-        sp.paint(tctx);
-        tctx.restore();
-      } else {
-        sp.paint(tctx);
-      }
+      const ffs0 = Math.min(1, sp.perp / this.maxDist);
+      const fogT0 = Math.min(1, ffs0 * ffs0 * Math.sqrt(ffs0) * 1.02);
 
-      // fog TINTS the sprite (it stays opaque — no ghost trees)
-      const ffs = Math.min(1, sp.perp / FP_MAXDIST);
-      const fogT = Math.min(1, ffs * ffs * Math.sqrt(ffs) * 1.02);
-      if (fogT > 0.03) {
-        tctx.save();
-        tctx.globalCompositeOperation = "source-atop";
-        tctx.globalAlpha = fogT * 0.92;
-        tctx.fillStyle = "rgb(" + this._fogStr + ")";
-        tctx.fillRect(0, 0, tcv.width, tcv.height);
-        tctx.restore();
+      let tcv;
+      if (sp.key && !useBig) {
+        // statics cache PER FOG BUCKET: a distant tree is one blit, not a pipeline
+        const bucket = Math.round(fogT0 * 9);
+        const fullKey = bucket ? sp.key + "|" + bucket + "|" + this._fogStrFrame : sp.key;
+        tcv = this.spriteCache.get(fullKey);
+        if (!tcv) {
+          tcv = document.createElement("canvas");
+          tcv.width = 128; tcv.height = 176;
+          const cctx = tcv.getContext("2d");
+          sp.paint(cctx);
+          if (bucket) {
+            cctx.save();
+            cctx.globalCompositeOperation = "source-atop";
+            cctx.globalAlpha = (bucket / 9) * 0.92;
+            cctx.fillStyle = "rgb(" + this._fogStrFrame + ")";
+            cctx.fillRect(0, 0, 128, 176);
+            cctx.restore();
+          }
+          if (this.spriteCache.size > 420) this.spriteCache.clear();
+          this.spriteCache.set(fullKey, tcv);
+        }
+      } else {
+        // dynamics (and the very close) paint fresh
+        tcv = useBig ? this.tmpBig : this.tmp;
+        const tctx = useBig ? this.tmpBigCtx : this.tmpCtx;
+        tctx.clearRect(0, 0, tcv.width, tcv.height);
+        if (useBig) {
+          tctx.save(); tctx.scale(2, 2);
+          sp.paint(tctx);
+          tctx.restore();
+        } else {
+          sp.paint(tctx);
+        }
+        // fog TINTS the sprite (it stays opaque — no ghost trees)
+        if (fogT0 > 0.03) {
+          tctx.save();
+          tctx.globalCompositeOperation = "source-atop";
+          tctx.globalAlpha = fogT0 * 0.92;
+          tctx.fillStyle = "rgb(" + this._fogStrFrame + ")";
+          tctx.fillRect(0, 0, tcv.width, tcv.height);
+          tctx.restore();
+        }
       }
 
       // span-batch: contiguous visible column runs become single draws
@@ -873,7 +931,7 @@ const RenderFP = {
       const pr = this.project(pt.x, pt.y);
       if (!pr || this.depth[pr.col] + 0.1 < pr.perp) continue;
       const a = Math.max(0, 1 - pt.t / pt.life);
-      ctx.globalAlpha = a * Math.max(0.15, 1 - pr.perp / FP_MAXDIST);
+      ctx.globalAlpha = a * Math.max(0.15, 1 - pr.perp / this.maxDist);
       ctx.fillStyle = pt.color;
       const sz = U.clamp(pt.size * pr.h / 130, 1.5, 10);
       if (pt.glow) { ctx.shadowColor = pt.color; ctx.shadowBlur = 7; }

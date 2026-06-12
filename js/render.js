@@ -70,6 +70,18 @@ const Render = {
     ctx.fillRect(px, py, TILE, TILE);
     ctx.globalAlpha = 1;
 
+    // walls throw shade on whatever stands south of them
+    if (t !== T.WALL_WOOD && t !== T.WALL_STONE) {
+      const above = World.tileAt(map, wx, wy - 1);
+      if (above === T.WALL_WOOD || above === T.WALL_STONE) {
+        const gsh = ctx.createLinearGradient(px, py, px, py + 14);
+        gsh.addColorStop(0, "rgba(0,0,0,0.34)");
+        gsh.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = gsh;
+        ctx.fillRect(px, py, TILE, 14);
+      }
+    }
+
     // soft transitions between natural terrains (walls/floors stay crisp)
     if (t <= T.BRIDGE) {
       const edges = [[0, -1, px, py, TILE, 7], [0, 1, px, py + TILE - 7, TILE, 7],
@@ -287,11 +299,17 @@ const Render = {
     }
     ctx.globalAlpha = 1;
 
+    /* storm light */
+    if (G.lightning > 0) {
+      ctx.fillStyle = `rgba(235,240,255,${Math.min(0.85, G.lightning * 5)})`;
+      ctx.fillRect(0, 0, G.W, G.H);
+    }
+
     /* HUD */
-    if (G.state === "play" || G.state === "dialogue") this.hud(ctx);
+    if (!G.photoHide && (G.state === "play" || G.state === "dialogue")) this.hud(ctx);
 
     /* crosshair */
-    if (G.state === "play") {
+    if (!G.photoHide && G.state === "play") {
       ctx.strokeStyle = "rgba(232,207,154,0.7)";
       ctx.lineWidth = 1;
       const mx = Input.mouse.x, my = Input.mouse.y;
@@ -1339,6 +1357,16 @@ const Render = {
 
     /* minimap */
     this.minimap(ctx, p);
+
+    /* frame meter */
+    if (G.settings.showFps) {
+      const ms = G.frameMsAll || 0;
+      ctx.fillStyle = ms > 15 ? "#d89090" : "#8fae8f";
+      ctx.font = "12px monospace";
+      ctx.textAlign = "right";
+      ctx.fillText(`${ms.toFixed(1)} ms · ${(1000 / Math.max(0.1, ms)).toFixed(0)} fps · ${G.viewMode === "fp" ? RenderFP.W + "×" + RenderFP.H : "top"}`, G.W - 18, 176);
+      ctx.textAlign = "left";
+    }
 
     /* clock */
     const hh = Math.floor(G.time.hour), mm = Math.floor((G.time.hour % 1) * 60);
