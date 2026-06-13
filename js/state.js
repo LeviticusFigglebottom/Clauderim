@@ -56,6 +56,9 @@ const G = {
     viewDist: "far",       // near | far | vfar
     grain: true,           // per-pixel texture grain in first person
     showFps: false,
+    fov: 75,               // horizontal degrees, 60..100
+    sens: 1,               // mouse-look multiplier
+    invertY: false,
   },
   lightning: 0,            // white-out timer during storms
 

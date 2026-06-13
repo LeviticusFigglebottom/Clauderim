@@ -58,6 +58,7 @@ class Player extends Entity {
 
     // action state
     this.atk = null;          // {phase, t, heavy}
+    this.queuedAtk = false;   // combo buffer: LMB during a swing chains the next
     this.holdT = 0;           // LMB hold time
     this.holding = false;
     this.rollT = 0; this.rollDir = 0;
@@ -443,7 +444,7 @@ class Player extends Entity {
       return;
     }
 
-    /* ---- casting / flask animation ---- */
+    /* ---- casting / flask animation (you keep your feet) ---- */
     if (this.cast) {
       this.cast.t -= dt;
       if (this.cast.t <= 0) {
@@ -451,14 +452,11 @@ class Player extends Entity {
         this.cast = null;
         if (!c.flask && c.spell) Combat.finishCast(this, c.spell);
       }
-      return;
     }
 
-    /* ---- attack swing ---- */
-    if (this.atk) {
-      this.updateAttack(dt);
-      return;
-    }
+    /* ---- attack swing ticks alongside movement: no more freezing
+       in place mid-combat — swings only SLOW you ---- */
+    if (this.atk) this.updateAttack(dt);
 
     /* ---- movement ---- */
     const fp = G.viewMode === "fp";
@@ -487,6 +485,8 @@ class Player extends Entity {
     if (this.crouched) speed *= 0.55;
     if (this.blocking) speed *= 0.6;
     if (this.draw) speed *= 0.5;
+    if (this.atk) speed *= this.atk.heavy ? 0.34 : 0.5;
+    if (this.cast) speed *= 0.55;
     if (this.loadRatio() > 1) speed *= 0.45;
     if (this.status.frost > 0) speed *= 0.6;
     speed *= World.slowAt(map, this.x, this.y);
@@ -505,16 +505,16 @@ class Player extends Entity {
       }
     }
 
-    // face the cursor
-    this.facing = U.angTo(this.x, this.y, Input.worldX(), Input.worldY());
+    // face the cursor — but not mid-swing (updateAttack steers the windup)
+    if (!this.atk) this.facing = U.angTo(this.x, this.y, Input.worldX(), Input.worldY());
 
     /* ---- blocking ---- */
-    const wantBlock = Input.mouse.rdown && this.shield() && !this.draw;
+    const wantBlock = Input.mouse.rdown && this.shield() && !this.draw && !this.atk && !this.cast;
     if (wantBlock && !this.blocking) { this.blocking = true; this.blockT = 0; Sfx.play("block_raise"); }
     if (!wantBlock) this.blocking = false;
 
     /* ---- bow draw ---- */
-    if (this.bow() && Input.act("aim")) {
+    if (this.bow() && Input.act("aim") && !this.atk && !this.cast) {
       if (!this.draw) this.draw = { t: 0 };
       this.draw.t += dt;
       if (this.hasPerk("ar_2")) G.slowmoAim = true;
@@ -527,7 +527,11 @@ class Player extends Entity {
     }
 
     /* ---- light / heavy attacks (LMB tap vs hold) ---- */
-    if (Input.mouse.down && !this.blocking && !this.draw) {
+    if (this.atk) {
+      // mid-swing: LMB buffers the next blow instead of vanishing
+      if (Input.mouse.pressed) this.queuedAtk = true;
+      this.holding = false; this.holdT = 0;
+    } else if (Input.mouse.down && !this.blocking && !this.draw && !this.cast) {
       this.holding = true;
       this.holdT += dt;
       if (this.holdT > 0.32) { this.startAttack(true); this.holding = false; this.holdT = 0; }
@@ -538,10 +542,14 @@ class Player extends Entity {
     }
 
     /* ---- dodge roll ---- */
-    if (Input.pressed("roll") && this.rollCd <= 0) {
+    if (Input.pressed("roll") && this.rollCd <= 0 &&
+        (!this.atk || this.atk.phase === "rec")) {
       const prof = this.rollProfile();
       if (!prof.can) { G.msg("Overburdened — you cannot roll.", "bad"); }
       else if (this.stam >= 1) {
+        // the roll cancels the follow-through and any half-spoken spell
+        this.atk = null; this.queuedAtk = false;
+        this.cast = null;
         this.spendStam(prof.cost);
         this._rollProf = prof;
         this.rollT = prof.dur;
@@ -566,7 +574,7 @@ class Player extends Entity {
     }
 
     /* ---- spell cast ---- */
-    if (Input.pressed("cast") && this.equippedSpell) {
+    if (Input.pressed("cast") && this.equippedSpell && !this.atk && !this.cast) {
       Combat.beginCast(this, this.equippedSpell);
     }
 
@@ -605,13 +613,20 @@ class Player extends Entity {
       if (a.t <= 0) {
         a.phase = "strike"; a.t = a.strikeT;
         Combat.playerStrike(this, a.heavy);
-        // small step forward
-        World.moveCircle(G.map, this, Math.cos(this.facing) * 8, Math.sin(this.facing) * 8);
       }
     } else if (a.phase === "strike") {
+      // weight carries you forward THROUGH the blow — a smooth lunge,
+      // not the old single-frame jolt
+      const lspd = (a.heavy ? 150 : 110) * dt;
+      World.moveCircle(G.map, this, Math.cos(this.facing) * lspd, Math.sin(this.facing) * lspd);
       if (a.t <= 0) { a.phase = "rec"; a.t = a.recT; }
     } else if (a.t <= 0) {
       this.atk = null;
+      // a buffered press chains straight into the next light swing
+      if (this.queuedAtk) {
+        this.queuedAtk = false;
+        if (this.stam >= 1) this.startAttack(false);
+      }
     }
   }
 

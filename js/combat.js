@@ -116,7 +116,7 @@ const Combat = {
     if (hitAny) {
       Sfx.play("hit_flesh");
       G.shake(heavy ? 4 : 2, 0.12);
-      if (heavy) G.hitstop = Math.max(G.hitstop || 0, 0.05); // a beat of weight on heavy connects
+      if (heavy) G.hitstop = Math.max(G.hitstop || 0, 0.03); // a beat of weight on heavy connects
     }
   },
 

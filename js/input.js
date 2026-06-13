@@ -50,8 +50,7 @@ const Input = {
       // pointer-locked first person: relative mouse turns the head
       if (typeof document !== "undefined" && document.pointerLockElement === canvas) {
         if (G.player && G.viewMode === "fp" && G.state === "play") {
-          G.player.facing += (e.movementX || 0) * 0.0028;
-          G.player.fpPitch = U.clamp((G.player.fpPitch || 0) - (e.movementY || 0) * 0.0017, -0.3, 0.3);
+          this.applyLook(e.movementX || 0, e.movementY || 0);
         }
         return;
       }
@@ -74,6 +73,15 @@ const Input = {
       if (e.button === 2) this.mouse.rdown = false;
     });
     canvas.addEventListener("contextmenu", e => e.preventDefault());
+  },
+
+  // mouse-look math, factored for sanity: mouse up looks UP
+  applyLook(dx, dy) {
+    const sens = G.settings.sens || 1;
+    const inv = G.settings.invertY ? -1 : 1;
+    G.player.facing += dx * 0.0028 * sens;
+    // pitch > 0 tilts the view DOWN (horizon rises); mouse-down (dy>0) should look down
+    G.player.fpPitch = U.clamp((G.player.fpPitch || 0) + dy * 0.0017 * sens * inv, -0.3, 0.3);
   },
 
   act(name) {

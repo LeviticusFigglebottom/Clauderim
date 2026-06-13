@@ -869,13 +869,19 @@ check("high-res grainless frame renders clean", hiOk);
 run(`{ G.settings.renderScale = "med"; RenderFP.applySettings(); G.settings.grain = true; G.saveSettings(); }`);
 frames(2);
 
-// adaptive only steers when set to auto
+// adaptive only steers when set to auto (two bad windows = a signal)
 run(`{
-  RenderFP.frameMs = 30; RenderFP.frameN = 89;
+  RenderFP._resDown = 0; RenderFP._resUp = 0;
+  RenderFP.frameMs = 30; RenderFP.frameN = 119;
+  RenderFP.autoRes();
+  RenderFP.frameN = 119;
   RenderFP.autoRes();
   G.noSteer = RenderFP.W === 640; // 'med' pins the buffer
   G.settings.renderScale = "auto";
-  RenderFP.frameMs = 30; RenderFP.frameN = 89;
+  RenderFP._resDown = 0; RenderFP._resUp = 0;
+  RenderFP.frameMs = 30; RenderFP.frameN = 119;
+  RenderFP.autoRes();
+  RenderFP.frameN = 119;
   RenderFP.autoRes();
   G.steered = RenderFP.W === 480;
   RenderFP.setRes(640, 360);
@@ -941,6 +947,91 @@ run(`{
 }`);
 check("FP melee strike lands on a foe dead ahead", run(`G.fpWolf.hp < G.fpWolf.hpMax`));
 frames(4);
+run(`{ G.fpWolf.dead = true; }`); // clear the arena for the feel tests
+
+/* ---------------- first-person feel pass ---------------- */
+
+// mouse-look: pushing the mouse UP must look UP (pitch falls)
+run(`{ G.player.fpPitch = 0; G.settings.invertY = false; Input.applyLook(0, -10); G.lookUp = G.player.fpPitch; }`);
+check("mouse up looks up (pitch decreases)", run(`G.lookUp`) < 0);
+run(`{ G.player.fpPitch = 0; G.settings.invertY = true; Input.applyLook(0, -10); G.lookInv = G.player.fpPitch;
+       G.settings.invertY = false; G.player.fpPitch = 0; }`);
+check("invert Y flips the pitch axis", run(`G.lookInv`) > 0);
+
+// one lens for both axes: vertical focal must equal horizontal focal
+frames(4);
+check("projection uses a single focal length", run(`Math.abs(RenderFP.focal - (RenderFP.W * 0.5) / RenderFP.fov) < 1`));
+
+// the FOV setting actually reshapes the lens
+run(`{ G._fovSave = G.settings.fov; G.settings.fov = 100; }`);
+frames(45);
+const planeWide = run(`RenderFP.fov`);
+run(`G.settings.fov = 60;`);
+frames(45);
+const planeNarrow = run(`RenderFP.fov`);
+run(`G.settings.fov = G._fovSave || 75;`);
+check(`FOV 100° widens and 60° narrows the lens (${planeWide.toFixed(2)} / ${planeNarrow.toFixed(2)})`,
+  planeWide > 1.05 && planeNarrow < 0.65);
+
+// combat flow: you keep your feet during a swing
+run(`{ G.player.facing = 0; G.player.stam = G.player.stamMax; G.player.startAttack(false); G.atkX0 = G.player.x; }`);
+run(`Input.keys["KeyW"] = true;`);
+frames(3);
+check("you keep moving while you swing", run(`G.player.atk !== null && G.player.x > G.atkX0`));
+run(`Input.keys["KeyW"] = false;`);
+
+// a press mid-swing buffers the next blow and chains it
+run(`Input.mouse.pressed = true;`);
+frames(1);
+check("LMB mid-swing buffers the next attack", run(`G.player.queuedAtk === true`));
+frames(60);
+check("the buffered press chains a second swing", run(`G.player.atk !== null`));
+
+// the roll cancels the follow-through
+run(`{ G.player.atk.phase = "rec"; G.player.atk.t = 0.4; G.player.rollCd = 0;
+       G.player.stam = G.player.stamMax; Input.pressedSet["Space"] = true; }`);
+frames(1);
+check("roll cancels attack recovery", run(`G.player.rollT > 0 && G.player.atk === null && !G.player.queuedAtk`));
+frames(40); // let the roll land
+
+// adaptive resolution: one bad window is noise, two are a signal
+run(`{
+  G._rsSave = G.settings.renderScale;
+  G.settings.renderScale = "auto";
+  RenderFP.setRes(640, 360);
+  RenderFP._resDown = 0; RenderFP._resUp = 0;
+  RenderFP.frameMs = 30; RenderFP.frameN = 119;
+  RenderFP.autoRes();
+  G.resAfter1 = RenderFP.W;
+  RenderFP.frameN = 119;
+  RenderFP.autoRes();
+  G.resAfter2 = RenderFP.W;
+  G.settings.renderScale = G._rsSave;
+  RenderFP.setRes(640, 360);
+  RenderFP.applySettings();
+}`);
+check("autoRes needs two bad windows before stepping down", run(`G.resAfter1`) === 640 && run(`G.resAfter2`) === 480);
+
+// fog cache keys hold steady through gradual sky shifts
+run(`{
+  G._hrSave = G.time.hour;
+  G.time.hour = 18.0;  const a = RenderFP._fogStr;
+  G.time.hour = 18.02; const b = RenderFP._fogStr;
+  G.time.hour = G._hrSave;
+  G.fogStable = (a === b);
+}`);
+check("quantized fog keys are stable across moments", run(`G.fogStable`));
+
+// the sprite cache survives a resolution change (its canvases are res-independent)
+run(`{
+  RenderFP.spriteCache.set("smoke|test", {});
+  RenderFP.setRes(480, 270);
+  G.cacheKept = RenderFP.spriteCache.has("smoke|test");
+  RenderFP.spriteCache.delete("smoke|test");
+  RenderFP.setRes(640, 360);
+}`);
+check("sprite cache survives setRes", run(`G.cacheKept`));
+frames(3);
 
 // view toggle key flips modes both ways
 run(`Input.pressedSet["KeyV"] = true;`);

@@ -8,19 +8,21 @@ ember economy, telegraphed bosses, "you died").
 Zero dependencies. Zero build step. Pure vanilla JavaScript + Canvas + WebAudio.
 
 **Play it in first person** — a software raycaster renders the whole world from inside it:
-mouse-look with pitch, head-bob, an animated viewmodel for every weapon, sun-lit wall faces
-that track the time of day, sky-mirroring water, ambient occlusion, travelling sun and moon,
-cloud banks, starfields, lightning storms, and firelight pooling on the ground. Press **V**
-any time for the classic top-down view. **Graphics settings** (render scale up to 854×480,
-view distance to 64 tiles, texture grain, frame meter) live in the System menu and persist.
-**P** captures a clean screenshot. Same world, same systems, both perspectives.
+mouse-look with pitch, a **true-perspective lens** (one focal length for both axes — a
+configurable **60–100° FOV** with no edge stretch), head-bob, look-sway, an animated
+viewmodel for every weapon, sun-lit wall faces that track the time of day, sky-mirroring
+water, ambient occlusion, travelling sun and moon, cloud banks, starfields, lightning
+storms, and firelight pooling on the ground. Press **V** any time for the classic top-down
+view. **Graphics & mouse settings** (render scale up to 854×480, view distance to 64 tiles,
+FOV, look sensitivity, invert-Y, texture grain, frame meter) live in the System menu and
+persist. **P** captures a clean screenshot. Same world, same systems, both perspectives.
 
 ![genre](https://img.shields.io/badge/genre-open--world%20ARPG-8b6f3a)
 ![deps](https://img.shields.io/badge/dependencies-none-2d6a2d)
 ![engine](https://img.shields.io/badge/engine-vanilla%20JS%20%2B%20canvas-555)
 
 <p align="center">
-  <img src="docs/screenshots/fpv1_town.png" width="49%">
+  <img src="docs/screenshots/fpv7_emberfall.png" width="49%">
   <img src="docs/screenshots/fpv4_bow.png" width="49%">
   <img src="docs/screenshots/fpv6_night.png" width="49%">
   <img src="docs/screenshots/fpv5_crypt.png" width="49%">
@@ -63,9 +65,9 @@ node test/smoke.js
 | **Mouse / ←→** | Look & turn (first person; click to capture the mouse) |
 | **WASD** | Move (FP: W/S walk, A/D strafe) |
 | **Shift** | Sprint (drains stamina) |
-| **Space** | Dodge roll (i-frames; speed scales with equip load) |
+| **Space** | Dodge roll (i-frames; speed scales with equip load; cancels attack recovery and casts) |
 | **Ctrl / X** | Sneak |
-| **LMB tap / hold** | Light / heavy attack |
+| **LMB tap / hold** | Light / heavy attack — you keep moving while you swing; a press mid-swing buffers the next blow |
 | **RMB hold** | Block — raise at the last instant to **parry** |
 | **F (hold)** | Draw bow; release to loose |
 | **Q** | Cast equipped spell |

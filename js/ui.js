@@ -487,6 +487,16 @@ const UI = {
       ${chk("grain", "Texture grain (first person)")}
       ${chk("showFps", "Frame meter")}
       ${chk("screenShake", "Screen shake")}${chk("showDamage", "Damage numbers")}
+      <label style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <span>Field of view: <span id="sys-fov-val">${G.settings.fov || 75}°</span></span>
+        <input type="range" id="sys-fov" min="60" max="100" step="1" value="${G.settings.fov || 75}" style="flex:1;max-width:180px">
+      </label>
+      <div style="color:#c9a86a;letter-spacing:.15em;font-size:13px;margin-top:4px">MOUSE</div>
+      <label style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <span>Look sensitivity: <span id="sys-sens-val">${(G.settings.sens || 1).toFixed(1)}×</span></span>
+        <input type="range" id="sys-sens" min="0.4" max="2" step="0.1" value="${G.settings.sens || 1}" style="flex:1;max-width:180px">
+      </label>
+      ${chk("invertY", "Invert mouse Y (first person)")}
       <div style="color:#c9a86a;letter-spacing:.15em;font-size:13px;margin-top:4px">SOUND & VIEW</div>
       ${chk("music", "Music")}${chk("sfx", "Sound effects")}
       <button class="act-btn" id="sys-view">View: ${G.viewMode === "fp" ? "First person" : "Top-down"} (switch — or press V in game)</button>
@@ -531,6 +541,16 @@ const UI = {
       G.saveSettings();
       Sfx.play("ui");
       this.renderMenu();
+    };
+    U.el("sys-fov").oninput = (e) => {
+      G.settings.fov = parseInt(e.target.value);
+      U.el("sys-fov-val").textContent = G.settings.fov + "°";
+      G.saveSettings();
+    };
+    U.el("sys-sens").oninput = (e) => {
+      G.settings.sens = parseFloat(e.target.value);
+      U.el("sys-sens-val").textContent = G.settings.sens.toFixed(1) + "×";
+      G.saveSettings();
     };
     U.el("sys-view").onclick = () => {
       G.viewMode = G.viewMode === "fp" ? "top" : "fp";
@@ -1135,10 +1155,12 @@ const UI = {
       <p><b>V</b> toggles first-person / top-down at any time (also in System; your choice is saved).
       In first person: <b>mouse</b> looks and pitches (click to capture; Esc releases),
       <b>←/→</b> also turn, <b>W/S</b> walk, <b>A/D</b> strafe, and <b>E</b> uses whatever you're looking at.
+      Field of view, look sensitivity and invert-Y live in the System menu.
       In top-down: <b>WASD</b> moves, cursor aims.</p>
       <p><b>Shift</b> sprint · <b>Space</b> dodge roll (i-frames) · <b>Ctrl/X</b> sneak</p>
       <h3>Combat</h3>
-      <p><b>LMB tap</b> light attack · <b>LMB hold</b> heavy attack</p>
+      <p><b>LMB tap</b> light attack · <b>LMB hold</b> heavy attack — you keep moving while you swing,
+      a press mid-swing <b>buffers the next blow</b>, and <b>Space</b> rolls out of the follow-through</p>
       <p><b>RMB hold</b> block with shield — raise it at the last instant to <b>parry</b></p>
       <p><b>F hold</b> draw bow, release to loose · <b>Q</b> cast equipped spell</p>
       <p><b>1–4</b> speak Edicts of the Old Tongue · <b>R</b> drink the Ember Flask · <b>T</b> quick item · <b>P</b> photo (clean screenshot)</p>

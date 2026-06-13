@@ -34,9 +34,19 @@ const FP_DECO_H = {
   [D.PILLAR]: 2.2, [D.FROZEN]: 1.5, [D.WRECK]: 1.8, [D.ALTAR]: 1.4, [D.BOARD]: 1.6,
 };
 
+/* shared deco painter — sprites carry data (pa = deco id, pb = hash)
+   instead of a fresh closure per tree per frame */
+function paintDecoSprite(c, sp) {
+  c.save(); c.scale(2, 2);
+  Render.drawDeco(c, sp.pa, 32, 72, sp.pb);
+  c.restore();
+}
+
 const RenderFP = {
   W: 640, H: 360,
-  fov: 0.7,
+  fov: 0.767,   // tan(75°/2): horizontal half-plane at the default FOV
+  focal: 0,     // pixels per unit tan — one lens for both axes
+  swayX: 0, swayY: 0,
   frameMs: 8, frameN: 0,   // rolling cost — drives adaptive resolution
   canvas: null, ctx: null, img: null,
   depth: null, wallTop: null, wallBot: null,
@@ -89,7 +99,7 @@ const RenderFP = {
     if (this.W === w && this.H === h) return;
     this.W = w; this.H = h;
     this.canvas = null; // full re-init next frame
-    this.spriteCache.clear();
+    // sprite cache is resolution-independent (128x176 vectors) — keep it
   },
   // the player's word is law; 'auto' lets the frame budget decide
   applySettings() {
@@ -106,10 +116,19 @@ const RenderFP = {
   autoRes() {
     if (G.settings.renderScale !== "auto") return;
     this.frameN++;
-    if (this.frameN < 90) return;
+    if (this.frameN < 120) return;
     this.frameN = 0;
-    if (this.frameMs > 14 && this.W > 480) this.setRes(480, 270);
-    else if (this.frameMs < 6.5 && this.W < 640) this.setRes(640, 360);
+    // hysteresis: two consecutive bad/good windows before switching, so a
+    // single GC spike or a quiet moment can't ping-pong the resolution
+    if (this.frameMs > 15 && this.W > 480) {
+      this._resDown = (this._resDown || 0) + 1; this._resUp = 0;
+      if (this._resDown >= 2) { this._resDown = 0; this.setRes(480, 270); }
+    } else if (this.frameMs < 5.5 && this.W < 640) {
+      this._resUp = (this._resUp || 0) + 1; this._resDown = 0;
+      if (this._resUp >= 2) { this._resUp = 0; this.setRes(640, 360); }
+    } else {
+      this._resDown = 0; this._resUp = 0;
+    }
   },
 
   jit(xi, yi) {
@@ -130,7 +149,7 @@ const RenderFP = {
     const scale = G.W / this.W;
     const sx = (0.5 + Math.tan(rel) / (2 * this.fov)) * this.W;
     if (sx < -60 || sx > this.W + 60) return null;
-    const unit = this.H / perp; // pixels per tile at this depth
+    const unit = (this.lastFocal || this.H) / perp; // pixels per tile at this depth
     return {
       x: sx * scale,
       ground: (this.lastHorizon + (this.lastEye || FP_EYE) * unit) * scale,
@@ -169,9 +188,27 @@ const RenderFP = {
     this.lastEye = eye;
     const horizon = U.clamp((H * (0.5 - pitch)) | 0, 48, H - 48);
     this.lastHorizon = horizon;
-    // sprint stretches the view a touch
-    const fovTarget = p.sprinting ? 0.78 : 0.7;
-    this.fov += (fovTarget - this.fov) * Math.min(1, (G.rdt || 0.016) * 7);
+    /* field of view: the player's setting in true horizontal degrees.
+       One focal length serves BOTH axes — vertical scale derives from the
+       same lens as horizontal, so circles stay circles and the edges of
+       the frame stop stretching. Sprint widens the lens a touch. */
+    const fovDeg = U.clamp(G.settings.fov || 75, 60, 100);
+    const planeTarget = Math.tan(fovDeg * Math.PI / 360) * (p.sprinting ? 1.12 : 1);
+    this.fov += (planeTarget - this.fov) * Math.min(1, (G.rdt || 0.016) * 7);
+    const focal = (W * 0.5) / this.fov;   // pixels per unit tan
+    this.focal = focal;
+    this.lastFocal = focal;
+
+    /* look-velocity, smoothed: the viewmodel drags a beat behind the eye */
+    {
+      const rdt = Math.max(0.004, Math.min(0.05, G.rdt || 0.016));
+      const yawV = this._prevYaw === undefined ? 0 : U.angDiff(this._prevYaw, yaw) / rdt;
+      const pitV = this._prevPitch === undefined ? 0 : (pitch - this._prevPitch) / rdt;
+      this._prevYaw = yaw; this._prevPitch = pitch;
+      const k = Math.min(1, rdt * 9);
+      this.swayX = (this.swayX || 0) + (U.clamp(-yawV * 7, -16, 16) - (this.swayX || 0)) * k;
+      this.swayY = (this.swayY || 0) + (U.clamp(-pitV * 30, -12, 12) - (this.swayY || 0)) * k;
+    }
 
     /* ---- ambient, fog, sky ---- */
     const dark = map.outdoor ? G.darkness() : 1;
@@ -222,13 +259,13 @@ const RenderFP = {
       this._sunX = 0.4; this._sunY = -0.7;
     }
 
-    const unitFor = perp => H / perp;
+    const unitFor = perp => focal / perp;
 
     /* ---- per-row tables: distance, fog and brightness are
        functions of the screen row alone — compute them once ---- */
     const glowK = 0.55 * (1 - amb);
     for (let y = horizon + 1; y < H; y++) {
-      const rd = (eye * H) / (y - horizon);
+      const rd = (eye * focal) / (y - horizon);
       this.rowRD[y] = rd;
       if (rd > md) { this.rowFog[y] = 1; this.rowB[y] = 0; continue; }
       const f = Math.min(1, rd / md);
@@ -238,7 +275,7 @@ const RenderFP = {
     const ceilH = FP_WALL_H - eye;
     if (!map.outdoor) {
       for (let y = 0; y < horizon; y++) {
-        const rd = (ceilH * H) / Math.max(1, horizon - y);
+        const rd = (ceilH * focal) / Math.max(1, horizon - y);
         this.ceilRD[y] = rd;
         if (rd > md) { this.ceilFog[y] = 1; this.ceilB[y] = 0; continue; }
         const f = Math.min(1, rd / md);
@@ -384,7 +421,7 @@ const RenderFP = {
       /* floor */
       const floorStart = hit ? bot + 1 : horizon + 1;
       // walls seat into the ground: short occlusion ramp at their base
-      const aoRows = hit ? Math.min(14, Math.max(2, (H / perp * 0.22) | 0)) : 0;
+      const aoRows = hit ? Math.min(14, Math.max(2, (focal / perp * 0.22) | 0)) : 0;
       let wif = floorStart * W + col;
       for (let y = floorStart; y < H; y++, wif += W) {
         const fogT = rowFog[y];
@@ -600,7 +637,7 @@ const RenderFP = {
     if (perp < 0.2) return null;
     const sx = (0.5 + Math.tan(rel) / (2 * this.fov)) * this.W;
     if (sx < -80 || sx > this.W + 80) return null;
-    const unit = this.H / perp;
+    const unit = (this.focal || (this.W * 0.5) / this.fov) / perp;
     return { x: sx, ground: horizon + (this.lastEye || FP_EYE) * unit, unit, perp, col: U.clamp(sx | 0, 0, this.W - 1) };
   },
 
@@ -608,14 +645,14 @@ const RenderFP = {
 
   gatherSprites(map, p, tm) {
     const list = [];
-    const addIf = (wx, wy, hTiles, anchorFrac, paint, wFactor, yLift, key) => {
+    const addIf = (wx, wy, hTiles, anchorFrac, paint, wFactor, yLift, key, pa, pb) => {
       const dist = U.dist(p.x, p.y, wx, wy) / TILE;
       if (dist > this.maxDist) return;
       const rel = U.angDiff(p.facing, U.angTo(p.x, p.y, wx, wy));
       if (Math.abs(rel) > 1.05) return;
       const perp = dist * Math.cos(rel);
       if (perp < 0.22) return;
-      list.push({ rel, perp, hTiles, anchorFrac, paint, wFactor: wFactor || 1, yLift: yLift || 0, key: key || null });
+      list.push({ rel, perp, hTiles, anchorFrac, paint, wFactor: wFactor || 1, yLift: yLift || 0, key: key || null, pa, pb });
     };
 
     for (const e of G.entities) {
@@ -673,11 +710,8 @@ const RenderFP = {
         const hT = FP_DECO_H[d] || 1;
         const hash = U.hash2(tx, ty, 31);
         const key = d === D.LAMP ? null : "d:" + d + ":" + ((hash * 4) | 0);
-        addIf(tx * TILE + 16, ty * TILE + 16, hT, 0.86, (c) => {
-          c.save(); c.scale(2, 2);
-          Render.drawDeco(c, d, 32, 72, hash);
-          c.restore();
-        }, 1, 0, key);
+        // paint:null routes to the shared deco painter — no closure churn
+        addIf(tx * TILE + 16, ty * TILE + 16, hT, 0.86, null, 1, 0, key, d, hash);
       }
     }
 
@@ -832,6 +866,7 @@ const RenderFP = {
 
   drawBillboards(map, p, yaw, tm, horizon) {
     const W = this.W, H = this.H;
+    const focal = this.focal || (W * 0.5) / this.fov;
     let sprites = this.gatherSprites(map, p, tm);
     sprites.sort((a, b) => b.perp - a.perp);
     if (sprites.length > 260) sprites = sprites.slice(-260);
@@ -840,7 +875,7 @@ const RenderFP = {
     ctx.imageSmoothingEnabled = true;
 
     for (const sp of sprites) {
-      const unit = H / sp.perp;
+      const unit = focal / sp.perp;
       const groundY = horizon + (this.lastEye || FP_EYE) * unit - sp.yLift * unit;
       let sH = sp.hTiles * unit * (176 / 128);
       if (sH < 3) continue;
@@ -868,7 +903,7 @@ const RenderFP = {
           tcv = document.createElement("canvas");
           tcv.width = 128; tcv.height = 176;
           const cctx = tcv.getContext("2d");
-          sp.paint(cctx);
+          if (sp.paint) sp.paint(cctx); else paintDecoSprite(cctx, sp);
           if (bucket) {
             cctx.save();
             cctx.globalCompositeOperation = "source-atop";
@@ -877,7 +912,15 @@ const RenderFP = {
             cctx.fillRect(0, 0, 128, 176);
             cctx.restore();
           }
-          if (this.spriteCache.size > 420) this.spriteCache.clear();
+          if (this.spriteCache.size > 420) {
+            // shed the oldest third — never the whole cache (a full clear
+            // means a hundred repaints next frame: a visible hitch)
+            let shed = 140;
+            for (const k of this.spriteCache.keys()) {
+              this.spriteCache.delete(k);
+              if (--shed <= 0) break;
+            }
+          }
           this.spriteCache.set(fullKey, tcv);
         }
       } else {
@@ -887,10 +930,10 @@ const RenderFP = {
         tctx.clearRect(0, 0, tcv.width, tcv.height);
         if (useBig) {
           tctx.save(); tctx.scale(2, 2);
-          sp.paint(tctx);
+          if (sp.paint) sp.paint(tctx); else paintDecoSprite(tctx, sp);
           tctx.restore();
         } else {
-          sp.paint(tctx);
+          if (sp.paint) sp.paint(tctx); else paintDecoSprite(tctx, sp);
         }
         // fog TINTS the sprite (it stays opaque — no ghost trees)
         if (fogT0 > 0.03) {
@@ -961,7 +1004,10 @@ const RenderFP = {
     const map = G.map;
     if (map && map.outdoor) {
       const dark = G.darkness();
-      return `${U.lerp(168, 22, dark) * 0.92 | 0},${U.lerp(190, 26, dark) * 0.92 | 0},${U.lerp(214, 44, dark) * 0.92 | 0}`;
+      // quantize to steps of 16 — cache keys hold steady through dawn and
+      // dusk instead of invalidating every sprite each frame
+      const q = v => Math.min(255, Math.round(v / 16) * 16);
+      return `${q(U.lerp(168, 22, dark) * 0.92)},${q(U.lerp(190, 26, dark) * 0.92)},${q(U.lerp(214, 44, dark) * 0.92)}`;
     }
     return map && map.ambient === "undermarch" ? "7,8,14" : "10,9,8";
   },
@@ -978,7 +1024,7 @@ const RenderFP = {
     if (p.rollT > 0) return; // hands tuck during the roll
 
     ctx.save();
-    ctx.translate(bobX, bobYv + (p.crouched ? 26 : 0));
+    ctx.translate(bobX + (this.swayX || 0), bobYv + (this.swayY || 0) + (p.crouched ? 26 : 0));
 
     const w = p.weapon();
 
