@@ -711,6 +711,32 @@ check("Conjure Warden-Shade summons a guardian", run(`G.player._shade`) === true
 // Pass 4: economy/QoL — enchant variety + inventory sort setting
 check("new weapon enchants exist", run(`ENCHANTS.keen.crit > 0 && ENCHANTS.crushing.poiseMult > 1`));
 check("inventory sort setting present", run(`"invSort" in G.settings`));
+
+// Pass 5: faction reputation + the morality quest "The Hollowing"
+run(`{ const b = G.player.getRep("march"); G.player.addRep("march", 3); G.player._repd = G.player.getRep("march") - b; }`);
+check("reputation accrues", run(`G.player._repd`) === 3);
+run(`{
+  G.player.rep = { march: 0 };
+  const base = G.player.buyPrice({ value: 100 });
+  G.player.rep = { march: 12 };
+  const repd = G.player.buyPrice({ value: 100 });
+  G.player.rep = {};
+  G.player._cheaper = repd < base;
+}`);
+check("high standing lowers shop prices", run(`G.player._cheaper`) === true);
+run(`{
+  QS.start("sq_hollowing");
+  G.player.addItem("ghost_fern", 2);
+  QS.update();
+  G.player._hq = QS.stage("sq_hollowing");
+}`);
+check("The Hollowing advances past the gather stage", run(`G.player._hq`) === 1);
+run(`{
+  G.flags.hollow_mercy = true;
+  QS.complete("sq_hollowing");
+  G.player._hdone = (QS.stage("sq_hollowing") === 999 && G.flags.hollow_mercy === true);
+}`);
+check("The Hollowing resolves to a chosen outcome", run(`G.player._hdone`) === true);
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 

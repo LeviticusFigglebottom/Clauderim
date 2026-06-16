@@ -230,7 +230,37 @@ const DIALOGUES = {
           { text: "Buying.", next: null, action: () => UI.openShop("maren") },
           { text: "Brewing. (Use the alchemy bench)", next: null, action: () => UI.openCraft("alchemy") },
           { text: "Heard of any work?", next: "delivery_ask", cond: () => QS.stage("sq_delivery") === -1 },
+          { text: "You look troubled. (Ask after her neighbour)", next: "hollow_ask", cond: () => QS.stage("sq_hollowing") === -1 },
+          { text: "About Edrin — I've decided.", next: "hollow_choice", cond: () => QS.stage("sq_hollowing") === 1 },
           { text: "Bleeding, but it can wait.", next: null },
+        ],
+      },
+      hollow_ask: {
+        text: "Edrin, two doors down. He's hollowing. You know the word? The Ember leaves a man slow — a finger of warmth at a time — until one morning the body keeps walking and nobody's home in it. His wife's been on my step since the thaw, begging a cure. There is no cure. There is a draught — ghost-fern, two stems, from the wet dark of the Mire — that blunts the cold and buys him lucid days. That is all medicine can offer here, and I'll not pretend otherwise. Will you fetch the fern?",
+        choices: [
+          { text: "I'll bring the ghost-fern. (Quest: The Hollowing)", next: "hollow_yes" },
+          { text: "That's a healer's errand, not mine.", next: null },
+        ],
+      },
+      hollow_yes: {
+        text: "Two stems. It grows where the Mire keeps its older griefs — pale fronds, no shadow under them. Go gently. And… prepare yourself. Edrin asked me something, in a clear hour. I won't repeat it until you're back. It isn't a question I'll answer for him, or for you.",
+        choices: [{ text: "(Set out for the Mire)", next: null, action: () => QS.start("sq_hollowing") }],
+      },
+      hollow_choice: {
+        text: "The draught's ready; it'll dull the leaving for a while. But here's what Edrin asked, lucid as you or I: a clean end, now, by a steady hand, before he turns and his fingers forget which throats are his family's. His wife doesn't know he asked. So. Three doors out of this, and none of them open onto morning. Choose, and own it.",
+        choices: [
+          { text: "Give him the draught. Let him have the days that are left.", next: null,
+            action: p => { p.gold += 220; p.addRep("march", 2); G.flags.hollow_prolonged = true;
+              G.msg("You gave Edrin the draught. His wife pressed every coin in the house on you, weeping her thanks. He has weeks now — lucid, fading, his.", "good");
+              QS.complete("sq_hollowing"); } },
+          { text: "Grant the mercy he asked for.", next: null,
+            action: p => { p.gainEmbers(280); p.addItem("big_hp_potion", 1); G.flags.hollow_mercy = true;
+              G.msg("It was quick, and he thanked you with the last warmth in him. His wife will hate you, and Maren will not. You carry his keeping a while.", "ember");
+              QS.complete("sq_hollowing"); } },
+          { text: "This isn't mine to decide. (Walk away)", next: null,
+            action: p => { p.gainEmbers(60); p.addRep("march", -1); G.flags.hollow_refused = true;
+              G.msg("You left the choice on Maren's bench. Someone will make it, or the hollow will make it for them. You don't ask which.", "bad");
+              QS.complete("sq_hollowing"); } },
         ],
       },
       delivery_ask: {

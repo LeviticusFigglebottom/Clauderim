@@ -50,6 +50,7 @@ class Player extends Entity {
     this.favorites = [];     // Skyrim-style quick-select: [{type:"item"|"spell", id}]
     this.loadouts = {};      // gear-set snapshots: slot(1-3) -> {equip, spell}
     this.seenHints = {};     // one-shot tutorial hints already shown (G.tip)
+    this.rep = {};           // faction standing, e.g. rep.march — shifted by deeds/choices
     this.honing = {};        // weaponId -> forge tier (0-3)
     this.fpPitch = 0;        // first-person look pitch
     this.stepT = 0;          // footstep cadence
@@ -195,17 +196,27 @@ class Player extends Entity {
   }
 
   /* Speech moves the market */
+  /* ---------------- faction standing ---------------- */
+  getRep(faction) { return this.rep[faction] || 0; }
+  addRep(faction, n) {
+    if (!n) return;
+    this.rep[faction] = (this.rep[faction] || 0) + n;
+    if (faction === "march") G.msg(n > 0 ? "Word of this kindness travels — the March warms to you." : "Word of this will not flatter you.", n > 0 ? "good" : "bad");
+  }
+
   buyPrice(it) {
     let m = 1 - this.skills.speech.lvl * 0.002;
     if (this.hasPerk("sp_3")) m -= 0.2;
     else if (this.hasPerk("sp_1")) m -= 0.1;
+    m -= U.clamp(this.getRep("march") * 0.01, -0.05, 0.15);  // the well-regarded haggle better
     return Math.max(1, Math.round(it.value * Math.max(0.5, m)));
   }
   sellPrice(it) {
     let m = 0.4 * (1 + this.skills.speech.lvl * 0.003);
     if (this.hasPerk("sp_3")) m *= 1.2;
     else if (this.hasPerk("sp_1")) m *= 1.1;
-    return Math.max(1, Math.floor(it.value * Math.min(0.8, m)));
+    m *= 1 + U.clamp(this.getRep("march") * 0.01, -0.1, 0.2);
+    return Math.max(1, Math.floor(it.value * Math.min(0.85, m)));
   }
   canPersuade() { return this.hasPerk("sp_2") || this.skills.speech.lvl >= 40; }
 
@@ -793,7 +804,7 @@ class Player extends Entity {
       respawn: this.respawn, quests: this.quests, readBooks: this.readBooks,
       undimmedUsed: this.undimmedUsed, statsKills: this.statsKills, statsDeaths: this.statsDeaths,
       belt: this.belt, beltSel: this.beltSel, favorites: this.favorites, loadouts: this.loadouts,
-      seenHints: this.seenHints, honing: this.honing, enchants: this.enchants,
+      seenHints: this.seenHints, rep: this.rep, honing: this.honing, enchants: this.enchants,
       bestiary: this.bestiary, statsFish: this.statsFish,
     };
   }
@@ -824,6 +835,7 @@ class Player extends Entity {
     p.favorites = d.favorites || [];
     p.loadouts = d.loadouts || {};
     p.seenHints = d.seenHints || {};
+    p.rep = d.rep || {};
     p.honing = d.honing || {};
     p.enchants = d.enchants || {};
     p.bestiary = d.bestiary || {};

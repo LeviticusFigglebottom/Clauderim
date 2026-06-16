@@ -278,6 +278,21 @@ const QUESTS = {
     rewardText: "Senn kept four pearls for passage and pressed the rest of her pouch on you — 'Work an altar with them. Something that floats.'",
   },
 
+  sq_hollowing: {
+    name: "The Hollowing", type: "side",
+    stages: [
+      {
+        journal: "Maren's neighbour Edrin is hollowing — the slow leaving, where the Ember walks out of a living man one cold step at a time. His wife begs for a cure that doesn't exist. Maren will brew a draught to blunt the worst of it if I bring her two ghost-ferns from the Mire. It will not save him. She was very clear about that.",
+        objective: { kind: "collect", item: "ghost_fern", count: 2, hint: "Gather Ghost-Fern from the Mire (need 2)" },
+      },
+      {
+        journal: "I have the ferns. The draught will dull Edrin's pain and stretch his last days — but he has, in a lucid hour, asked Maren for a cleaner end, before he turns and his hands stop knowing his family. Maren won't make this choice. She says it was always going to be mine. Speak with her.",
+        objective: { kind: "talk", npc: "maren", hint: "Decide Edrin's fate with Maren" },
+      },
+    ],
+    rewards: {},  // outcome (gold/embers/items/standing) is decided in dialogue
+  },
+
   sq_blooms: {
     name: "Ash and Blossom", type: "side",
     stages: [
