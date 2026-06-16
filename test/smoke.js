@@ -815,6 +815,26 @@ check("new lore books exist and are carryable", run(`
   BOOKS.bram_ledger && BOOKS.ralka_journal && BOOKS.tollroad_accord &&
   ITEMS.book_bram_ledger && ITEMS.book_bram_ledger.type === "book"
 `));
+
+// inventory / HUD overhaul: 10-slot hotbar, equipment slot filtering, inventory tabs
+check("hotbar holds 10 slots", run(`new Player("T", "pilgrim").belt.length`) === 10);
+check("equipment slots filter to compatible gear", run(`
+  UI.fitsSlot("iron_sword", "weapon") && !UI.fitsSlot("iron_sword", "body") &&
+  UI.fitsSlot("iron_cuirass", "body") && UI.fitsSlot("hunting_bow", "ranged") &&
+  UI.fitsSlot("iron_kite", "shield") && UI.fitsSlot("ashen_staff", "weapon")
+`) === true);
+check("inventory has category tabs incl. potions & reagents", run(`
+  UI.invTabs().some(t => t[0] === "consumable") && UI.invTabs().some(t => t[0] === "reagent") && UI.invTabs().length >= 6
+`) === true);
+run(`{
+  try {
+    UI.invCat = "weapon"; UI.renderInventory(U.el("menu-content"));
+    UI.invCat = "consumable"; UI.renderInventory(U.el("menu-content"));
+    UI.eqSlot = "body"; UI.renderEquipment(U.el("menu-content"));
+    G.player._uiOk = true;
+  } catch (e) { G.player._uiOk = false; G.player._uiErr = "" + e; }
+}`);
+check("inventory & equipment screens render without error", run(`G.player._uiOk`) === true);
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 

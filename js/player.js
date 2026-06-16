@@ -9,7 +9,7 @@
 
 const LEVEL_COST = lvl => Math.floor(80 * Math.pow(lvl, 1.55));
 const SKILL_XP_TO_NEXT = lvl => 80 + lvl * 14;
-const BELT_SIZE = 6;   // quick-belt slots (wheel / [ ] to cycle, T to use)
+const BELT_SIZE = 10;  // quick-belt slots (wheel / [ ] to cycle, T to use)
 
 // weapon move-sets: phase ratios (of total swing time) + a total multiplier.
 // daggers snap, spears thrust long, great-weapons commit hard.

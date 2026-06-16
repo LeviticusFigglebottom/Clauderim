@@ -181,16 +181,26 @@ const UI = {
     return it.type;
   },
 
+  // inventory category tabs: type-sets keyed for filtering
+  invTabs() {
+    return [
+      ["all", "All", null],
+      ["weapon", "Weapons", ["weapon", "staff", "bow", "shield"]],
+      ["apparel", "Apparel", ["armor", "trinket"]],
+      ["consumable", "Potions & Food", ["consumable", "tool"]],
+      ["reagent", "Reagents", ["ingredient", "material"]],
+      ["book", "Books", ["book"]],
+      ["key", "Keys", ["key"]],
+    ];
+  },
+
   renderInventory(c) {
     const p = G.player;
-    const cats = [
-      ["Weapons & Shields", ["weapon", "staff", "bow", "shield"]],
-      ["Apparel", ["armor", "trinket"]],
-      ["Consumables", ["consumable", "tool"]],
-      ["Ingredients & Materials", ["ingredient", "material"]],
-      ["Books", ["book"]],
-      ["Keys & Relics", ["key"]],
-    ];
+    const tabs = this.invTabs();
+    if (!this.invCat || !tabs.some(t => t[0] === this.invCat)) this.invCat = "all";
+    const active = tabs.find(t => t[0] === this.invCat);
+    const inSet = (id, types) => !types || types.includes(ITEMS[id].type);
+
     const sortMode = G.settings.invSort || "default";
     const sortRows = arr => {
       if (sortMode === "name") return arr.slice().sort((a, b) => ITEMS[a.id].name.localeCompare(ITEMS[b.id].name));
@@ -198,27 +208,37 @@ const UI = {
       if (sortMode === "weight") return arr.slice().sort((a, b) => (ITEMS[b.id].weight || 0) - (ITEMS[a.id].weight || 0));
       return arr;
     };
-    let list = "";
-    for (const [label, types] of cats) {
-      const rows = sortRows(p.inventory.filter(s => types.includes(ITEMS[s.id].type)));
-      if (!rows.length) continue;
-      list += `<div class="inv-cat">${label}</div>`;
-      for (const s of rows) {
-        const it = ITEMS[s.id];
-        const eq = Object.values(p.equip).includes(s.id);
-        const sel = this.selItem === s.id ? " sel" : "";
-        const quick = p.beltIndexOf(s.id, "item") >= 0 ? ' <span style="color:#b9d8a0;font-size:11px">[belt]</span>' : "";
-        const fav = p.isFavorite(s.id, "item") ? ' <span style="color:#c9a86a;font-size:11px">★</span>' : "";
-        list += `<div class="inv-row${eq ? " equipped" : ""}${sel}" data-item="${s.id}">
-          <span class="iname r-${it.rarity}">${U.esc(this.itemName(it, p))}${s.n > 1 ? " ×" + s.n : ""}${quick}${fav}</span>
-          <span class="imeta">${this.itemMeta(it)} · ${it.weight || 0}wt</span></div>`;
-      }
+
+    // tab row with live counts
+    let tabRow = "";
+    for (const [key, label, types] of tabs) {
+      const n = p.inventory.reduce((a, s) => a + (inSet(s.id, types) ? 1 : 0), 0);
+      tabRow += `<button class="inv-cat-tab${this.invCat === key ? " active" : ""}" data-invcat="${key}">${label}${n ? `<span class="ic-n">${n}</span>` : ""}</button>`;
     }
+
+    // filtered + sorted list
+    let list = "";
+    for (const s of sortRows(p.inventory.filter(s => inSet(s.id, active[2])))) {
+      const it = ITEMS[s.id];
+      const eq = Object.values(p.equip).includes(s.id);
+      const sel = this.selItem === s.id ? " sel" : "";
+      const quick = p.beltIndexOf(s.id, "item") >= 0 ? ' <span style="color:#b9d8a0;font-size:11px">[belt]</span>' : "";
+      const fav = p.isFavorite(s.id, "item") ? ' <span style="color:#c9a86a;font-size:11px">★</span>' : "";
+      list += `<div class="inv-row${eq ? " equipped" : ""}${sel}" data-item="${s.id}">
+        <span class="iname r-${it.rarity}">${U.esc(this.itemName(it, p))}${s.n > 1 ? " ×" + s.n : ""}${quick}${fav}</span>
+        <span class="imeta">${this.itemMeta(it)} · ${it.weight || 0}wt</span></div>`;
+    }
+    const carried = p.inventory.reduce((a, s) => a + (ITEMS[s.id].weight || 0) * s.n, 0);
     const sortLabel = { default: "Default", name: "Name", value: "Value", weight: "Weight" }[sortMode];
-    c.innerHTML = `<div class="inv-sortbar" style="margin-bottom:6px;font-size:13px;color:#8a8378">Sort by <button class="act-btn" id="inv-sort">${sortLabel}</button></div>
+
+    c.innerHTML = `<div class="inv-cats">${tabRow}</div>
+      <div class="inv-sortbar" style="margin-bottom:6px;font-size:13px;color:#8a8378">
+        Sort by <button class="act-btn" id="inv-sort">${sortLabel}</button>
+        <span style="float:right">${carried.toFixed(1)} wt carried · ${p.gold} gold</span></div>
       <div class="inv-layout">
-      <div class="inv-list">${list || '<i style="color:#5d574c">Your pack is empty.</i>'}</div>
-      <div class="inv-detail" id="inv-detail"></div></div>`;
+        <div class="inv-list">${list || '<i style="color:#5d574c">Nothing here.</i>'}</div>
+        <div class="inv-detail" id="inv-detail"></div></div>`;
+    c.querySelectorAll("[data-invcat]").forEach(b => b.onclick = () => { this.invCat = b.dataset.invcat; Sfx.play("ui"); this.renderMenu(); });
     U.el("inv-sort").onclick = () => {
       const modes = ["default", "name", "value", "weight"];
       G.settings.invSort = modes[(modes.indexOf(sortMode) + 1) % modes.length];
@@ -292,47 +312,75 @@ const UI = {
     });
   },
 
+  // which inventory items fit a given equip slot
+  fitsSlot(id, slot) {
+    const it = ITEMS[id];
+    if (!it) return false;
+    if (slot === "weapon") return it.type === "weapon" || it.type === "staff";
+    if (slot === "ranged") return it.type === "bow";
+    if (slot === "shield") return it.type === "shield";
+    if (slot === "trinket") return it.type === "trinket";
+    return it.type === "armor" && it.slot === slot;   // head / body / legs
+  },
+
   renderEquipment(c) {
     const p = G.player;
     const slots = [
       ["weapon", "Weapon"], ["shield", "Shield"], ["ranged", "Bow"],
       ["head", "Head"], ["body", "Body"], ["legs", "Legs"], ["trinket", "Trinket"],
     ];
+    if (!this.eqSlot || !slots.some(s => s[0] === this.eqSlot)) this.eqSlot = "weapon";
+
     let grid = "";
     for (const [slot, label] of slots) {
       const it = p.equip[slot] ? ITEMS[p.equip[slot]] : null;
-      grid += `<div class="equip-slot" data-slot="${slot}">
+      grid += `<div class="equip-slot${this.eqSlot === slot ? " sel" : ""}" data-slot="${slot}">
         <span class="slot-label">${label}</span>
         <span class="slot-item ${it ? "r-" + it.rarity : "empty"}">${it ? U.esc(this.itemName(it, p)) : "—"}</span></div>`;
     }
+
+    // pack, filtered to gear that fits the SELECTED slot — click to equip/unequip
+    const slotLabel = slots.find(s => s[0] === this.eqSlot)[1];
+    const equippedId = p.equip[this.eqSlot];
+    let fitList = "";
+    if (equippedId) {
+      const it = ITEMS[equippedId];
+      fitList += `<div class="inv-row equipped" data-equip="${equippedId}">
+        <span class="iname r-${it.rarity}">${U.esc(this.itemName(it, p))}</span>
+        <span class="imeta">${this.itemMeta(it)} · unequip</span></div>`;
+    }
+    for (const s of p.inventory.filter(s => this.fitsSlot(s.id, this.eqSlot) && s.id !== equippedId)) {
+      const it = ITEMS[s.id];
+      fitList += `<div class="inv-row" data-equip="${s.id}">
+        <span class="iname r-${it.rarity}">${U.esc(this.itemName(it, p))}${s.n > 1 ? " ×" + s.n : ""}</span>
+        <span class="imeta">${this.itemMeta(it)} · ${it.weight || 0}wt</span></div>`;
+    }
+    if (!fitList) fitList = `<i style="color:#5d574c">Nothing in your pack fits this slot.</i>`;
+
     const lr = p.loadRatio();
     const rollDesc = lr > 1 ? "cannot roll" : lr >= 0.75 ? "heavy roll" : lr >= 0.4 ? "medium roll" : "fast roll";
     const w = p.weapon();
-    c.innerHTML = `<h2>Equipment</h2><div class="equip-grid">${grid}</div>
-      <div class="derived-stats">
-        <div class="ds"><span>Attack</span><b>${w ? Math.round(Combat.weaponDamage(p, w, false)) : "—"}</b></div>
-        <div class="ds"><span>Armor</span><b>${Math.round(p.armorTotal())}</b></div>
-        <div class="ds"><span>Poise</span><b>${Math.round(p.poiseTotal())}</b></div>
-        <div class="ds"><span>Equip load</span><b>${p.equipLoad().toFixed(1)} / ${p.equipLoadMax()}</b></div>
-        <div class="ds"><span>Mobility</span><b>${rollDesc}</b></div>
-        <div class="ds"><span>Stealth</span><b>+${p.sneakBonus()}</b></div>
-        <div class="ds"><span>Fire res.</span><b>${Math.round(p.resist("fire"))}%</b></div>
-        <div class="ds"><span>Frost res.</span><b>${Math.round(p.resist("frost"))}%</b></div>
-        <div class="ds"><span>Poison res.</span><b>${Math.round(p.resist("poison"))}%</b></div>
-      </div>
-      <p class="sys-note">Click a slot to unequip. Equip from the Inventory tab.</p>`;
-    c.querySelectorAll("[data-slot]").forEach(el => el.onclick = () => {
-      const s = el.dataset.slot;
-      const pl = G.player;
-      if (pl.equip[s]) {
-        pl.equip[s] = null;
-        // workings on the removed piece may have carried vitals
-        pl.hpMax = pl.calcHpMax(); pl.magMax = pl.calcMagMax();
-        pl.hp = Math.min(pl.hp, pl.hpMax); pl.mag = Math.min(pl.mag, pl.magMax);
-        Sfx.play("equip");
-        this.renderMenu();
-      }
-    });
+    c.innerHTML = `<h2>Equipment</h2>
+      <div class="inv-layout">
+        <div class="inv-list" style="flex:1">
+          <div class="equip-grid">${grid}</div>
+          <div class="derived-stats">
+            <div class="ds"><span>Attack</span><b>${w ? Math.round(Combat.weaponDamage(p, w, false)) : "—"}</b></div>
+            <div class="ds"><span>Armor</span><b>${Math.round(p.armorTotal())}</b></div>
+            <div class="ds"><span>Poise</span><b>${Math.round(p.poiseTotal())}</b></div>
+            <div class="ds"><span>Equip load</span><b>${p.equipLoad().toFixed(1)} / ${p.equipLoadMax()}</b></div>
+            <div class="ds"><span>Mobility</span><b>${rollDesc}</b></div>
+            <div class="ds"><span>Stealth</span><b>+${p.sneakBonus()}</b></div>
+            <div class="ds"><span>Fire res.</span><b>${Math.round(p.resist("fire"))}%</b></div>
+            <div class="ds"><span>Frost res.</span><b>${Math.round(p.resist("frost"))}%</b></div>
+            <div class="ds"><span>Poison res.</span><b>${Math.round(p.resist("poison"))}%</b></div>
+          </div>
+        </div>
+        <div class="inv-detail" style="flex:1">
+          <div class="inv-cat">Fit your ${slotLabel}</div>${fitList}</div>
+      </div>`;
+    c.querySelectorAll("[data-slot]").forEach(el => el.onclick = () => { this.eqSlot = el.dataset.slot; Sfx.play("ui"); this.renderMenu(); });
+    c.querySelectorAll("[data-equip]").forEach(el => el.onclick = () => { p.equipItem(el.dataset.equip); this.renderMenu(); });
   },
 
   renderCharacter(c) {
