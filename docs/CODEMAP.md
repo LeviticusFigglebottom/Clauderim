@@ -171,7 +171,13 @@ sparkle`, + `FX.update(dt)` integrates particles and `G.floats`.
   hasLoadout`; apply skips items you no longer own). `seenHints{}` records one-shot tutorial
   hints; fire them with `G.tip(key,text)` (shows once per character via `msg-line.hint`,
   then remembered in the save).
-- Magic: `spells[], equippedSpell, edicts[], edictCds{}`.
+- Standing: `rep{faction:n}` (`getRep/addRep`); `rep.march` shifts `buyPrice/sellPrice`
+  and is moved by quest choices (e.g. The Hollowing) and deeds.
+- Magic: `spells[], equippedSpell, edicts[] (up to 5: val/suth/kyr/thur/ond), edictCds{}`.
+- Combat riders now in the pipeline: riposte (`riposteT` after a parry → ×2.5),
+  melee crit vs staggered/dagger, positional backstab, shield bash
+  (`Combat.shieldBash`), Keen/Crushing enchants, spark_lash `magBurn` interrupt,
+  shock poise-stagger, charged bolts (hold cast → ×1.5), difficulty (`Combat.diffMult`).
 - Flask: `flask{max:3,charges:3,heal:60}`.
 - Vitals: `hp/hpMax (80+vig·14+…), stam/stamMax (60+end·9), mag/magMax (40+mnd·11+…),
   poise/poiseMax (poiseTotal()=30+…)`.

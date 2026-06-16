@@ -106,7 +106,9 @@ multi-file. (Full detail + line numbers in `docs/CODEMAP.md`.)
 - **New perk** → add to a `SKILL_DEFS[x].perks` (id `<2-letter>_<1..4>`, req
   10/25/45/70) **AND** wire its effect with `p.hasPerk("id")` in
   `combat.js`/`player.js`. ⚠ `hasPerk` is string-keyed and fails **silently** — a
-  perk with no `hasPerk` branch is a dead, purchasable point.
+  perk with no `hasPerk` branch is a dead, purchasable point. (All current trees are
+  wired — smithing in `combat.js weaponDamage`/`armorTotal`/forge UI, alchemy via
+  `alchemyPotency`/`useConsumable`, sneak in `entities.js` detection. Keep it so.)
 - **New quest** → `QUESTS` in `data_quests.js`. `talk`-kind objectives do **not**
   auto-advance — a dialogue `action` must call `QS.advance/complete` or the quest
   soft-locks. `kill`/`flags` hints must contain literal `(0/N)` for the live-count
