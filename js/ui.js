@@ -189,9 +189,16 @@ const UI = {
       ["Books", ["book"]],
       ["Keys & Relics", ["key"]],
     ];
+    const sortMode = G.settings.invSort || "default";
+    const sortRows = arr => {
+      if (sortMode === "name") return arr.slice().sort((a, b) => ITEMS[a.id].name.localeCompare(ITEMS[b.id].name));
+      if (sortMode === "value") return arr.slice().sort((a, b) => (ITEMS[b.id].value || 0) - (ITEMS[a.id].value || 0));
+      if (sortMode === "weight") return arr.slice().sort((a, b) => (ITEMS[b.id].weight || 0) - (ITEMS[a.id].weight || 0));
+      return arr;
+    };
     let list = "";
     for (const [label, types] of cats) {
-      const rows = p.inventory.filter(s => types.includes(ITEMS[s.id].type));
+      const rows = sortRows(p.inventory.filter(s => types.includes(ITEMS[s.id].type)));
       if (!rows.length) continue;
       list += `<div class="inv-cat">${label}</div>`;
       for (const s of rows) {
@@ -205,9 +212,17 @@ const UI = {
           <span class="imeta">${this.itemMeta(it)} · ${it.weight || 0}wt</span></div>`;
       }
     }
-    c.innerHTML = `<div class="inv-layout">
+    const sortLabel = { default: "Default", name: "Name", value: "Value", weight: "Weight" }[sortMode];
+    c.innerHTML = `<div class="inv-sortbar" style="margin-bottom:6px;font-size:13px;color:#8a8378">Sort by <button class="act-btn" id="inv-sort">${sortLabel}</button></div>
+      <div class="inv-layout">
       <div class="inv-list">${list || '<i style="color:#5d574c">Your pack is empty.</i>'}</div>
       <div class="inv-detail" id="inv-detail"></div></div>`;
+    U.el("inv-sort").onclick = () => {
+      const modes = ["default", "name", "value", "weight"];
+      G.settings.invSort = modes[(modes.indexOf(sortMode) + 1) % modes.length];
+      G.saveSettings();
+      this.renderMenu();
+    };
     c.querySelectorAll("[data-item]").forEach(row => row.onclick = () => {
       this.selItem = row.dataset.item;
       this.renderMenu();
@@ -763,9 +778,10 @@ const UI = {
         const it = ITEMS[s.id];
         if (it.type === "key" || !it.value) continue;
         const price = p.sellPrice(it);
-        rows += `<div class="craft-row"><span class="c-name r-${it.rarity}">${U.esc(it.name)}${s.n > 1 ? " ×" + s.n : ""}</span>
+        const kept = Object.values(p.equip).includes(s.id) || p.isFavorite(s.id, "item"); // don't fat-finger your kit away
+        rows += `<div class="craft-row"><span class="c-name r-${it.rarity}">${U.esc(it.name)}${s.n > 1 ? " ×" + s.n : ""}${kept ? ' <span style="color:#c9a86a;font-size:11px">★ kept</span>' : ""}</span>
           <span><span class="c-req have">${price} g</span>
-          <button class="act-btn" data-sell="${s.id}">Sell</button></span></div>`;
+          ${kept ? `<button class="act-btn" disabled title="Unfavorite or unequip to sell">Protected</button>` : `<button class="act-btn" data-sell="${s.id}">Sell</button>`}</span></div>`;
       }
       if (!rows) rows = `<i style="color:#5d574c">Nothing worth selling.</i>`;
     }

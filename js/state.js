@@ -59,6 +59,7 @@ const G = {
     fov: 75,               // horizontal degrees, 60..100
     sens: 1,               // mouse-look multiplier
     invertY: false,
+    invSort: "default",    // inventory sort: default | name | value | weight
   },
   lightning: 0,            // white-out timer during storms
 

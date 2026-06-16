@@ -91,7 +91,7 @@ const Combat = {
       if (w && w.skill === "onehand" && !heavy && p.hasPerk("oh_2") && Math.random() < 0.2) edmg.bleed = 5;
 
       // enchantments ride the edge
-      let bonusVs = w && w.bonusVs, leech = (w && w.leech) || 0;
+      let bonusVs = w && w.bonusVs, leech = (w && w.leech) || 0, enchCrit = 0, enchPoiseMult = 1;
       if (w) {
         const pot = p.enchPotency();
         for (const eid of p.itemEnchants(w.id)) {
@@ -100,11 +100,14 @@ const Combat = {
           if (en.edmg) for (const t2 in en.edmg) edmg[t2] = (edmg[t2] || 0) + en.edmg[t2] * pot;
           if (en.leech) leech += en.leech * pot;
           if (en.bonusVs) bonusVs = en.bonusVs;
+          if (en.crit) enchCrit += en.crit;
+          if (en.poiseMult) enchPoiseMult *= en.poiseMult;
         }
       }
+      if (!crit && enchCrit > 0 && Math.random() < enchCrit) { dmg *= 2.2; crit = true; } // Keen
 
       const dealt = this.applyDamage(e, {
-        amount: dmg, dtype: "phys", edmg, poiseDmg, sneak, crit,
+        amount: dmg, dtype: "phys", edmg, poiseDmg: poiseDmg * enchPoiseMult, sneak, crit,
         attacker: p, bonusVs,
       });
       if (leech > 0 && dealt > 0) {

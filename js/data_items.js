@@ -518,6 +518,16 @@ const ENCHANTS = {
     mats: { silver_dust: 3, old_bone: 2 }, embers: 300,
     desc: "Moonlight, sworn against the restless. The dead find it more than impolite.",
   },
+  keen: {
+    name: "Keen", slot: "weapon", crit: 0.15,
+    mats: { silver_dust: 2, old_bone: 1 }, embers: 360,
+    desc: "An edge ground past the point of sense, until it finds the seams in things.",
+  },
+  crushing: {
+    name: "Crushing", slot: "weapon", poiseMult: 1.6,
+    mats: { iron_ore: 3, troll_fat: 1 }, embers: 300,
+    desc: "Weight taught manners. What it strikes does not keep its footing.",
+  },
   warding: {
     name: "Warding", slot: "armor", edef: { fire: 12, frost: 12, shock: 12, poison: 12 },
     mats: { ghost_fern: 2, tide_pearl: 1 }, embers: 320,

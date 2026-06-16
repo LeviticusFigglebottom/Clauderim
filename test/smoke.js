@@ -707,6 +707,10 @@ run(`{
   G.player._shade = (n1 === n0 + 1);
 }`);
 check("Conjure Warden-Shade summons a guardian", run(`G.player._shade`) === true);
+
+// Pass 4: economy/QoL — enchant variety + inventory sort setting
+check("new weapon enchants exist", run(`ENCHANTS.keen.crit > 0 && ENCHANTS.crushing.poiseMult > 1`));
+check("inventory sort setting present", run(`"invSort" in G.settings`));
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 
