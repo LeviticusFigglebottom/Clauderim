@@ -62,6 +62,7 @@ const G = {
     invSort: "default",    // inventory sort: default | name | value | weight
     difficulty: "measured", // tender | measured | unforgiving (combat damage scaling)
     pauseOnBlur: true,     // open the pause menu when the window loses focus
+    binds: {},             // key rebind overrides: action -> [KeyCode]
   },
   lightning: 0,            // white-out timer during storms
 

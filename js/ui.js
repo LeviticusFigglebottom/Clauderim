@@ -524,6 +524,22 @@ const UI = {
       <span>${label}</span><input type="checkbox" data-set="${key}" ${G.settings[key] ? "checked" : ""}></label>`;
     const scaleNames = { auto: "Auto (adaptive)", low: "Low — 480×270", med: "Medium — 640×360", high: "High — 854×480" };
     const distNames = { near: "Near — 36 tiles", far: "Far — 48 tiles", vfar: "Very far — 64 tiles" };
+    const keyLabel = code => {
+      if (!code) return "—";
+      const map = { ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→", BracketLeft: "[", BracketRight: "]", ShiftLeft: "Shift", ShiftRight: "Shift", ControlLeft: "Ctrl", ControlRight: "Ctrl", Escape: "Esc", Space: "Space" };
+      return map[code] || code.replace(/^Key/, "").replace(/^Digit/, "");
+    };
+    const rebindable = [["up", "Forward / up"], ["down", "Back / down"], ["left", "Strafe left"], ["right", "Strafe right"], ["turnL", "Turn left"], ["turnR", "Turn right"], ["sprint", "Sprint"], ["roll", "Dodge roll"], ["crouch", "Sneak"], ["interact", "Interact"], ["flask", "Ember Flask"], ["quickuse", "Use belt slot"], ["beltprev", "Belt ◀"], ["beltnext", "Belt ▶"], ["favorites", "Favorites"], ["cast", "Cast spell"], ["aim", "Draw bow"], ["toggleview", "Toggle view"], ["menu", "Menu"], ["map", "Map"], ["journal", "Journal"], ["character", "Character"], ["photo", "Photo"], ["pause", "Pause"]];
+    let rebindList = "";
+    if (this.showRebinds) {
+      rebindList = `<div class="rebind-list">`;
+      for (const [act, label] of rebindable) {
+        const cap = Input.captureRebind === act;
+        rebindList += `<div class="rebind-row"><span>${label}</span>
+          <button class="act-btn" data-rebind="${act}">${cap ? "press a key…" : keyLabel(BINDS[act] && BINDS[act][0])}</button></div>`;
+      }
+      rebindList += `<button class="act-btn danger" id="sys-rebind-reset">Reset all to defaults</button></div>`;
+    }
     const diffNames = { tender: "Tender — forgiving", measured: "Measured — as intended", unforgiving: "Unforgiving — harsh" };
     c.innerHTML = `<h2>System</h2><div class="sys-rows">
       ${slots}
@@ -550,6 +566,9 @@ const UI = {
       <div style="color:#c9a86a;letter-spacing:.15em;font-size:13px;margin-top:4px">SOUND & VIEW</div>
       ${chk("music", "Music")}${chk("sfx", "Sound effects")}
       <button class="act-btn" id="sys-view">View: ${G.viewMode === "fp" ? "First person" : "Top-down"} (switch — or press V in game)</button>
+      <div style="color:#c9a86a;letter-spacing:.15em;font-size:13px;margin-top:4px">CONTROLS</div>
+      <button class="act-btn" id="sys-rebind">${this.showRebinds ? "Hide key bindings" : "Rebind keys"}</button>
+      ${rebindList}
       <button class="act-btn" id="sys-help">Manual & Controls</button>
       <button class="act-btn danger" id="sys-quit">Quit to title (unsaved progress is lost)</button>
     </div>
@@ -614,6 +633,16 @@ const UI = {
       Sfx.play("ui");
       this.renderMenu();
     };
+    U.el("sys-rebind").onclick = () => { this.showRebinds = !this.showRebinds; Sfx.play("ui"); this.renderMenu(); };
+    if (this.showRebinds) {
+      c.querySelectorAll("[data-rebind]").forEach(b => b.onclick = () => {
+        Input.captureRebind = b.dataset.rebind;
+        Input.onRebindDone = () => this.renderMenu();
+        this.renderMenu();   // reflect "press a key…"
+      });
+      const rbReset = U.el("sys-rebind-reset");
+      if (rbReset) rbReset.onclick = () => { Input.resetBinds(); Sfx.play("ui"); this.renderMenu(); };
+    }
     U.el("sys-help").onclick = () => this.showHelp();
     U.el("sys-quit").onclick = () => location.reload();
   },

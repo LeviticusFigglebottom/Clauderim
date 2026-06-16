@@ -33,14 +33,29 @@ const BINDS = {
   pause: ["Escape"],
 };
 
+// pristine defaults, so rebinds can be reset and saved binds layered over them
+const DEFAULT_BINDS = {};
+for (const k in BINDS) DEFAULT_BINDS[k] = BINDS[k].slice();
+
 const Input = {
   keys: {},          // code -> bool
   pressedSet: {},    // code -> bool (cleared each frame)
   mouse: { x: 640, y: 360, down: false, rdown: false, pressed: false, rpressed: false },
   wheel: 0,          // accumulated scroll this frame (sign), cleared in endFrame
+  captureRebind: null, // action id being rebound, or null
+  onRebindDone: null,  // callback after a capture resolves
 
   init(canvas) {
+    this.applyBinds();
     window.addEventListener("keydown", e => {
+      // intercept while rebinding a control (Escape cancels)
+      if (this.captureRebind) {
+        e.preventDefault();
+        if (e.code !== "Escape") this.assignBind(this.captureRebind, e.code);
+        const cb = this.onRebindDone; this.captureRebind = null; this.onRebindDone = null;
+        if (cb) cb();
+        return;
+      }
       if (e.repeat) { if (e.code === "Tab") e.preventDefault(); return; }
       this.keys[e.code] = true;
       this.pressedSet[e.code] = true;
@@ -111,6 +126,26 @@ const Input = {
 
   // one-frame edge for a raw key code (for context menus that bypass BINDS)
   pressedRaw(code) { return !!this.pressedSet[code]; },
+
+  /* ---- rebinding ---- */
+  // layer any saved overrides over the pristine defaults
+  applyBinds() {
+    for (const k in DEFAULT_BINDS) BINDS[k] = DEFAULT_BINDS[k].slice();
+    const saved = (G.settings && G.settings.binds) || {};
+    for (const k in saved) if (DEFAULT_BINDS[k] && saved[k] && saved[k].length) BINDS[k] = saved[k].slice();
+  },
+  assignBind(action, code) {
+    if (!DEFAULT_BINDS[action]) return;
+    BINDS[action] = [code];
+    G.settings.binds = G.settings.binds || {};
+    G.settings.binds[action] = [code];
+    G.saveSettings();
+  },
+  resetBinds() {
+    for (const k in DEFAULT_BINDS) BINDS[k] = DEFAULT_BINDS[k].slice();
+    if (G.settings) G.settings.binds = {};
+    if (G.saveSettings) G.saveSettings();
+  },
 
   // world-space aim point: cursor in top-down, dead ahead in first person
   worldX() {

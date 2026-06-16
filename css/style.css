@@ -390,6 +390,8 @@ html, body {
 .fav-row .f-hot { width: 22px; text-align: center; color: var(--gold); font-size: 13px; flex: 0 0 auto; }
 .fav-row .f-mv { padding: 2px 7px; }
 .fav-row[draggable] { cursor: grab; }
+.rebind-list { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.rebind-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .help-panel { width: 840px; }
 #help-content { columns: 2; column-gap: 40px; font-size: 14px; line-height: 1.7; margin-bottom: 18px; }
 #help-content h3 { color: var(--gold); font-weight: 400; letter-spacing: 0.15em; margin: 10px 0 6px; font-size: 15px; text-transform: uppercase; break-after: avoid; }

@@ -747,6 +747,18 @@ run(`{
 check("Tender softens incoming and sharpens outgoing", run(`G.player._din`) < 1 && run(`G.player._dout`) > 1);
 check("Unforgiving raises incoming damage", run(`G.player._din2`) > 1);
 check("difficulty + pause-on-blur settings present", run(`"difficulty" in G.settings && "pauseOnBlur" in G.settings`));
+
+// configurable keybinds
+run(`{
+  Input.assignBind("flask", "KeyG");
+  G.player._b1 = BINDS.flask[0];
+  G.player._bp = (G.settings.binds.flask[0] === "KeyG");
+  Input.resetBinds();
+  G.player._b2 = BINDS.flask[0];
+}`);
+check("keybinds rebind, persist, and reset", run(`G.player._b1`) === "KeyG" && run(`G.player._bp`) === true && run(`G.player._b2`) === "KeyR");
+run(`{ G.settings.binds = { roll: ["KeyB"] }; Input.applyBinds(); G.player._ab = BINDS.roll[0]; Input.resetBinds(); }`);
+check("saved binds apply over defaults on load", run(`G.player._ab`) === "KeyB");
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 
