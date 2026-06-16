@@ -1,8 +1,8 @@
 /* ============================================================
    CLAUDERIM — data_perks.js
    Skill definitions (Skyrim-style: level by use, 0-100) and
-   perk trees. Perk points are earned every 10 levels of any
-   skill plus on character level-up.
+   perk trees. A perk point is earned every 5 levels gained in
+   any skill (see Player.gainSkill).
    ============================================================ */
 "use strict";
 
@@ -153,8 +153,18 @@ const ATTR_DEFS = {
   wil: { name: "Will",      desc: "Scales spell power and resistances" },
 };
 
-/* Character origins (chargen classes) */
+/* Character origins (chargen classes). The first entry is the default
+   selection in character creation — keep the gentle "first run" class there. */
 const ORIGINS = {
+  pilgrim: {
+    name: "Penitent Pilgrim", tag: "balanced · recommended",
+    desc: "You walked to the shrine on purpose, which makes you either devout or desperate; the March rarely tells the two apart. A forgiving kit — blade, shield, a small mercy of healing, and a little of everything else — so you can learn what suits your hands. The gentlest way to meet the dark. Best for a first pilgrimage.",
+    attrs: { vig: 11, end: 10, mnd: 9, str: 10, fin: 10, wil: 10 },
+    skills: { onehand: 10, block: 10, restoration: 8 },
+    gear: { weapon: "iron_sword", shield: "wooden_shield", head: "leather_cap", body: "leather_jack", legs: "leather_boots" },
+    items: [["small_hp_potion", 3], ["bread", 2], ["mag_potion", 1]],
+    spells: ["lesser_heal"],
+  },
   marchwarden: {
     name: "March-Warden", tag: "sword & shield",
     desc: "You held a wall that no longer exists. Discipline survived the masonry. Begins with sword, shield and iron plate — slow, but very hard to convince to die.",
@@ -163,29 +173,56 @@ const ORIGINS = {
     gear: { weapon: "iron_sword", shield: "iron_kite", head: "iron_helm", body: "iron_cuirass", legs: "iron_greaves" },
     items: [["small_hp_potion", 2], ["bread", 2]],
   },
-  hexen: {
-    name: "Hexen of the Coast", tag: "fire & will",
-    desc: "You traded your name to a tide-cult for three words of fire and kept the receipt. Begins with staff and firebolt — fragile, but the Ember listens when you speak.",
-    attrs: { vig: 9, end: 8, mnd: 13, str: 8, fin: 9, wil: 13 },
-    skills: { destruction: 20, restoration: 10, alchemy: 10 },
-    gear: { weapon: "ashen_staff", head: "rag_hood", body: "rag_tunic", legs: "rag_boots" },
-    items: [["mag_potion", 3], ["small_hp_potion", 1]],
-    spells: ["firebolt", "lesser_heal", "frost_spike"],
+  hewer: {
+    name: "Frosthollow Hewer", tag: "great blade",
+    desc: "You felled pines beyond the snow line until something began felling them back. Begins with greataxe and furs — every swing is a closing argument, and most arguments end.",
+    attrs: { vig: 13, end: 12, mnd: 7, str: 14, fin: 8, wil: 6 },
+    skills: { twohand: 20, heavyarmor: 5, smithing: 10 },
+    gear: { weapon: "woodsman_axe", head: "leather_cap", body: "leather_jack", legs: "iron_greaves" },
+    items: [["honey_mead", 3], ["dried_meat", 2], ["warming_salve", 1]],
   },
   stray: {
     name: "Duskmere Stray", tag: "knife & shadow",
-    desc: "The Mire raised you, which is to say it tried to eat you and failed. Begins with dagger, bow and quiet feet — strike unseen or not at all.",
+    desc: "The Mire raised you, which is to say it tried to eat you and failed. Begins with dagger, bow and quiet feet — strike unseen, or do not strike at all.",
     attrs: { vig: 10, end: 10, mnd: 8, str: 8, fin: 14, wil: 8 },
     skills: { sneak: 20, onehand: 10, archery: 15 },
     gear: { weapon: "bone_dagger", ranged: "hunting_bow", head: "leather_cap", body: "leather_jack", legs: "leather_boots" },
     items: [["small_hp_potion", 2], ["antidote", 2], ["dried_meat", 2]],
   },
-  hewer: {
-    name: "Frosthollow Hewer", tag: "great blade",
-    desc: "You felled pines beyond the snow line until something began felling them back. Begins with greataxe and furs — every swing is a closing argument.",
-    attrs: { vig: 13, end: 12, mnd: 7, str: 14, fin: 8, wil: 6 },
-    skills: { twohand: 20, heavyarmor: 5, smithing: 10 },
-    gear: { weapon: "woodsman_axe", head: "leather_cap", body: "leather_jack", legs: "iron_greaves" },
-    items: [["honey_mead", 3], ["dried_meat", 2], ["warming_salve", 1]],
+  acolyte: {
+    name: "Acolyte of the Lamp", tag: "staff · two schools",
+    desc: "You learned the old light the slow way — by candle, by rote, by burning your fingers and writing down why. A clean caster who can both scorch and mend; less reckless than a Hexen, and far likelier to see the morning. The clearest road into magic.",
+    attrs: { vig: 9, end: 8, mnd: 14, str: 7, fin: 8, wil: 14 },
+    skills: { destruction: 15, restoration: 12, alchemy: 5 },
+    gear: { weapon: "ashen_staff", head: "rag_hood", body: "rag_tunic", legs: "rag_boots" },
+    items: [["mag_potion", 3], ["small_hp_potion", 2]],
+    spells: ["firebolt", "frost_spike", "lesser_heal", "ward"],
+  },
+  hexen: {
+    name: "Hexen of the Coast", tag: "fire & will · glass cannon",
+    desc: "You traded your name to a tide-cult for three words of fire and kept the receipt. Begins with staff and a quick flame — fragile as a held breath, but the Ember answers when you speak, and answers loudly.",
+    attrs: { vig: 9, end: 8, mnd: 13, str: 8, fin: 9, wil: 13 },
+    skills: { destruction: 20, restoration: 8, alchemy: 10 },
+    gear: { weapon: "ashen_staff", head: "rag_hood", body: "rag_tunic", legs: "rag_boots" },
+    items: [["mag_potion", 3], ["small_hp_potion", 1]],
+    spells: ["firebolt", "frost_spike", "lesser_heal"],
+  },
+  ashpriest: {
+    name: "Ashpriest's Acolyte", tag: "sword & fire · battlemage",
+    desc: "The sermon got into you and would not leave. You fight with a blade in one hand and a verse of fire in the other — neither a true knight nor a true mage, and rightly suspicious of both. For those who refuse to choose, and survive the refusing.",
+    attrs: { vig: 11, end: 9, mnd: 11, str: 11, fin: 8, wil: 10 },
+    skills: { onehand: 12, destruction: 12, lightarmor: 8 },
+    gear: { weapon: "iron_sword", head: "leather_cap", body: "leather_jack", legs: "leather_boots" },
+    items: [["mag_potion", 2], ["small_hp_potion", 2]],
+    spells: ["firebolt", "lesser_heal"],
+  },
+  lampwright_apprentice: {
+    name: "Lampwright's Apprentice", tag: "succor & summoning",
+    desc: "Serah's order took you in to tend the lamps, and you stayed for the company of light. You mend, you ward, and you never walk the dark alone — a patient supporter who wins by outlasting. Frail by yourself; formidable beside a conjured flame.",
+    attrs: { vig: 10, end: 9, mnd: 13, str: 7, fin: 8, wil: 13 },
+    skills: { restoration: 18, enchanting: 10, alchemy: 8 },
+    gear: { weapon: "ashen_staff", head: "rag_hood", body: "rag_tunic", legs: "rag_boots" },
+    items: [["mag_potion", 3], ["small_hp_potion", 2]],
+    spells: ["lesser_heal", "lantern_orb", "ward"],
   },
 };

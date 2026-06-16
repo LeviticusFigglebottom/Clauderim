@@ -73,6 +73,8 @@ node test/smoke.js
 | **Q** | Cast equipped spell |
 | **1–4** | Speak Edicts of the Old Tongue |
 | **R** | Drink the Ember Flask |
+| **T** | Use the selected quick-belt slot (potion, throwable, or quick-swap weapon/spell) |
+| **Mouse wheel / [ ]** | Cycle the quick belt |
 | **E** | Interact (shrines, people, chests, herbs, doors) |
 | **Tab / I** | Menu · **M** map · **J** journal · **C** character · **Esc** system |
 
@@ -131,7 +133,8 @@ and a living spawn ecology.
 - **Conjuration**: summon an **ember sprite** that picks its own targets and opens fire,
   or a **Lampwright's lantern** that walks the dark beside you.
 - **A bestiary** in the journal that remembers every foe the March has thrown at you.
-- **Quick slot** (`T`), grave-searching (loot or angry tenants), drinkable wells,
+- **Quick belt** (`T` to use, mouse-wheel or `[ ]` to cycle; auto-fills with
+  consumables, holds quick-swap weapons & spells), grave-searching (loot or angry tenants), drinkable wells,
   parry/heavy-hit **hit-stop**, low-health vignette, lost-ember compass beacon.
 - **~80 items** — weapons, armor sets (light/heavy with stealth and resist identities),
   shields, trinkets, consumables, bombs — every one carrying its own lore line.

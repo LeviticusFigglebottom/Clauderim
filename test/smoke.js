@@ -435,14 +435,41 @@ run(`{
 }`);
 check("cooking yields seared venison", run(`G.player.hasItem("seared_venison")`));
 
-// quick item: bind and use via T
+// quick belt: consumables auto-add, cycle, use via T, and swap spells
 run(`
+  G.player.belt = new Array(6).fill(null);
   G.player.addItem("small_hp_potion", 1);
-  G.player.quickItem = "small_hp_potion";
-  G.player.hp = 10;
-  G.player.useConsumable(G.player.quickItem);
 `);
-check("quick item heals when used", run(`G.player.hp`) > 30);
+check("consumable auto-adds to belt", run(`G.player.beltIndexOf("small_hp_potion", "item") >= 0`));
+run(`
+  G.player.beltSel = G.player.beltIndexOf("small_hp_potion", "item");
+  G.player.hp = 10;
+  G.player.beltUseSelected();
+`);
+check("belt use heals the selected consumable", run(`G.player.hp`) > 30);
+run(`
+  if (!G.player.spells.includes("firebolt")) G.player.spells.push("firebolt");
+  G.player.belt[4] = { type: "spell", id: "firebolt" };
+  G.player.beltSel = 4; G.player.beltUseSelected();
+`);
+check("belt spell slot swaps equipped spell", run(`G.player.equippedSpell === "firebolt"`));
+run(`const b0 = G.player.beltSel; G.player.beltCycle(1); G.player._cyc = (G.player.beltSel !== b0);`);
+check("belt cycles the active slot", run(`G.player._cyc`) === true);
+
+// every origin (incl. the new starter classes) builds a valid character
+run(`
+  G._origOk = true; G._origN = 0;
+  for (const id in ORIGINS) {
+    G._origN++;
+    try {
+      const tp = new Player("Test", id);
+      for (const sl in tp.equip) if (tp.equip[sl] && !ITEMS[tp.equip[sl]]) G._origOk = false;
+      for (const s of tp.spells) if (!SPELLS[s]) G._origOk = false;
+    } catch (e) { G._origOk = false; }
+  }
+`);
+check("all origins build valid characters", run(`G._origOk`) === true);
+check("eight starter classes available", run(`G._origN`) === 8);
 
 // critters: deer flees the player and drops venison when hunted
 run(`{
@@ -509,9 +536,9 @@ check("NPCs use day posts and night homes", run(`{
 }`));
 
 // save/load round-trips the new state
-run(`G.player.quickItem = "small_hp_potion"; G.player.honing.iron_sword = 2; SaveSys.save(3); Game.loadGame(3);`);
-check("save/load keeps honing and quick item",
-  run(`G.player.honing.iron_sword === 2 && G.player.quickItem === "small_hp_potion"`));
+run(`G.player.belt[0] = { type: "item", id: "small_hp_potion" }; G.player.honing.iron_sword = 2; SaveSys.save(3); Game.loadGame(3);`);
+check("save/load keeps honing and belt",
+  run(`G.player.honing.iron_sword === 2 && G.player.belt[0] && G.player.belt[0].id === "small_hp_potion"`));
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 

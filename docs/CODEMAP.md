@@ -158,8 +158,12 @@ sparkle`, + `FX.update(dt)` integrates particles and `G.floats`.
 - Skills (13): `skills{onehand,twohand,archery,block,lightarmor,heavyarmor,
   destruction,restoration,sneak,smithing,alchemy,speech,enchanting}` each `{lvl,xp}`.
 - Inventory/equip: `inventory[{id,n}]` (gold NOT here), `equip{weapon,ranged,shield,
-  head,body,legs,trinket}`, `honing{itemId:tier0-3}`, `enchants{itemId:[enchId]}`,
-  `quickItem`.
+  head,body,legs,trinket}`, `honing{itemId:tier0-3}`, `enchants{itemId:[enchId]}`.
+- Quick belt: `belt` (array of `BELT_SIZE`=6 slots, each `{type:"item"|"spell",id}|null`),
+  `beltSel` (active index). Consumables auto-fill on `addItem`; cycle with wheel/`[ ]`,
+  use/equip/swap with `T`. Methods: `beltAdd/beltToggle/beltCycle/beltUse/beltUseSelected/
+  beltEntry/beltIndexOf`. (Replaced the old single `quickItem`; `deserialize` still reads
+  a legacy `quickItem` into `belt[0]`.)
 - Magic: `spells[], equippedSpell, edicts[], edictCds{}`.
 - Flask: `flask{max:3,charges:3,heal:60}`.
 - Vitals: `hp/hpMax (80+vig·14+…), stam/stamMax (60+end·9), mag/magMax (40+mnd·11+…),
@@ -441,10 +445,12 @@ exits pointer lock.
 
 ### input.js (`Input`, `BINDS`)
 - `BINDS`: up `W/↑`, down `S/↓`, left `A`, right `D`, turnL/R `←/→`, toggleview `V`,
-  sprint `Shift`, roll `Space`, interact `E`, flask `R`, quickuse `T`, photo `P`,
-  crouch `Ctrl/X`, cast `Q`, aim `F` (hold), edict1-4 `1-4`, menu `Tab/I`, map `M`,
-  journal `J`, character `C`, pause `Esc`. **Attack/block are mouse** (not in BINDS):
-  light `mouse.pressed`, heavy `mouse.down`, block `mouse.rdown`+shield.
+  sprint `Shift`, roll `Space`, interact `E`, flask `R`, quickuse (use belt slot) `T`,
+  beltprev/beltnext `[`/`]`, photo `P`, crouch `Ctrl/X`, cast `Q`, aim `F` (hold),
+  edict1-4 `1-4`, menu `Tab/I`, map `M`, journal `J`, character `C`, pause `Esc`.
+  **Attack/block are mouse** (not in BINDS): light `mouse.pressed`, heavy `mouse.down`,
+  block `mouse.rdown`+shield. **Mouse wheel** cycles the belt (`Input.wheel`, cleared in
+  `endFrame`).
 - `act(name)` (held), `pressed(name)` (one-frame edge, cleared by `endFrame()`).
   `mouse{x,y,down,pressed,rdown,rpressed}`. `applyLook(dx,dy)`: `facing+=dx·0.0028·
   sens`, `fpPitch` clamped, `·invertY`. `worldX/worldY` (FP: 220px ahead). Pointer

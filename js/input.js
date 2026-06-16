@@ -18,6 +18,8 @@ const BINDS = {
   interact: ["KeyE"],
   flask: ["KeyR"],
   quickuse: ["KeyT"],
+  beltprev: ["BracketLeft"],     // cycle quick-belt left  (mouse wheel too)
+  beltnext: ["BracketRight"],    // cycle quick-belt right
   photo: ["KeyP"],
   crouch: ["ControlLeft", "ControlRight", "KeyX"],
   cast: ["KeyQ"],
@@ -34,6 +36,7 @@ const Input = {
   keys: {},          // code -> bool
   pressedSet: {},    // code -> bool (cleared each frame)
   mouse: { x: 640, y: 360, down: false, rdown: false, pressed: false, rpressed: false },
+  wheel: 0,          // accumulated scroll this frame (sign), cleared in endFrame
 
   init(canvas) {
     window.addEventListener("keydown", e => {
@@ -73,6 +76,9 @@ const Input = {
       if (e.button === 2) this.mouse.rdown = false;
     });
     canvas.addEventListener("contextmenu", e => e.preventDefault());
+    canvas.addEventListener("wheel", e => {
+      if (G.state === "play") { this.wheel += Math.sign(e.deltaY); e.preventDefault(); }
+    }, { passive: false });
   },
 
   // mouse-look math, factored for sanity: mouse up looks UP
@@ -112,5 +118,6 @@ const Input = {
     this.pressedSet = {};
     this.mouse.pressed = false;
     this.mouse.rpressed = false;
+    this.wheel = 0;
   },
 };

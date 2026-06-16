@@ -9,6 +9,7 @@
 
 const LEVEL_COST = lvl => Math.floor(80 * Math.pow(lvl, 1.55));
 const SKILL_XP_TO_NEXT = lvl => 80 + lvl * 14;
+const BELT_SIZE = 6;   // quick-belt slots (wheel / [ ] to cycle, T to use)
 
 class Player extends Entity {
   constructor(name, originId) {
@@ -35,7 +36,8 @@ class Player extends Entity {
     this.edictCds = {};
 
     this.flask = { max: 3, charges: 3, heal: 60 };
-    this.quickItem = null;   // consumable bound to [T]
+    this.belt = new Array(BELT_SIZE).fill(null); // quick belt: {type:"item"|"spell", id} | null
+    this.beltSel = 0;                            // active belt slot
     this.honing = {};        // weaponId -> forge tier (0-3)
     this.fpPitch = 0;        // first-person look pitch
     this.stepT = 0;          // footstep cadence
@@ -254,6 +256,11 @@ class Player extends Entity {
     const stack = this.inventory.find(s => s.id === id);
     if (stack) stack.n += n;
     else this.inventory.push({ id, n });
+    // fresh consumables auto-fill an empty belt slot so they're ready at hand
+    if (it.type === "consumable" && this.belt && this.beltIndexOf(id, "item") < 0) {
+      const free = this.belt.indexOf(null);
+      if (free >= 0) this.belt[free] = { type: "item", id };
+    }
   }
   countItem(id) {
     const s = this.inventory.find(s2 => s2.id === id);
@@ -290,6 +297,63 @@ class Player extends Entity {
     this.hpMax = this.calcHpMax();
     this.magMax = this.calcMagMax();
     Sfx.play("equip");
+  }
+
+  /* ---------------- quick belt ---------------- */
+
+  beltEntry(slot) { return this.belt[slot] || null; }
+
+  beltIndexOf(id, type) {
+    for (let i = 0; i < this.belt.length; i++) {
+      const e = this.belt[i];
+      if (e && e.id === id && (!type || e.type === type)) return i;
+    }
+    return -1;
+  }
+
+  beltAdd(id, type) {
+    type = type || (SPELLS[id] && !ITEMS[id] ? "spell" : "item");
+    if (this.beltIndexOf(id, type) >= 0) return -1;   // already carried
+    const free = this.belt.indexOf(null);
+    if (free < 0) return -1;                            // belt full
+    this.belt[free] = { type, id };
+    return free;
+  }
+
+  // add if absent, remove if present; returns true when now on the belt
+  beltToggle(id, type) {
+    type = type || (SPELLS[id] && !ITEMS[id] ? "spell" : "item");
+    const at = this.beltIndexOf(id, type);
+    if (at >= 0) { this.belt[at] = null; return false; }
+    return this.beltAdd(id, type) >= 0;
+  }
+
+  beltCycle(dir) {
+    const n = this.belt.length;
+    this.beltSel = ((this.beltSel + dir) % n + n) % n;
+    Sfx.play("ui");
+  }
+
+  beltUseSelected() { this.beltUse(this.beltSel); }
+
+  beltUse(slot) {
+    const e = this.belt[slot];
+    if (!e) { Sfx.play("deny"); return; }
+    if (e.type === "spell") {
+      if (this.spells.includes(e.id)) { this.equippedSpell = e.id; Sfx.play("ui"); }
+      else { this.belt[slot] = null; Sfx.play("deny"); }   // forgotten spell
+      return;
+    }
+    const it = ITEMS[e.id];
+    if (!it) { this.belt[slot] = null; return; }
+    if (it.type === "consumable") {
+      if (this.hasItem(e.id)) this.useConsumable(e.id);
+      else { G.msg(`No ${it.name} left.`, "bad"); Sfx.play("deny"); }
+    } else {
+      // weapons / staves / bows / shields / apparel: quick-swap (equipItem toggles)
+      if (this.hasItem(e.id)) this.equipItem(e.id);
+      else { this.belt[slot] = null; Sfx.play("deny"); }
+    }
   }
 
   /* ---------------- progression ---------------- */
@@ -567,11 +631,12 @@ class Player extends Entity {
     /* ---- flask ---- */
     if (Input.pressed("flask")) this.useFlask();
 
-    /* ---- quick item ---- */
-    if (Input.pressed("quickuse") && this.quickItem) {
-      if (this.hasItem(this.quickItem)) this.useConsumable(this.quickItem);
-      else { G.msg(`No ${ITEMS[this.quickItem].name} left.`, "bad"); Sfx.play("deny"); }
-    }
+    /* ---- quick belt: cycle (wheel / [ ]) + use (T) ---- */
+    let beltStep = Input.wheel || 0;
+    if (Input.pressed("beltnext")) beltStep += 1;
+    if (Input.pressed("beltprev")) beltStep -= 1;
+    if (beltStep) this.beltCycle(beltStep > 0 ? 1 : -1);
+    if (Input.pressed("quickuse")) this.beltUseSelected();
 
     /* ---- spell cast ---- */
     if (Input.pressed("cast") && this.equippedSpell && !this.atk && !this.cast) {
@@ -641,7 +706,7 @@ class Player extends Entity {
       flask: this.flask, x: this.x, y: this.y, hp: this.hp, stam: this.stam, mag: this.mag,
       respawn: this.respawn, quests: this.quests, readBooks: this.readBooks,
       undimmedUsed: this.undimmedUsed, statsKills: this.statsKills, statsDeaths: this.statsDeaths,
-      quickItem: this.quickItem, honing: this.honing, enchants: this.enchants,
+      belt: this.belt, beltSel: this.beltSel, honing: this.honing, enchants: this.enchants,
       bestiary: this.bestiary, statsFish: this.statsFish,
     };
   }
@@ -664,7 +729,11 @@ class Player extends Entity {
     p.respawn = d.respawn; p.quests = d.quests; p.readBooks = d.readBooks || {};
     p.undimmedUsed = d.undimmedUsed || false;
     p.statsKills = d.statsKills || 0; p.statsDeaths = d.statsDeaths || 0;
-    p.quickItem = d.quickItem || null;
+    // belt: prefer saved belt, fall back to the legacy single quick-item slot
+    if (d.belt) { p.belt = d.belt; p.beltSel = d.beltSel || 0; }
+    else if (d.quickItem) { p.belt = new Array(BELT_SIZE).fill(null); p.belt[0] = { type: "item", id: d.quickItem }; }
+    else { p.belt = new Array(BELT_SIZE).fill(null); }
+    while (p.belt.length < BELT_SIZE) p.belt.push(null);
     p.honing = d.honing || {};
     p.enchants = d.enchants || {};
     p.bestiary = d.bestiary || {};

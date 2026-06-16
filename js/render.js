@@ -1325,8 +1325,11 @@ const Render = {
     slotBox(G.W / 2 - 207, "BOW  [F hold]", p.bow() ? UI.itemName(p.bow(), p) : "—");
     const sp = p.equippedSpell ? SPELLS[p.equippedSpell] : null;
     slotBox(G.W / 2 - 69, "SPELL  [Q]", sp ? sp.name : "—", sp ? "#a8bcd8" : "#555");
-    const qi = p.quickItem ? ITEMS[p.quickItem] : null;
-    slotBox(G.W / 2 + 69, "ITEM  [T]", qi ? `${qi.name} ×${p.countItem(qi.id)}` : "—", qi ? "#b9d8a0" : "#555");
+    const be = p.beltEntry(p.beltSel);
+    let beName = "—", beCol = "#555";
+    if (be && be.type === "spell") { const bsp = SPELLS[be.id]; beName = bsp ? bsp.name : "?"; beCol = "#a8bcd8"; }
+    else if (be) { const bit = ITEMS[be.id]; beName = bit ? (bit.type === "consumable" ? `${bit.name} ×${p.countItem(be.id)}` : bit.name) : "?"; beCol = "#b9d8a0"; }
+    slotBox(G.W / 2 + 69, "BELT  [T] · wheel/[ ]", beName, beCol);
     // edicts with cooldown sweep
     let ex = G.W / 2 + 207;
     for (let i = 0; i < 4; i++) {
@@ -1351,6 +1354,43 @@ const Render = {
       ex += 36;
     }
     ctx.textAlign = "left";
+
+    /* quick belt strip (auto-fills with consumables; wheel / [ ] cycle, T uses) */
+    {
+      const bn = p.belt.length, bw = 40, bgap = 4;
+      const btot = bn * bw + (bn - 1) * bgap;
+      let bx = G.W / 2 - btot / 2;
+      const by = G.H - 102;
+      ctx.textAlign = "center";
+      for (let i = 0; i < bn; i++) {
+        const e = p.belt[i], on = i === p.beltSel;
+        ctx.fillStyle = "rgba(10,9,7,0.8)";
+        ctx.fillRect(bx, by, bw, 38);
+        ctx.strokeStyle = on ? "#c9a86a" : "rgba(74,64,48,0.9)";
+        ctx.lineWidth = on ? 2 : 1;
+        ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, 37);
+        ctx.lineWidth = 1;
+        if (e) {
+          let tag = "?", col = "#d8d0c0", cnt = null;
+          if (e.type === "spell") { const s2 = SPELLS[e.id]; tag = s2 ? s2.name : "?"; col = s2 ? s2.color : "#555"; }
+          else {
+            const i2 = ITEMS[e.id];
+            tag = i2 ? i2.name : "?";
+            if (i2 && i2.type === "consumable") { cnt = p.countItem(e.id); col = cnt === 0 ? "#5d574c" : "#d8d0c0"; }
+            else if (i2 && Object.values(p.equip).includes(e.id)) col = "#b9d8a0";
+          }
+          const init = (tag.replace(/[^A-Za-z ]/g, "").split(" ").filter(Boolean).map(wd => wd[0]).join("").slice(0, 3).toUpperCase()) || "?";
+          ctx.fillStyle = on ? "#e8cf9a" : col;
+          ctx.font = "13px serif";
+          ctx.fillText(init, bx + bw / 2, by + (cnt !== null ? 18 : 23));
+          if (cnt !== null) { ctx.fillStyle = cnt === 0 ? "#8e2f2f" : "#8a8378"; ctx.font = "10px serif"; ctx.fillText("×" + cnt, bx + bw / 2, by + 31); }
+        }
+        bx += bw + bgap;
+      }
+      ctx.fillStyle = "rgba(138,131,120,0.6)"; ctx.font = "9px serif";
+      ctx.fillText("wheel or [ ] cycle · T use", G.W / 2, by - 4);
+      ctx.textAlign = "left";
+    }
 
     /* compass strip */
     this.compass(ctx, p);

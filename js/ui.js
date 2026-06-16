@@ -99,8 +99,15 @@ const UI = {
         for (const c of grid.children) c.classList.remove("sel");
         card.classList.add("sel");
         const a = o.attrs;
+        const skillStr = Object.entries(o.skills).map(kv => `${SKILL_DEFS[kv[0]].name} ${kv[1]}`).join(" · ");
+        const gearStr = Object.values(o.gear).map(g => ITEMS[g] ? ITEMS[g].name : g).join(", ");
+        const spellStr = (o.spells || []).map(s => SPELLS[s] ? SPELLS[s].name : s).join(", ");
         U.el("cg-origin-desc").innerHTML =
-          `${U.esc(o.desc)}<div class="stat-line">VIG ${a.vig} · END ${a.end} · MND ${a.mnd} · STR ${a.str} · FIN ${a.fin} · WIL ${a.wil}</div>`;
+          `${U.esc(o.desc)}` +
+          `<div class="stat-line">VIG ${a.vig} · END ${a.end} · MND ${a.mnd} · STR ${a.str} · FIN ${a.fin} · WIL ${a.wil}</div>` +
+          `<div class="stat-line">Skills: ${U.esc(skillStr)}</div>` +
+          `<div class="stat-line">Gear: ${U.esc(gearStr)}</div>` +
+          (spellStr ? `<div class="stat-line">Spells: ${U.esc(spellStr)}</div>` : "");
         Sfx.play("ui");
       };
       grid.appendChild(card);
@@ -190,7 +197,7 @@ const UI = {
         const it = ITEMS[s.id];
         const eq = Object.values(p.equip).includes(s.id);
         const sel = this.selItem === s.id ? " sel" : "";
-        const quick = p.quickItem === s.id ? ' <span style="color:#b9d8a0;font-size:11px">[T]</span>' : "";
+        const quick = p.beltIndexOf(s.id, "item") >= 0 ? ' <span style="color:#b9d8a0;font-size:11px">[belt]</span>' : "";
         list += `<div class="inv-row${eq ? " equipped" : ""}${sel}" data-item="${s.id}">
           <span class="iname r-${it.rarity}">${U.esc(this.itemName(it, p))}${s.n > 1 ? " ×" + s.n : ""}${quick}</span>
           <span class="imeta">${this.itemMeta(it)} · ${it.weight || 0}wt</span></div>`;
@@ -239,7 +246,10 @@ const UI = {
     }
     if (it.type === "consumable") {
       actions += `<button class="act-btn" data-act="use">Use</button>`;
-      actions += `<button class="act-btn" data-act="quick">${p.quickItem === it.id ? "Unbind [T]" : "Bind to [T]"}</button>`;
+    }
+    if (["weapon", "staff", "bow", "shield", "consumable"].includes(it.type)) {
+      const onBelt = p.beltIndexOf(it.id, "item") >= 0;
+      actions += `<button class="act-btn" data-act="belt">${onBelt ? "Remove from Belt" : "Add to Belt"}</button>`;
     }
     if (it.type === "book") actions += `<button class="act-btn" data-act="read">Read</button>`;
     if (it.type !== "key") actions += `<button class="act-btn danger" data-act="drop">Discard</button>`;
@@ -252,7 +262,7 @@ const UI = {
     box.querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
       if (b.dataset.act === "equip") p.equipItem(it.id);
       else if (b.dataset.act === "use") p.useConsumable(it.id);
-      else if (b.dataset.act === "quick") { p.quickItem = p.quickItem === it.id ? null : it.id; Sfx.play("ui"); }
+      else if (b.dataset.act === "belt") { p.beltToggle(it.id, "item"); Sfx.play("ui"); }
       else if (b.dataset.act === "read") { this.openBook(it.book); return; }
       else if (b.dataset.act === "drop") { p.removeItem(it.id, 1); Sfx.play("ui"); }
       this.renderMenu();
@@ -361,10 +371,12 @@ const UI = {
     let spells = "";
     for (const id of p.spells) {
       const sp = SPELLS[id];
+      const onBelt = p.beltIndexOf(id, "spell") >= 0;
       spells += `<div class="spell-row${p.equippedSpell === id ? " equipped" : ""}" data-spell="${id}">
-        <span class="sp-name">${sp.name}</span>
+        <span class="sp-name">${sp.name}${onBelt ? ' <span style="color:#b9d8a0;font-size:11px">[belt]</span>' : ""}</span>
         <span class="spell-desc">${U.esc(sp.desc)}</span>
-        <span class="sp-cost">${Combat.spellCost(p, sp)} mg</span></div>`;
+        <span class="sp-cost">${Combat.spellCost(p, sp)} mg</span>
+        <button class="act-btn" data-spellbelt="${id}">${onBelt ? "− Belt" : "+ Belt"}</button></div>`;
     }
     if (!spells) spells = `<i style="color:#5d574c">You know no spells. Serah and the hermit Caldus teach those with coin.</i>`;
     let edicts = "";
@@ -378,6 +390,12 @@ const UI = {
       <div class="edict-block"><h2>Edicts of the Old Tongue</h2>${edicts}</div>`;
     c.querySelectorAll("[data-spell]").forEach(el => el.onclick = () => {
       G.player.equippedSpell = el.dataset.spell;
+      Sfx.play("ui");
+      this.renderMenu();
+    });
+    c.querySelectorAll("[data-spellbelt]").forEach(el => el.onclick = ev => {
+      ev.stopPropagation();
+      G.player.beltToggle(el.dataset.spellbelt, "spell");
       Sfx.play("ui");
       this.renderMenu();
     });

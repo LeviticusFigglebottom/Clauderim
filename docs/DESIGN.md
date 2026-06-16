@@ -82,7 +82,9 @@ extended ×1.6 for slams and breaths.
   travel food with regen buffs. Wildlife (deer, hares) flees, drops meat and hides.
 - **Ashen elites**: ~7% of overworld spawns roll elite — ×1.7 HP, ×1.4 damage,
   ×3 embers, smoldering aura. Never wildlife.
-- **Quick slot**: any consumable binds to **T** from the inventory.
+- **Quick belt**: a 6-slot belt that auto-fills with consumables as you find them;
+  cycle the active slot with the mouse wheel or **[ ]** and use it with **T**. Weapons
+  and spells can be hand-assigned to slots for quick-swap (inventory / Magic menus).
 - **Grave-searching** in crypts: 40% goods, 32% dust, 28% the tenant objects.
 - **The Undermarch**: hidden 78×78 super-dungeon under the Great Sink, with three
   questable way-lamps and the optional superboss *Echo of Ald* (Aldsbane,
