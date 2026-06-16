@@ -159,8 +159,9 @@ sparkle`, + `FX.update(dt)` integrates particles and `G.floats`.
   destruction,restoration,sneak,smithing,alchemy,speech,enchanting}` each `{lvl,xp}`.
 - Inventory/equip: `inventory[{id,n}]` (gold NOT here), `equip{weapon,ranged,shield,
   head,body,legs,trinket}`, `honing{itemId:tier0-3}`, `enchants{itemId:[enchId]}`.
-- Quick belt: `belt` (array of `BELT_SIZE`=6 slots, each `{type:"item"|"spell",id}|null`),
-  `beltSel` (active index). Consumables auto-fill on `addItem`; cycle with wheel/`[ ]`,
+- Quick belt: `belt` (array of `BELT_SIZE`=10 slots, each `{type:"item"|"spell",id}|null`),
+  `beltSel` (active index). Potions+weapons auto-fill on `addItem`, spells on `learnSpell`
+  (starter kit pre-slotted in the ctor); cycle with wheel/`[ ]`,
   use/equip/swap with `T`. Methods: `beltAdd/beltToggle/beltCycle/beltUse/beltUseSelected/
   beltEntry/beltIndexOf`. (Replaced the old single `quickItem`; `deserialize` still reads
   a legacy `quickItem` into `belt[0]`.)
@@ -169,7 +170,7 @@ sparkle`, + `FX.update(dt)` integrates particles and `G.floats`.
   (reorder persists). The overlay binds `1–9` (`UI.favSelect`/`favActivate`) and drag/▲▼.
   `loadouts{slot1-3:{equip,spell}}` are gear-set snapshots (`saveLoadout/applyLoadout/
   hasLoadout`; apply skips items you no longer own). `seenHints{}` records one-shot tutorial
-  hints; fire them with `G.tip(key,text)` (shows once per character via `msg-line.hint`,
+  hints; fire them with `G.tip(key,text)` (queued to a manual-dismiss tip box, `[H]`,
   then remembered in the save).
 - Standing: `rep{faction:n}` (`getRep/addRep`); `rep.march` shifts `buyPrice/sellPrice`
   and is moved by quest choices (e.g. The Hollowing) and deeds.

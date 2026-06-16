@@ -63,6 +63,7 @@ const G = {
     invSort: "default",    // inventory sort: default | name | value | weight
     difficulty: "measured", // tender | measured | unforgiving (combat damage scaling)
     pauseOnBlur: true,     // open the pause menu when the window loses focus
+    tips: true,            // show one-shot tutorial hints (dismissed by hand, not timed)
     binds: {},             // key rebind overrides: action -> [KeyCode]
   },
   lightning: 0,            // white-out timer during storms
@@ -99,12 +100,15 @@ const G = {
     setTimeout(() => line.remove(), 5600);
   },
 
-  // one-shot teaching hint: shown once per character, then remembered in the save
+  // one-shot teaching hint: shown once per character (then remembered in the save),
+  // queued into a visible, manually-dismissed tip box rather than a fading log line
   tip(key, text) {
     const p = G.player;
     if (!p || !p.seenHints || p.seenHints[key]) return;
+    if (G.settings && G.settings.tips === false) return;   // hints disabled — may still fire if re-enabled
     p.seenHints[key] = true;
-    G.msg(text, "hint");
+    if (typeof UI !== "undefined" && UI.showTip) UI.showTip(text);
+    else G.msg(text, "hint");
   },
 
   banner(title, sub = "") {

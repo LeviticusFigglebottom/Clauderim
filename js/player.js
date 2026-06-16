@@ -63,6 +63,8 @@ class Player extends Entity {
       this.equipItem(it.id);
     }
     for (const pair of o.items) this.addItem(pair[0], pair[1]);
+    // the starter class's spells ride the belt from the first breath, too
+    for (const sid of this.spells) this.beltAdd(sid, "spell");
 
     // vitals
     this.hp = this.hpMax = this.calcHpMax();
@@ -287,8 +289,9 @@ class Player extends Entity {
     const stack = this.inventory.find(s => s.id === id);
     if (stack) stack.n += n;
     else this.inventory.push({ id, n });
-    // fresh consumables auto-fill an empty belt slot so they're ready at hand
-    if (it.type === "consumable" && this.belt && this.beltIndexOf(id, "item") < 0) {
+    // fresh potions and weapons auto-fill an empty belt slot so they're ready at hand
+    const beltable = it.type === "consumable" || it.type === "weapon" || it.type === "staff" || it.type === "bow";
+    if (beltable && this.belt && this.beltIndexOf(id, "item") < 0) {
       const free = this.belt.indexOf(null);
       if (free >= 0) this.belt[free] = { type: "item", id };
       else G.tip("beltfull", "Your belt is full. Rearrange it from your pack [Tab] or favorites [Z].");
@@ -447,6 +450,7 @@ class Player extends Entity {
       if (s.lvl % 5 === 0) {
         this.perkPoints++;
         G.msg("Perk point earned", "good");
+        G.tip("perk", "A perk point earned. Spend it in the Skills tab [C] — perks reshape how you fight, not just the numbers.");
       }
     }
   }
@@ -482,6 +486,7 @@ class Player extends Entity {
     if (this.spells.includes(id)) return;
     this.spells.push(id);
     if (!this.equippedSpell) this.equippedSpell = id;
+    this.beltAdd(id, "spell");   // newly-learned spells slot onto the belt
     G.msg(`Spell learned: ${SPELLS[id].name}`, "good");
   }
 
@@ -491,6 +496,7 @@ class Player extends Entity {
     const e = EDICTS[id];
     G.questToast("EDICT LEARNED", e.name);
     Sfx.play("edict");
+    G.tip("edict", "An Edict of the Old Tongue is yours — speak it with its number key (1–5). Long to recharge, but it can turn a fight.");
   }
 
   /* ---------------- vitals ---------------- */

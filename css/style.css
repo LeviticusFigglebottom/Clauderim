@@ -168,6 +168,18 @@ html, body {
 .msg-line.ember { color: var(--ember); }
 .msg-line.hint { color: var(--gold); font-style: italic; }
 
+/* tutorial hint box — prominent, centered, dismissed by hand (never auto-expires) */
+#tip-box {
+  position: absolute; left: 50%; top: 96px; transform: translateX(-50%);
+  width: min(560px, 70%); z-index: 60;
+  background: rgba(14, 12, 9, 0.94); border: 1px solid var(--gold);
+  box-shadow: 0 0 24px rgba(0,0,0,0.6), inset 0 0 30px rgba(201,168,106,0.06);
+  padding: 14px 18px 16px; text-align: center;
+}
+#tip-box .tip-mark { color: var(--gold); letter-spacing: 0.28em; font-size: 12px; margin-bottom: 7px; }
+#tip-box #tip-text { color: var(--bone); font-size: 15px; line-height: 1.55; font-style: italic; margin-bottom: 12px; }
+#tip-box #tip-dismiss { display: inline-block; }
+
 #area-banner {
   position: absolute; top: 17%; left: 0; right: 0; text-align: center;
   font-size: 42px; letter-spacing: 0.35em; color: var(--bone);

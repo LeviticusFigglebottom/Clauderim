@@ -506,8 +506,31 @@ check("loadout restores the equipped weapon", run(`G.player.equip.weapon === "ir
 check("loadout slot reports saved", run(`G.player.hasLoadout(1) === true`));
 
 // one-shot teaching hints fire once and remember themselves
-run(`G.player.seenHints = {}; G.tip("t_demo","once"); G.tip("t_demo","twice"); G.player._tipSeen = G.player.seenHints.t_demo === true;`);
+run(`G.player.seenHints = {}; G.tipQueue = []; UI._tipShowing = false; G.settings.tips = true; G.tip("t_demo","once"); G.tip("t_demo","twice"); G.player._tipSeen = G.player.seenHints.t_demo === true;`);
 check("a hint marks itself seen", run(`G.player._tipSeen`) === true);
+
+// hints queue into a visible box and are dismissed by hand (never auto-expire)
+run(`{
+  G.player.seenHints = {}; G.tipQueue = []; UI._tipShowing = false; G.settings.tips = true;
+  G.tip("t_a", "alpha"); G.tip("t_b", "beta");
+  G.player._tq = (G.tipQueue.length === 2 && UI._tipShowing === true);
+  UI.dismissTip(); G.player._tq2 = (G.tipQueue.length === 1 && UI._tipShowing === true);
+  UI.dismissTip(); G.player._tq3 = (G.tipQueue.length === 0 && UI._tipShowing === false);
+}`);
+check("hints queue and dismiss by hand", run(`G.player._tq && G.player._tq2 && G.player._tq3`) === true);
+run(`{
+  G.player.seenHints = {}; G.tipQueue = []; UI._tipShowing = false; G.settings.tips = false;
+  G.tip("t_off", "should not show");
+  G.player._tipOff = (G.tipQueue.length === 0 && G.player.seenHints.t_off !== true);
+  G.settings.tips = true; G.tipQueue = []; UI._tipShowing = false;
+}`);
+check("disabling hints suppresses them (they can still return)", run(`G.player._tipOff`) === true);
+check("hotbar auto-slots potions, weapons, and spells", run(`{
+  const tp = new Player("T", "acolyte");
+  // acolyte starts with ashen_staff (weapon), potions, and spells — all should be on the belt
+  const has = (id, t) => tp.beltIndexOf(id, t) >= 0;
+  has("ashen_staff", "item") && has("mag_potion", "item") && has("firebolt", "spell");
+}`) === true);
 
 // critters: deer flees the player and drops venison when hunted
 run(`{

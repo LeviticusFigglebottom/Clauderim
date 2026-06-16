@@ -139,8 +139,10 @@ multi-file. (Full detail + line numbers in `docs/CODEMAP.md`.)
 - **New SFX** → a recipe row in `SFX_TABLE` (`audio.js`), play with
   `Sfx.play("name")`. **New music mood** → `MOODS` + `Music.setMood`. Gated by
   `G.settings.sfx`/`.music`; nothing plays until `audioInit()` (first input).
-- **New onboarding hint** → `G.tip("uniqueKey", text)` at the trigger site. Shows once
-  per character (gold italic `msg-line.hint`), then remembered in `player.seenHints`
+- **New onboarding hint** → `G.tip("uniqueKey", text)` at the trigger site. Queues into a
+  visible, manually-dismissed tip box (`UI.showTip`/`dismissTip`, key `[H]` or the button;
+  gated by `G.settings.tips`, never auto-expires), shown once per character then remembered
+  in `player.seenHints`
   (already in `serialize`/`deserialize`). The **quick belt** (`player.belt`/`beltSel`,
   wheel/`[ ]`/`T`) and **favorites** (`player.favorites`, `Z` → `UI.openFavorites`, a
   pausing `"favorites"` state with `1–9` hotkeys + reorder, plus 3 **gear loadouts**

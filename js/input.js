@@ -21,6 +21,7 @@ const BINDS = {
   beltprev: ["BracketLeft"],     // cycle quick-belt left  (mouse wheel too)
   beltnext: ["BracketRight"],    // cycle quick-belt right
   favorites: ["KeyZ"],           // Skyrim-style quick-select overlay
+  dismisstip: ["KeyH"],          // acknowledge/close a tutorial hint
   photo: ["KeyP"],
   crouch: ["ControlLeft", "ControlRight", "KeyX"],
   cast: ["KeyQ"],

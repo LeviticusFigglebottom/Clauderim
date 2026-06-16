@@ -28,6 +28,7 @@ const UI = {
     U.el("btn-titlehelp").onclick = () => { Sfx.play("ui"); this.showHelp(); };
     U.el("help-close").onclick = () => { U.hide("help-screen"); if (G.state === "help") G.setState(G.prevState === "help" ? "title" : G.prevState); };
     U.el("fav-close").onclick = () => this.closeFavorites();
+    U.el("tip-dismiss").onclick = () => this.dismissTip();
     U.el("cg-back").onclick = () => { U.hide("chargen-screen"); U.show("title-screen"); G.setState("title"); };
     U.el("cg-begin").onclick = () => {
       const name = U.el("cg-name").value.trim() || "Wanderer";
@@ -596,6 +597,8 @@ const UI = {
       <div style="color:#c9a86a;letter-spacing:.15em;font-size:13px">GAMEPLAY</div>
       <button class="act-btn" id="sys-diff">Difficulty: ${diffNames[G.settings.difficulty] || diffNames.measured}</button>
       ${chk("pauseOnBlur", "Pause when the window loses focus")}
+      ${chk("tips", "Tutorial hints (dismiss by hand, [H])")}
+      <button class="act-btn" id="sys-tips-reset">Replay tutorial hints</button>
       <div style="color:#c9a86a;letter-spacing:.15em;font-size:13px">GRAPHICS</div>
       ${chk("autoRes", "Adaptive resolution (auto)")}
       <label style="display:flex;justify-content:space-between;align-items:center;gap:10px">
@@ -651,6 +654,7 @@ const UI = {
       G.settings[el.dataset.set] = el.checked;
       if (el.dataset.set === "music") { const m = Music.mood; Music.mood = null; Music.setMood(el.checked ? (m || "world") : null); }
       if (el.dataset.set === "autoRes") { RenderFP.applySettings(); this.renderMenu(); }
+      if (el.dataset.set === "tips" && !el.checked) { G.tipQueue = []; this._tipShowing = false; U.hide("tip-box"); }
       G.saveSettings();
     });
     U.el("sys-res").oninput = (e) => {
@@ -670,6 +674,12 @@ const UI = {
       G.saveSettings();
       Sfx.play("ui");
       this.renderMenu();
+    };
+    const tr = U.el("sys-tips-reset");
+    if (tr) tr.onclick = () => {
+      if (G.player) G.player.seenHints = {};
+      G.tipQueue = []; this._tipShowing = false; U.hide("tip-box");
+      Sfx.play("ui"); G.msg("Tutorial hints will reappear as you play.", "good");
     };
     U.el("sys-fov").oninput = (e) => {
       G.settings.fov = parseInt(e.target.value);
@@ -838,6 +848,7 @@ const UI = {
   openShop(npcId) {
     const def = NPC_DEFS[npcId];
     if (!def.shop) return;
+    G.tip("shop", "Buy, sell, and learn spells here. Your standing in the March sways the prices — and favourited or worn gear is shielded from accidental sale.");
     this.closeDialogue();
     G.setState("station");
     U.show("station-screen");
@@ -926,6 +937,9 @@ const UI = {
   },
 
   openCraft(kind) {
+    if (kind === "smith") G.tip("forge", "At a forge you craft gear and hone weapons sharper (gold + reagents). Honing carries on the same blade — smithing perks make it bite deeper.");
+    else if (kind === "cook") G.tip("cook", "Cook hunted meat and fish over a campfire for healing, stamina, and lasting buffs.");
+    else G.tip("alchemy", "Brew potions from gathered reagents at the bench. Alchemy perks make every dose stronger.");
     this.closeDialogue();
     G.setState("station");
     U.show("station-screen");
@@ -1090,6 +1104,7 @@ const UI = {
   /* ============ enchanting (Lampwright's altar) ============ */
 
   openEnchant() {
+    G.tip("enchant", "Lampwright altars bind embers into gear — elements and leech onto weapons, wards and vitality onto armor. Enchanting perks empower the working.");
     this.closeDialogue();
     G.setState("station");
     U.show("station-screen");
@@ -1441,6 +1456,30 @@ const UI = {
     return this.favActivate(f);
   },
 
+  /* ============ tutorial hints (queued, manual-dismiss) ============ */
+
+  showTip(text) {
+    G.tipQueue = G.tipQueue || [];
+    G.tipQueue.push(text);
+    if (!this._tipShowing) this.renderTip();
+  },
+  renderTip() {
+    const q = G.tipQueue || [];
+    if (!q.length) { this._tipShowing = false; U.hide("tip-box"); return; }
+    this._tipShowing = true;
+    U.el("tip-text").innerHTML = U.esc(q[0]);
+    const btn = U.el("tip-dismiss");
+    if (btn) btn.innerHTML = "Got it&nbsp;[H]" + (q.length > 1 ? ` · ${q.length - 1} more` : "");
+    U.show("tip-box");
+    Sfx.play("ui");
+  },
+  dismissTip() {
+    const q = G.tipQueue || [];
+    if (q.length) q.shift();
+    this.renderTip();
+    return true;
+  },
+
   /* ============ help / manual ============ */
 
   showHelp() {
@@ -1461,6 +1500,7 @@ const UI = {
       <p><b>1–5</b> speak Edicts of the Old Tongue · <b>R</b> drink the Ember Flask · <b>P</b> photo (clean screenshot)</p>
       <p><b>T</b> use the selected quick-belt slot · <b>mouse wheel</b> or <b>[ / ]</b> cycle the belt — consumables you gather fill it automatically; weapons and spells can be slotted for quick-swap</p>
       <p><b>Z</b> favorites: a quick-select of anything you've marked with ★ — click or press <b>1–9</b> to equip/use, <b>▲▼</b> (or drag) to reorder, or assign to a belt slot. Save up to three <b>gear loadouts</b> here to swap your whole kit + spell in a tap.</p>
+      <p><b>H</b> dismiss a tutorial hint (toggle hints, or replay them, in the System menu)</p>
       <h3>World</h3>
       <p><b>E</b> interact — shrines, people, chests, herbs, doors, graves, campfires, wells</p>
       <p><b>Tab</b> menu · <b>M</b> map · <b>J</b> journal · <b>C</b> character · <b>Esc</b> close/system</p>

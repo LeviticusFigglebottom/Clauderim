@@ -355,6 +355,7 @@ const Game = {
         }
         p.respawn = { map: G.map.id, x: s.x + 18, y: s.y + 24, shrine: s.id };
         UI.openShrine(s);
+        G.tip("shrine", "Shrines save your progress, refill the Ember Flask, and become your respawn point. Resting also restores the land's monsters and herbs.");
         break;
       }
       case "npc": UI.openDialogue(t.obj.npcId); break;
@@ -362,6 +363,7 @@ const Game = {
         const c = t.obj;
         G.openedChests[c.id] = true;
         Sfx.play("chest");
+        G.tip("chest", "Chests and hidden caches hold gold, gear, and reagents. Crack open everything — the March pays the curious.");
         const table = LOOT[c.tier];
         const rolls = c.tier === "chest_rare" ? 3 : 2;
         for (let i = 0; i < rolls; i++) {
@@ -459,7 +461,7 @@ const Game = {
       }
       case "gauntlet": this.startGauntletWave(); break;
       case "fish": this.startFishing(t.obj.x, t.obj.y); break;
-      case "board": UI.openBoard(); break;
+      case "board": UI.openBoard(); G.tip("board", "The Wardens' Ledger posts repeatable bounties — coin and embers for thinning the roads and culling named foes."); break;
       case "secret": {
         const st = t.obj;
         G.flags["searched_" + st.id] = true;
@@ -796,6 +798,7 @@ const Game = {
     Sfx.play("roar");
     G.shake(6, 0.45);
     G.msg(`⚔ ${title} — ${sub}`, "bad");
+    G.tip("encounter", "Random encounters strike on the open road — the banner names them. Fight, run for a safe zone, or pick a side in a skirmish.");
   },
 
   tickEncounters(dt) {
@@ -870,6 +873,8 @@ const Game = {
   },
 
   handleMetaKeys() {
+    // a tutorial hint can be dismissed any time it's up (it never auto-expires)
+    if (UI._tipShowing && Input.pressed("dismisstip")) UI.dismissTip();
     if (G.state === "play" && Input.pressed("toggleview")) {
       G.viewMode = G.viewMode === "fp" ? "top" : "fp";
       if (G.viewMode !== "fp" && document.exitPointerLock) document.exitPointerLock();
