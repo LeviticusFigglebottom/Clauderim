@@ -60,6 +60,8 @@ const G = {
     sens: 1,               // mouse-look multiplier
     invertY: false,
     invSort: "default",    // inventory sort: default | name | value | weight
+    difficulty: "measured", // tender | measured | unforgiving (combat damage scaling)
+    pauseOnBlur: true,     // open the pause menu when the window loses focus
   },
   lightning: 0,            // white-out timer during storms
 

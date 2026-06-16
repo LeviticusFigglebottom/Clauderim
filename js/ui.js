@@ -524,9 +524,13 @@ const UI = {
       <span>${label}</span><input type="checkbox" data-set="${key}" ${G.settings[key] ? "checked" : ""}></label>`;
     const scaleNames = { auto: "Auto (adaptive)", low: "Low — 480×270", med: "Medium — 640×360", high: "High — 854×480" };
     const distNames = { near: "Near — 36 tiles", far: "Far — 48 tiles", vfar: "Very far — 64 tiles" };
+    const diffNames = { tender: "Tender — forgiving", measured: "Measured — as intended", unforgiving: "Unforgiving — harsh" };
     c.innerHTML = `<h2>System</h2><div class="sys-rows">
       ${slots}
       <hr style="border-color:#2c2719">
+      <div style="color:#c9a86a;letter-spacing:.15em;font-size:13px">GAMEPLAY</div>
+      <button class="act-btn" id="sys-diff">Difficulty: ${diffNames[G.settings.difficulty] || diffNames.measured}</button>
+      ${chk("pauseOnBlur", "Pause when the window loses focus")}
       <div style="color:#c9a86a;letter-spacing:.15em;font-size:13px">GRAPHICS</div>
       <button class="act-btn" id="sys-scale">Render scale: ${scaleNames[G.settings.renderScale]}</button>
       <button class="act-btn" id="sys-dist">View distance: ${distNames[G.settings.viewDist]}</button>
@@ -584,6 +588,13 @@ const UI = {
     U.el("sys-dist").onclick = () => {
       const order = ["near", "far", "vfar"];
       G.settings.viewDist = order[(order.indexOf(G.settings.viewDist) + 1) % order.length];
+      G.saveSettings();
+      Sfx.play("ui");
+      this.renderMenu();
+    };
+    U.el("sys-diff").onclick = () => {
+      const order = ["tender", "measured", "unforgiving"];
+      G.settings.difficulty = order[(order.indexOf(G.settings.difficulty) + 1) % order.length];
       G.saveSettings();
       Sfx.play("ui");
       this.renderMenu();

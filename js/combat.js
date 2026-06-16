@@ -7,7 +7,19 @@
    ============================================================ */
 "use strict";
 
+// difficulty presets: incoming (to player) / outgoing (player→world) multipliers
+const DIFFICULTY = {
+  tender:      { in: 0.6, out: 1.25 },
+  measured:    { in: 1.0, out: 1.0 },
+  unforgiving: { in: 1.5, out: 0.85 },
+};
+// damage-number tint by element (sneak/crit still override)
+const ELEM_COL = { fire: "#ff8c3a", frost: "#bfeaff", shock: "#cfe0ff", poison: "#9be09b" };
+
 const Combat = {
+
+  diffMult() { return DIFFICULTY[G.settings.difficulty] || DIFFICULTY.measured; },
+
 
   /* ====================================================
      PLAYER OFFENSE
@@ -273,6 +285,7 @@ const Combat = {
       }
     }
 
+    if (info.attacker === G.player) dmg *= this.diffMult().out;
     dmg = Math.max(1, Math.round(dmg));
     e.hp -= dmg;
     e.flashT = 0.12;
@@ -281,7 +294,7 @@ const Combat = {
       def.tags && def.tags.includes("spirit") ? 0 : 6);
     if (def.tags && def.tags.includes("spirit")) FX.burst(e.x, e.y, def.look.body, 8, 90);
 
-    const col = info.sneak ? "#ffd34a" : info.crit ? "#ff9a3a" : "#fff";
+    const col = info.sneak ? "#ffd34a" : info.crit ? "#ff9a3a" : ELEM_COL[info.dtype] || "#fff";
     G.float(e.x + (Math.random() - 0.5) * 10, e.y - e.r - 10, String(dmg), col, info.sneak || info.crit ? 17 : 13);
 
     // poise
@@ -478,6 +491,7 @@ const Combat = {
       }
     }
 
+    dmg *= this.diffMult().in;
     dmg = Math.max(1, Math.round(dmg));
     p.hp -= dmg;
     p.flashT = 0.15;

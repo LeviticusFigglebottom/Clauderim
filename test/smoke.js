@@ -737,6 +737,16 @@ run(`{
   G.player._hdone = (QS.stage("sq_hollowing") === 999 && G.flags.hollow_mercy === true);
 }`);
 check("The Hollowing resolves to a chosen outcome", run(`G.player._hdone`) === true);
+
+// Pass 7: difficulty scaling + settings
+run(`{
+  G.settings.difficulty = "tender"; G.player._din = Combat.diffMult().in; G.player._dout = Combat.diffMult().out;
+  G.settings.difficulty = "unforgiving"; G.player._din2 = Combat.diffMult().in;
+  G.settings.difficulty = "measured";
+}`);
+check("Tender softens incoming and sharpens outgoing", run(`G.player._din`) < 1 && run(`G.player._dout`) > 1);
+check("Unforgiving raises incoming damage", run(`G.player._din2`) > 1);
+check("difficulty + pause-on-blur settings present", run(`"difficulty" in G.settings && "pauseOnBlur" in G.settings`));
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 

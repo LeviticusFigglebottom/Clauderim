@@ -48,7 +48,11 @@ const Input = {
       audioInit();
     });
     window.addEventListener("keyup", e => { this.keys[e.code] = false; });
-    window.addEventListener("blur", () => { this.keys = {}; this.mouse.down = false; this.mouse.rdown = false; });
+    window.addEventListener("blur", () => {
+      this.keys = {}; this.mouse.down = false; this.mouse.rdown = false;
+      // pause the world when focus leaves, so you don't die to a tab-switch
+      if (G.settings.pauseOnBlur && typeof UI !== "undefined" && G.state === "play") UI.openMenu("system");
+    });
 
     canvas.addEventListener("mousemove", e => {
       // pointer-locked first person: relative mouse turns the head
