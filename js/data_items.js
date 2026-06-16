@@ -46,6 +46,43 @@ const ITEMS = {
     scale: { str: "C", fin: "C" }, edmg: { fire: 9 },
     lore: "A shard of the First Ember sleeps in the fuller. It does not burn its bearer — only everything the bearer regrets."
   },
+  /* region-flavored weapons — ordinary steel, upgraded only at the forge (honable) */
+  march_falchion: {
+    name: "March Falchion", type: "weapon", wclass: "1h", skill: "onehand",
+    dmg: 22, spd: 1.4, reach: 55, stam: 13, poiseDmg: 20, weight: 5, value: 170, rarity: "fine",
+    scale: { str: "C", fin: "C" },
+    lore: "Heartland wall-guard issue: a heavy, forward-weighted blade made to clear a breach and not much else.",
+  },
+  boar_spear: {
+    name: "Greywood Boar-Spear", type: "weapon", wclass: "spear", skill: "onehand",
+    dmg: 20, spd: 1.35, reach: 70, stam: 13, poiseDmg: 18, weight: 5, value: 165, rarity: "fine",
+    scale: { str: "C", fin: "C" },
+    lore: "A forester's spear with a crossbar below the head, so what you stop does not walk up the haft to argue.",
+  },
+  fen_cleaver: {
+    name: "Fen Cleaver", type: "weapon", wclass: "1h", skill: "onehand",
+    dmg: 20, spd: 1.2, reach: 50, stam: 15, poiseDmg: 26, weight: 6, value: 190, rarity: "fine",
+    scale: { str: "B", fin: "E" }, edmg: { poison: 5 },
+    lore: "Duskmere bog-iron, pitted and weeping. The Mire's rot never quite leaves the edge — which suits it fine.",
+  },
+  rimebrand: {
+    name: "Rimebrand", type: "weapon", wclass: "1h", skill: "onehand",
+    dmg: 22, spd: 1.45, reach: 56, stam: 13, poiseDmg: 18, weight: 5, value: 210, rarity: "fine",
+    scale: { str: "C", fin: "B" }, edmg: { frost: 6 },
+    lore: "Frosthollow steel quenched in meltwater that never warmed. It carries a sliver of the White Pass quiet.",
+  },
+  cinder_scimitar: {
+    name: "Cinder Scimitar", type: "weapon", wclass: "1h", skill: "onehand",
+    dmg: 23, spd: 1.4, reach: 57, stam: 14, poiseDmg: 18, weight: 5, value: 230, rarity: "fine",
+    scale: { str: "C", fin: "C" }, edmg: { fire: 6 },
+    lore: "Ashland work, the fuller packed with ember-grit so the curve trails a line of heat. The Ashpriests called it honest argument.",
+  },
+  tide_harpoon: {
+    name: "Tideglass Harpoon", type: "weapon", wclass: "spear", skill: "onehand",
+    dmg: 21, spd: 1.3, reach: 72, stam: 14, poiseDmg: 20, weight: 6, value: 195, rarity: "fine",
+    scale: { str: "C", fin: "C" },
+    lore: "Cinder Coast salvage: a whaler's harpoon barbed in tideglass, made for things that did not want to be landed.",
+  },
   iron_axe: {
     name: "Iron Axe", type: "weapon", wclass: "1h", skill: "onehand",
     dmg: 19, spd: 1.2, reach: 48, stam: 15, poiseDmg: 24, weight: 5, value: 45, rarity: "common",
@@ -599,5 +636,6 @@ const LOOT = {
     { w: 1, id: "warden_seal", n: [1, 1] },
     { w: 1, id: "occult_scepter", n: [1, 1] },
     { w: 1, id: "shade_garb", n: [1, 1] },
+    { w: 1, id: "cinder_scimitar", n: [1, 1] },
   ],
 };

@@ -20,7 +20,7 @@ const NPC_DEFS = {
   bram: {
     name: "Bram the Smith", town: "emberfall", role: "smith",
     look: { body: "#5a4633", trim: "#8a6a3a", hair: "#3a3026" },
-    shop: { stock: ["iron_sword", "iron_axe", "iron_mace", "iron_spear", "iron_helm", "iron_cuirass", "iron_greaves", "iron_kite", "wooden_shield", "iron_ore", "leather_strips", "steel_ingot"] },
+    shop: { stock: ["iron_sword", "iron_axe", "iron_mace", "iron_spear", "march_falchion", "iron_helm", "iron_cuirass", "iron_greaves", "iron_kite", "wooden_shield", "iron_ore", "leather_strips", "steel_ingot"] },
     bark: ["Mind the sparks.", "Good steel argues back.", "Ore\u2019s scarce. Bring me ore."],
   },
   maren: {
@@ -38,7 +38,7 @@ const NPC_DEFS = {
   ralka: {
     name: "Ralka the Huntress", town: "emberfall", role: "hunter",
     look: { body: "#4a5238", trim: "#a8b888", hair: "#2c2620" },
-    shop: { stock: ["hunting_bow", "leather_cap", "leather_jack", "leather_boots", "dried_meat", "wolf_pelt"] },
+    shop: { stock: ["hunting_bow", "boar_spear", "leather_cap", "leather_jack", "leather_boots", "dried_meat", "wolf_pelt"] },
     bark: "Wind's from the barrows. Bad hunting.",
   },
   mosswick: {
@@ -49,7 +49,7 @@ const NPC_DEFS = {
   petra: {
     name: "Petra the Fisher", town: "duskmere", role: "merchant",
     look: { body: "#3c4a50", trim: "#88a8b0", hair: "#5a4a3a" },
-    shop: { stock: ["antidote", "mireweed", "glowcap", "dried_meat", "steel_dirk", "mirewalker_cowl", "mirewalker_coat", "mirewalker_waders", "torch", "fishing_rod"] },
+    shop: { stock: ["antidote", "mireweed", "glowcap", "dried_meat", "steel_dirk", "fen_cleaver", "mirewalker_cowl", "mirewalker_coat", "mirewalker_waders", "torch", "fishing_rod"] },
     bark: "Eels are biting. Bite back.",
   },
   eirik: {
@@ -60,13 +60,13 @@ const NPC_DEFS = {
   sigrun: {
     name: "Sigrun the Healer", town: "frosthollow", role: "healer",
     look: { body: "#705a5a", trim: "#e0c8c8", hair: "#e8e0d0" },
-    shop: { stock: ["small_hp_potion", "big_hp_potion", "warming_salve", "frostmoss", "troll_fat", "honey_mead", "frostplate_helm"] },
+    shop: { stock: ["small_hp_potion", "big_hp_potion", "warming_salve", "frostmoss", "troll_fat", "honey_mead", "rimebrand", "frostplate_helm"] },
     bark: "Keep your blood moving, southerner.",
   },
   senn: {
     name: "Quartermaster Senn", town: "strand", role: "castaway",
     look: { body: "#4a5a60", trim: "#c9a86a", hair: "#3a302a" },
-    shop: { stock: ["salt_cod", "antidote", "torch", "tide_pearl", "hunting_bow", "leather_strips", "fishing_rod"] },
+    shop: { stock: ["salt_cod", "antidote", "torch", "tide_pearl", "tide_harpoon", "hunting_bow", "leather_strips", "fishing_rod"] },
     bark: ["Keep above the tide line after dark.", "The PENNY was a good ship. Is. Was.", "The sea returns everything but apologies."],
   },
   brann: {

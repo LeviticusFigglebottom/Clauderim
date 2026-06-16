@@ -785,6 +785,18 @@ run(`{
 }`);
 check("overworld hides secret caches", run(`G.player._secN`) > 0);
 check("searching a secret rewards and marks it", run(`G.player._secOk`) === true);
+
+// region-specific weapons: exist, are honable weapons, sold in their region
+check("region weapons exist and are honable weapons", run(`
+  ["march_falchion","boar_spear","fen_cleaver","rimebrand","cinder_scimitar","tide_harpoon"]
+    .every(id => ITEMS[id] && ITEMS[id].type === "weapon" && !ITEMS[id].scaleWithLevel)
+`) === true);
+check("region weapons are placed in their regions", run(`
+  NPC_DEFS.bram.shop.stock.includes("march_falchion") &&
+  NPC_DEFS.sigrun.shop.stock.includes("rimebrand") &&
+  NPC_DEFS.senn.shop.stock.includes("tide_harpoon") &&
+  LOOT.chest_rare.some(r => r.id === "cinder_scimitar")
+`) === true);
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 
