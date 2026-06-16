@@ -797,6 +797,24 @@ check("region weapons are placed in their regions", run(`
   NPC_DEFS.senn.shop.stock.includes("tide_harpoon") &&
   LOOT.chest_rare.some(r => r.id === "cinder_scimitar")
 `) === true);
+
+// faction quest + faction-dependent reprisal encounters + new books
+check("toll-road faction quest exists", run(`QUESTS.sq_tollroad && QUESTS.sq_tollroad.type === "side"`));
+run(`{ G.player.rep = {}; G.player.addRep("ashcoats", 3); G.player._fr = G.player.getRep("ashcoats"); }`);
+check("multiple factions are tracked", run(`G.player._fr`) === 3);
+run(`{
+  Game.enterMap("overworld", 220*32, 156*32);
+  G.flags.road_faction = "levy"; G.encAlertT = 0;
+  const n0 = G.entities.length;
+  for (let i = 0; i < 6; i++) Game.spawnEncounter();   // exercise the reprisal-banner path
+  delete G.flags.road_faction;
+  G.player._frEnc = (G.entities.length > n0 && G.encAlertT > 0);
+}`);
+check("faction-aligned encounters still fire with an alert", run(`G.player._frEnc`) === true);
+check("new lore books exist and are carryable", run(`
+  BOOKS.bram_ledger && BOOKS.ralka_journal && BOOKS.tollroad_accord &&
+  ITEMS.book_bram_ledger && ITEMS.book_bram_ledger.type === "book"
+`));
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 

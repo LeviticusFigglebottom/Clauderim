@@ -278,6 +278,17 @@ const QUESTS = {
     rewardText: "Senn kept four pearls for passage and pressed the rest of her pouch on you — 'Work an altar with them. Something that floats.'",
   },
 
+  sq_tollroad: {
+    name: "The Toll Road", type: "side",
+    stages: [
+      {
+        journal: "Caldus says the south road is held by two keepers who hate each other more than they hate the dark: the Wardens' Levy, lawful and heavy-handed, gibbets at every milestone; and the Ashcoat Company, road-orphans who clear it of bandits by being the last bandits standing. Each wants me to tip the scale. Whoever I back will guard my passage — and the other will mark me on it. There is no keeping out of it that survives the winter.",
+        objective: { kind: "talk", npc: "caldus", hint: "Choose who keeps the south road" },
+      },
+    ],
+    rewards: {},  // the reward is which faction owes you, and which hunts you — set in dialogue
+  },
+
   sq_hollowing: {
     name: "The Hollowing", type: "side",
     stages: [

@@ -61,8 +61,10 @@ const UI = {
     stock("petra", ["book_duskmere_book"]);
     stock("sigrun", ["book_frosthollow_book"]);
     stock("maren", ["book_alchemy_primer"]);
-    stock("caldus", ["book_undermarch_book", "stormcaller"]);
+    stock("caldus", ["book_undermarch_book", "book_tollroad_accord", "stormcaller"]);
     stock("senn", ["book_tidelost_book"]);
+    stock("bram", ["book_bram_ledger"]);
+    stock("ralka", ["book_ralka_journal"]);
     LOOT.chest_fine.push({ w: 1, id: "book_wardens_book", n: [1, 1] });
     LOOT.chest_rare.push({ w: 1, id: "book_citadel_book", n: [1, 1] });
     LOOT.chest_rare.push({ w: 1, id: "ring_deep", n: [1, 1] });

@@ -209,5 +209,44 @@ The word for what he hoards is ending. A good one. Everyone's.
 
 I am going down to knock. If the knocking stops`,
   },
+
+  bram_ledger: {
+    title: "Bram's Bent Nails",
+    author: "Bram, smith of Emberfall (mostly margins and curses)",
+    text:
+`Day's takings, less the ore I'll never see again: nil.
+
+A blade is a promise you make to a stranger's enemy. Most of what I forge is promises to the wall — hinge, latch, brace, the unsung iron that keeps the cold out so the songs can happen inside. Nobody writes ballads about a good hinge. I would.
+
+Honing note, for the apprentice I'll never afford: an edge is not made sharp, it is made willing. You take what the metal already wants to do and you ask it, again and again, until asking and doing are the same motion. Gold buys the coal. Patience buys the rest.
+
+The Emberborn came through again, half-dead, wanting steel. I gave it. They always pay, eventually, in the only coin the March still mints: they come back, or they don't.`,
+  },
+
+  ralka_journal: {
+    title: "A Huntress's Tally",
+    author: "Ralka, of the Emberfall wall-guard",
+    text:
+`Wolves down this moon: nine. Wolves that were only hungry: nine. There is no ninth kind of wolf, whatever the wall-guard whisper. The barrows make them bold, not wicked.
+
+The red deer have stopped running from the dark and started running from the quiet — they bolt at a held breath now, not a snapped twig. Whatever Hrolgar's word did to the Pass, the animals heard it first. They always do.
+
+Hunter's craft, since the boys keep asking: coals, not flame. Fat side down. Turn it when it sings. The same that's true of meat is true of patience and of grief — low heat, long time, and don't keep lifting the lid to look.
+
+I keep a tally because someone should. The March forgets its dead the way a forest forgets a fire: greenly, and too soon.`,
+  },
+
+  tollroad_accord: {
+    title: "The Toll-Road Accord (annotated)",
+    author: "unsigned; a hand like Caldus's in the margins",
+    text:
+`Be it known that the south road, from the crossroads to the cinder verge, is kept.
+
+By the Wardens' Levy: lawfully, in the old king's name, with a gibbet at each milestone for the discouragement of robbery. They take a tithe and call it tax. They are not gentle. They are not the worst.
+
+By the Ashcoat Company: a free band of the road's own orphans, who clear it of bandits by the simple method of being the only bandits left. They take a toll and call it toll. They keep no gibbets — the road itself does their advertising.
+
+[margin, that crabbed hand:] Two keepers, one road, and a traveler must choose whose mercy to owe. There is no third option that survives the winter. Whoever you side with will love you exactly as long as it is useful, and the other will remember you exactly as long as that. Choose like someone who walks this road twice.`,
+  },
 };
 for (const id in BOOKS) BOOKS[id].id = id;

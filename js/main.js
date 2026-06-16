@@ -825,12 +825,14 @@ const Game = {
       return made;
     };
 
-    // standing tilts the odds: the disliked are ambushed; the well-regarded find allies
+    // standing tilts the odds: the disliked are ambushed; the well-regarded find allies;
+    // a road faction you've sided with leaves you be — and the one you crossed comes collecting
     const rep = p.getRep("march");
+    const rf = G.flags.road_faction;
     const kind = U.weighted(Math.random, [
-      { w: 5 + (rep < 0 ? 3 : 0), t: "ambush" },
+      { w: Math.max(1, 5 + (rep < 0 ? 3 : 0) - (rf === "ashcoat" ? 2 : 0)), t: "ambush" },
       { w: 2, t: "miniboss" },
-      { w: 3 + (rep > 4 ? 3 : 0), t: "skirmish" },
+      { w: 3 + (rep > 4 ? 3 : 0) + (rf && rf !== "none" ? 1 : 0), t: "skirmish" },
     ]).t;
 
     if (kind === "miniboss") {
@@ -843,7 +845,10 @@ const Game = {
       this.encounterAlert("A SKIRMISH", "March-guards and bandits, blade to blade. Pick a side or pass.", "#cbb78a");
     } else {
       ring(U.randi(Math.random, 3, 4), 150, false);
-      this.encounterAlert("AMBUSH", "Steel from the brush — they were waiting for you.", "#d89090");
+      // a crossed faction's reprisal is clearly named so it never reads as a random mob
+      if (rf === "levy") this.encounterAlert("ASHCOAT REPRISAL", "The free company hasn't forgotten whose writ you signed.", "#c08a3a");
+      else if (rf === "ashcoat") this.encounterAlert("LEVY PATROL", "Wardens' levy on the road — and they carry a writ with your name on it.", "#a8b0c0");
+      else this.encounterAlert("AMBUSH", "Steel from the brush — they were waiting for you.", "#d89090");
     }
   },
 

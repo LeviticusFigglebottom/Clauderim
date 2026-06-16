@@ -604,8 +604,45 @@ const DIALOGUES = {
           { text: "Why 'the Unlit'?", next: "lore_caldus" },
           { text: "Do you need anything out here?", next: "blooms_ask", cond: () => QS.stage("sq_blooms") === -1 },
           { text: "What do you know of the Undermarch?", next: "echo_ask", cond: () => QS.stage("sq_echo") === -1 && QS.stage("sq_blooms") === 999 },
+          { text: "Who keeps the south road these days?", next: "road_ask", cond: () => QS.stage("sq_tollroad") === -1 },
           { text: "Enjoy the solitude.", next: null },
         ],
+      },
+      road_ask: {
+        text: "The road? Two dogs and one bone. The Wardens' Levy keep it lawfully — a tithe, a gibbet every milestone, and the manners of men who've decided cruelty is paperwork. The Ashcoat Company keep it the other way — a toll, no gibbets, and the road itself for a warning. Both have sent word to the tower asking which way the famous Emberborn will lean. Lean, and the leaning sticks: whoever you back guards your passage; whoever you don't will know your face on their road.",
+        choices: [
+          { text: "Back the Levy — law, even ugly law, is law.", next: "road_levy" },
+          { text: "Back the Ashcoats — the road's orphans keep it best.", next: "road_ash" },
+          { text: "I keep the road for no one. Let them sort it.", next: "road_none" },
+          { text: "I'll think on it.", next: null },
+        ],
+      },
+      road_levy: {
+        text: "The lawful choice, and the heavier one. The Levy will wave you through their gibbets like kin — and the Ashcoats will come for you on the open road, who do not forgive a writ. Towns will warm to you. The free company will not.",
+        choices: [{ text: "(Side with the Wardens' Levy)", next: null, action: p => {
+          if (QS.stage("sq_tollroad") === -1) QS.start("sq_tollroad");
+          G.flags.road_faction = "levy"; p.addRep("march", 3); p.addRep("ashcoats", -3); p.gold += 180;
+          G.msg("You've thrown in with the Levy. The towns will remember it kindly — the Ashcoats, otherwise.", "good");
+          QS.complete("sq_tollroad");
+        } }],
+      },
+      road_ash: {
+        text: "The honest dishonest choice. The Ashcoats will let you pass for nothing now, and stand at your shoulder when the road turns ugly — but the Levy will hunt you with paperwork and pikes, and the town gates will get colder. Outlaws keep better promises than kings, in my experience. They have to.",
+        choices: [{ text: "(Side with the Ashcoat Company)", next: null, action: p => {
+          if (QS.stage("sq_tollroad") === -1) QS.start("sq_tollroad");
+          G.flags.road_faction = "ashcoat"; p.addRep("ashcoats", 3); p.addRep("march", -2); p.gainEmbers(260); p.addItem("fire_bomb", 2);
+          G.msg("You've thrown in with the Ashcoats. The road's orphans owe you safe passage — the Levy owes you a noose.", "ember");
+          QS.complete("sq_tollroad");
+        } }],
+      },
+      road_none: {
+        text: "Hah. The neutral's wage: both keepers spit when they say your name, and neither lifts a hand when the road turns on you. It's the cleanest answer and the loneliest. I've made it myself. Look where I sit.",
+        choices: [{ text: "(Keep the road for no one)", next: null, action: p => {
+          if (QS.stage("sq_tollroad") === -1) QS.start("sq_tollroad");
+          G.flags.road_faction = "none"; p.addRep("march", -1); p.addRep("ashcoats", -1); p.gainEmbers(80);
+          G.msg("You took no side. The road will take that personally, from both directions.", "bad");
+          QS.complete("sq_tollroad");
+        } }],
       },
       echo_ask: {
         text: "More than is healthy. When the line of Ald began, the first king did not take a throne — he took a torch, and went down through the Great Sink to argue with the Dark in person. He never came up. Something of him still paces the deep root of the realm: not a ghost, an *echo* — a flame that has forgotten everything except the argument. It has been burning, alone, in the dark, for an age. I think it should be allowed to stop. Wouldn't you want to be?",
