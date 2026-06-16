@@ -1126,10 +1126,14 @@ check("manual scale pins the buffer; auto adapts under load", run(`G.noSteer && 
 
 // storms strike during heavy rain
 run(`{
-  G.weather.kind = "rain"; G.weather.intensity = 1;
+  Game.enterMap("overworld", 220*32, 156*32);   // strikes only over open sky
   G.lightning = 0;
   let struck = false;
-  for (let i = 0; i < 4000 && !struck; i++) { Game.updateClock(0.05); if (G.lightning > 0) struck = true; }
+  for (let i = 0; i < 4000 && !struck; i++) {
+    G.weather.kind = "rain"; G.weather.intensity = 1; // hold the storm open so the clock can't drift it to clear
+    Game.updateClock(0.05);
+    if (G.lightning > 0) struck = true;
+  }
   G.struck = struck;
   G.lightning = 0.1;
   Game.updateClock(0.016);
