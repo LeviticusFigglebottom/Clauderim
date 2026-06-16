@@ -150,6 +150,7 @@ class Player extends Entity {
       }
       a += v;
     }
+    if (this.hasPerk("sm_3")) a *= 1.15;   // Master Fittings: your smith's eye improves any plate
     if (this.buffs.stoneskin) a += this.buffs.stoneskin.armor;
     a += this.enchBonus("armor");
     return a;
@@ -205,6 +206,12 @@ class Player extends Entity {
     if (this.hasPerk("en_4")) m *= 1.5;
     else if (this.hasPerk("en_1")) m *= 1.25;
     return m;
+  }
+  // alchemy perks make every potion you drink stronger
+  alchemyPotency() {
+    if (this.hasPerk("al_4")) return 1.5;
+    if (this.hasPerk("al_1")) return 1.25;
+    return 1;
   }
   itemEnchants(itemId) { return this.enchants[itemId] || []; }
   // summed numeric enchant bonus of a given key across equipped armor/shield
@@ -502,11 +509,13 @@ class Player extends Entity {
       });
       Sfx.play("throw");
     } else {
-      if (u.hp) this.heal(u.hp);
-      if (u.stam) this.stam = Math.min(this.stamMax, this.stam + u.stam);
-      if (u.mag) this.mag = Math.min(this.magMax, this.mag + u.mag);
+      const pot = this.alchemyPotency();
+      if (u.hp) this.heal(u.hp * pot);
+      if (u.stam) this.stam = Math.min(this.stamMax, this.stam + u.stam * pot);
+      if (u.mag) this.mag = Math.min(this.magMax, this.mag + u.mag * pot);
       if (u.embers) this.gainEmbers(u.embers);
       if (u.cure) delete this.status[u.cure];
+      if (this.hasPerk("al_4")) { delete this.status.burn; delete this.status.poison; delete this.status.frost; delete this.status.bleed; } // Panacea
       if (u.buff) this.buffs[u.buff.id] = Object.assign({ t: u.buff.dur }, u.buff);
       Sfx.play("drink");
     }

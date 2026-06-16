@@ -117,6 +117,13 @@ class Enemy extends Entity {
       if (G.map.outdoor) range *= U.lerp(1, 0.62, G.darkness());
       if (p) {
         range *= Math.max(0.35, 1 - (p.skills.sneak.lvl * 0.004 + p.sneakBonus() * 0.01) * (p.crouched ? 1 : 0.2));
+        // sneak perks: stack BELOW the floor above for true invisibility builds
+        if (p.crouched && p.hasPerk("sn_1")) range *= 0.6;        // Soft Step
+        if (p.hasPerk("sn_3") && p.crouched && !p.moving &&
+            (!G.map.outdoor || G.darkness() > 0.45)) range *= 0.3; // Dusk Sibling
+        // armor noise: plate gives you away, leathers hush
+        if (p.armorKindCount("heavy") >= 2) range *= 1.2;
+        else if (p.armorKindCount("light") >= 2) range *= 0.9;
         // approaching from behind is much harder to notice
         const behind = Math.abs(U.angDiff(this.facing, U.angTo(this.x, this.y, p.x, p.y))) > 1.7;
         if (behind) range *= 0.55;
@@ -196,7 +203,7 @@ class Enemy extends Entity {
       }
 
       case "attack": {
-        this.stateT -= tdt; // attack timers honor KYR's stillness
+        this.stateT -= tdt * (this.status.frost > 0 ? 0.62 : 1); // KYR's stillness + a chill in the limbs both slow the blow
         const def2 = this.def;
         if (this.attackPhase === "wind" && this.stateT <= 0) {
           this.attackPhase = "strike";

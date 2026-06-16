@@ -96,9 +96,9 @@ const SKILL_DEFS = {
     name: "Sneak", attr: "fin",
     desc: "Be the rumor, not the news.",
     perks: [
-      { id: "sn_1", name: "Soft Step", req: 10, desc: "30% harder to detect while crouched." },
+      { id: "sn_1", name: "Soft Step", req: 10, desc: "Far harder to detect while crouched — enemies notice you at much shorter range." },
       { id: "sn_2", name: "Knife Logic", req: 25, desc: "Sneak attacks with daggers deal ×6 damage." },
-      { id: "sn_3", name: "Dusk Sibling", req: 45, desc: "Nearly invisible while crouched and motionless in darkness." },
+      { id: "sn_3", name: "Dusk Sibling", req: 45, desc: "Crouched and still in shadow, you are very nearly unseeable." },
       { id: "sn_4", name: "Throatwriter", req: 70, desc: "All sneak attacks deal +50% damage." },
     ],
   },
@@ -106,20 +106,20 @@ const SKILL_DEFS = {
     name: "Smithing", attr: "str",
     desc: "Iron is a question. The forge is where you answer it.",
     perks: [
-      { id: "sm_1", name: "Apprentice Hammer", req: 10, desc: "Unlock steel smelting and steel gear." },
-      { id: "sm_2", name: "Honing Sense", req: 25, desc: "Crafted weapons gain +10% damage." },
-      { id: "sm_3", name: "Master Fittings", req: 45, desc: "Crafted armor gains +15% rating." },
-      { id: "sm_4", name: "Moonwright", req: 70, desc: "Unlock silvered forging." },
+      { id: "sm_1", name: "Forgewise", req: 10, desc: "Honing and forge-work cost 30% less gold." },
+      { id: "sm_2", name: "Honing Sense", req: 25, desc: "Each honing tier grants +12% damage instead of +8%." },
+      { id: "sm_3", name: "Master Fittings", req: 45, desc: "All armor you wear rates 15% higher." },
+      { id: "sm_4", name: "Moonwright", req: 70, desc: "Hone weapons one tier beyond the master's limit." },
     ],
   },
   alchemy: {
     name: "Alchemy", attr: "wil",
     desc: "The land is a cabinet of cures and cruelties; learn which shelf is which.",
     perks: [
-      { id: "al_1", name: "Field Brewer", req: 10, desc: "Brewed potions are 25% stronger." },
+      { id: "al_1", name: "Field Brewer", req: 10, desc: "Every potion you drink is 25% stronger." },
       { id: "al_2", name: "Thrifty Mortar", req: 25, desc: "20% chance to not consume ingredients." },
       { id: "al_3", name: "Iron Gut", req: 45, desc: "+25% poison resistance." },
-      { id: "al_4", name: "Panacea", req: 70, desc: "Brewed potions are 50% stronger and weigh nothing." },
+      { id: "al_4", name: "Panacea", req: 70, desc: "Potions are 50% stronger and purge all ailments as you drink." },
     ],
   },
   speech: {

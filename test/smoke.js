@@ -587,6 +587,49 @@ check("save/load keeps honing and belt",
 check("save/load keeps favorites and seen hints",
   run(`G.player.isFavorite("iron_sword","item") && G.player.seenHints.boss === true`));
 check("save/load keeps gear loadouts", run(`G.player.hasLoadout(2) === true`));
+
+// Pass 1: perks made impactful
+run(`{
+  G.player.honing.iron_sword = 2;
+  const base = Combat.weaponDamage(G.player, ITEMS.iron_sword, false);
+  G.player.perks.sm_2 = true;
+  const honed = Combat.weaponDamage(G.player, ITEMS.iron_sword, false);
+  delete G.player.perks.sm_2;
+  G.player._honR = honed / base;
+}`);
+check("Honing Sense raises honing to +12%/tier", Math.abs(run(`G.player._honR`) - (1.24 / 1.16)) < 0.01);
+run(`G.player.perks.al_1 = true; G.player._ap1 = G.player.alchemyPotency(); G.player.perks.al_4 = true; G.player._ap4 = G.player.alchemyPotency(); delete G.player.perks.al_1; delete G.player.perks.al_4;`);
+check("Field Brewer potions ×1.25", run(`G.player._ap1`) === 1.25);
+check("Panacea potions ×1.5", run(`G.player._ap4`) === 1.5);
+run(`{
+  const sv = G.player.equip;
+  G.player.equip = { weapon: null, ranged: null, shield: null, head: null, body: "iron_cuirass", legs: null, trinket: null };
+  const a0 = G.player.armorTotal();
+  G.player.perks.sm_3 = true;
+  const a1 = G.player.armorTotal();
+  delete G.player.perks.sm_3;
+  G.player.equip = sv;
+  G.player._smR = a1 / a0;
+}`);
+check("Master Fittings = +15% armor", Math.abs(run(`G.player._smR`) - 1.15) < 0.01);
+run(`{
+  G.player.perks.al_4 = true;
+  G.player.status.poison = 5; G.player.status.burn = 5;
+  if (!G.player.hasItem("small_hp_potion")) G.player.addItem("small_hp_potion", 1);
+  G.player.useConsumable("small_hp_potion");
+  delete G.player.perks.al_4;
+  G.player._cured = (!G.player.status.poison && !G.player.status.burn);
+}`);
+check("Panacea purges ailments on drink", run(`G.player._cured`) === true);
+run(`{
+  Game.enterMap("overworld", 220*32, 156*32);
+  const mbE = new Enemy("bandit", G.player.x + 50, G.player.y);
+  G.entities.push(mbE);
+  mbE.state = "attack"; mbE.attackPhase = "wind"; mbE.staggerT = 0;
+  Combat.projectileHit({ dmg: 1, dtype: "shock", edmg: {}, slow: 0, magBurn: 10, spell: "spark_lash", radius: 0 }, mbE);
+  G.player._mb = (mbE.staggerT > 0 && mbE.state !== "attack");
+}`);
+check("spark_lash magBurn interrupts a winding foe", run(`G.player._mb`) === true);
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 

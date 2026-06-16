@@ -15,9 +15,9 @@ const Combat = {
 
   weaponDamage(p, w, heavy) {
     let dmg = w.dmg;
-    // forge honing: +8% per tier
+    // forge honing: +8% per tier (+12% with Honing Sense)
     const tier = (p.honing && p.honing[w.id]) || 0;
-    if (tier) dmg *= 1 + tier * 0.08;
+    if (tier) dmg *= 1 + tier * (p.hasPerk("sm_2") ? 0.12 : 0.08);
     // attribute scaling
     if (w.scale) {
       let bonus = 0;
@@ -153,6 +153,13 @@ const Combat = {
       p.gainSkill("destruction", 5);
       if (pr.slow) e.status.frost = Math.max(e.status.frost || 0, pr.slow * (p.hasPerk("de_3") ? 2 : 1));
       if (pr.dtype === "fire") e.status.burn = Math.max(e.status.burn || 0, 3 * (p.hasPerk("de_3") ? 2 : 1));
+      if (pr.magBurn && !e.def.boss) {
+        // mind-burn: scramble a winding/casting foe and delay its next action
+        if (e.state === "attack") { e.staggerT = Math.max(e.staggerT, 0.55); e.attackPhase = null; e.state = "chase"; }
+        e.attackCd = Math.max(e.attackCd || 0, 1.1);
+        e.projCd = Math.max(e.projCd || 0, 1.4 * (p.hasPerk("de_3") ? 1.6 : 1));
+        G.float(e.x, e.y - e.r - 16, "mind-burned", "#cfe0ff", 12);
+      }
     } else {
       p.gainSkill("archery", 6);
       if (pr.slow) { e.status.frost = Math.max(e.status.frost || 0, pr.slow); e.staggerT = Math.max(e.staggerT, 0.5); }
@@ -296,6 +303,12 @@ const Combat = {
         }
       }
       QS.onKill(def.id);
+      // Red Harvest: a one-hander kill feeds the swing that made it
+      const wk = p.weapon();
+      if (wk && wk.skill === "onehand" && p.hasPerk("oh_4")) {
+        p.stam = Math.min(p.stamMax, p.stam + 14);
+        p.heal(6);
+      }
     }
 
     if (def.boss) this.bossFelled(e);
@@ -522,7 +535,7 @@ const Combat = {
         ang, speed: sp.speed, dmg: sp.dmg * power, dtype: sp.dtype,
         color: sp.color, from: "player",
         radius: sp.radius * (p.hasPerk("de_4") ? 1 : 1) + (p.hasPerk("de_4") && !sp.radius ? 36 : 0),
-        pierce: sp.pierce, slow: sp.slow || 0, spell: spellId, r: 6,
+        pierce: sp.pierce, slow: sp.slow || 0, magBurn: sp.magBurn || 0, spell: spellId, r: 6,
       });
     } else if (sp.kind === "nova") {
       FX.ring(p.x, p.y, sp.radius, sp.color);

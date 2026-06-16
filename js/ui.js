@@ -809,6 +809,13 @@ const UI = {
 
   /* ============ crafting ============ */
 
+  // cost to hone to the next tier; Moonwright (sm_4) adds a dearer tier past the master limit
+  honeCost(tier) {
+    if (tier < HONE_TIERS.length) return HONE_TIERS[tier];
+    const base = HONE_TIERS[HONE_TIERS.length - 1];
+    return { gold: Math.round(base.gold * 2.2), mats: base.mats };
+  },
+
   openCraft(kind) {
     this.closeDialogue();
     G.setState("station");
@@ -844,26 +851,29 @@ const UI = {
     /* the forge also hones edges */
     let honing = "";
     if (kind === "smith") {
-      honing = `<h2 style="margin-top:22px">Hone an Edge — +8% damage per tier</h2>`;
+      const honeStep = p.hasPerk("sm_2") ? 12 : 8;
+      const maxTier = HONE_TIERS.length + (p.hasPerk("sm_4") ? 1 : 0);
+      honing = `<h2 style="margin-top:22px">Hone an Edge — +${honeStep}% damage per tier</h2>`;
       const honables = p.inventory.filter(s => ["weapon", "bow", "staff"].includes(ITEMS[s.id].type));
       if (!honables.length) honing += `<i style="color:#5d574c">Nothing in your pack takes an edge.</i>`;
       for (const s of honables) {
         const it = ITEMS[s.id];
         const tier = p.honing[s.id] || 0;
-        if (tier >= HONE_TIERS.length) {
+        if (tier >= maxTier) {
           honing += `<div class="craft-row"><span class="c-name r-${it.rarity}">${U.esc(this.itemName(it, p))}</span>
             <span class="c-req have">honed to the bone</span></div>`;
           continue;
         }
-        const cost = HONE_TIERS[tier];
-        let req = `<span class="${p.gold >= cost.gold ? "have" : "lack"}">${cost.gold} g</span> `, can = p.gold >= cost.gold;
+        const cost = this.honeCost(tier);
+        const goldCost = Math.round(cost.gold * (p.hasPerk("sm_1") ? 0.7 : 1));
+        let req = `<span class="${p.gold >= goldCost ? "have" : "lack"}">${goldCost} g</span> `, can = p.gold >= goldCost;
         for (const m in cost.mats) {
           const ok = p.countItem(m) >= cost.mats[m];
           if (!ok) can = false;
           req += `<span class="${ok ? "have" : "lack"}">${ITEMS[m].name} ${p.countItem(m)}/${cost.mats[m]}</span> `;
         }
         honing += `<div class="craft-row">
-          <span class="c-name r-${it.rarity}">${U.esc(this.itemName(it, p))} → +${tier + 1}</span>
+          <span class="c-name r-${it.rarity}">${U.esc(this.itemName(it, p))} → +${tier + 1}${tier + 1 > HONE_TIERS.length ? " ✦" : ""}</span>
           <span><span class="c-req">${req}</span>
           <button class="act-btn" data-hone="${s.id}" ${can ? "" : "disabled"}>Hone</button></span></div>`;
       }
@@ -889,10 +899,13 @@ const UI = {
     panel.querySelectorAll("[data-hone]").forEach(b => b.onclick = () => {
       const id = b.dataset.hone;
       const tier = p.honing[id] || 0;
-      const cost = HONE_TIERS[tier];
-      if (p.gold < cost.gold) return;
+      const maxTier = HONE_TIERS.length + (p.hasPerk("sm_4") ? 1 : 0);
+      if (tier >= maxTier) return;
+      const cost = this.honeCost(tier);
+      const goldCost = Math.round(cost.gold * (p.hasPerk("sm_1") ? 0.7 : 1));
+      if (p.gold < goldCost) return;
       for (const m in cost.mats) if (p.countItem(m) < cost.mats[m]) return;
-      p.gold -= cost.gold;
+      p.gold -= goldCost;
       for (const m in cost.mats) p.removeItem(m, cost.mats[m]);
       p.honing[id] = tier + 1;
       p.gainSkill("smithing", 18);
