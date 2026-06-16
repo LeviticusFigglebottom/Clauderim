@@ -495,21 +495,23 @@ class Ally extends Entity {
     this.power = power || 1;
     this.orbit = Math.random() * TAU;
     this.fireCd = 1;
-    this.lightR = kind === "lantern" ? 150 : kind === "warden_shade" ? 60 : 80;
-    this.lightColor = kind === "lantern" ? "255,233,168" : kind === "warden_shade" ? "185,168,255" : "255,150,60";
+    const melee = kind === "warden_shade" || kind === "guard";
+    this.lightR = kind === "lantern" ? 150 : melee ? 50 : 80;
+    this.lightColor = kind === "lantern" ? "255,233,168" : kind === "guard" ? "154,176,216" : kind === "warden_shade" ? "185,168,255" : "255,150,60";
   }
   update(dt) {
     const p = G.player;
     if (!p || p.dead) { this.dead = true; return; }
+    const meleeCol = this.kind === "guard" ? "#9ab0d8" : "#b9a8ff";
     this.life -= dt;
     if (this.life <= 0) {
       this.dead = true;
-      FX.burst(this.x, this.y, this.kind === "lantern" ? "#ffe9a8" : this.kind === "warden_shade" ? "#b9a8ff" : "#ffb060", 14, 80);
+      FX.burst(this.x, this.y, this.kind === "lantern" ? "#ffe9a8" : this.kind === "guard" ? "#9ab0d8" : this.kind === "warden_shade" ? "#b9a8ff" : "#ffb060", 14, 80);
       return;
     }
 
-    // warden-shade: a melee guardian that seeks the nearest foe and hews it
-    if (this.kind === "warden_shade") {
+    // melee allies (warden-shade / march-guard): seek the nearest foe and hew it
+    if (this.kind === "warden_shade" || this.kind === "guard") {
       let best = null, bd = 340 * 340;
       for (const e of G.entities) {
         if (!e.isEnemy || e.dead || e.def.behavior === "flee") continue;
@@ -526,7 +528,7 @@ class Ally extends Entity {
         } else if (this.fireCd <= 0) {
           this.fireCd = 0.85;
           Combat.applyDamage(best, { amount: 16 * this.power, dtype: "phys", poiseDmg: 16, attacker: p });
-          FX.slash(this.x + Math.cos(ang) * this.r, this.y + Math.sin(ang) * this.r, ang, "#b9a8ff", 26);
+          FX.slash(this.x + Math.cos(ang) * this.r, this.y + Math.sin(ang) * this.r, ang, meleeCol, 26);
           Sfx.play("swing");
         }
       } else {
@@ -535,7 +537,7 @@ class Ally extends Entity {
         this.x += (tx - this.x) * Math.min(1, dt * 4);
         this.y += (ty - this.y) * Math.min(1, dt * 4);
       }
-      if (Math.random() < 1.5 * dt) FX.sparkle(this.x, this.y, "#b9a8ff");
+      if (Math.random() < 1.5 * dt) FX.sparkle(this.x, this.y, meleeCol);
       return;
     }
 

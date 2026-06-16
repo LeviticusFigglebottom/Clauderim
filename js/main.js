@@ -751,6 +751,85 @@ const Game = {
     Input.endFrame();
   },
 
+  /* ---------------- random encounters ---------------- */
+
+  // a loud, unmissable heads-up that something just kicked off
+  encounterAlert(title, sub, col) {
+    G.banner(title, sub);
+    G.questToast(title, sub);
+    G.encAlertT = 5;           // HUD pulse window (render reads G.encAlertT)
+    G.encAlertCol = col || "#d89090";
+    Sfx.play("roar");
+    G.shake(6, 0.45);
+    G.msg(`⚔ ${title} — ${sub}`, "bad");
+  },
+
+  tickEncounters(dt) {
+    const p = G.player;
+    if (G.encAlertT) G.encAlertT = Math.max(0, G.encAlertT - dt);
+    if (!p || p.dead || G.state !== "play" || !G.map.outdoor || G.bossFight) return;
+    if (World.nearSafeZone(G.map, p.x, p.y, 80)) return;     // never at the town gate
+    if (G.encCd === undefined) G.encCd = U.randf(Math.random, 60, 110);
+    G.encCd -= dt;
+    if (G.encCd > 0) return;
+    G.encCd = U.randf(Math.random, 80, 150);
+    // don't pile a new event onto an existing brawl
+    let chasing = 0;
+    for (const e of G.entities) if (e.isEnemy && !e.dead && e.state === "chase") chasing++;
+    if (chasing > 2) return;
+    this.spawnEncounter();
+  },
+
+  spawnEncounter() {
+    const p = G.player, map = G.map;
+    const key = BIOME_TABLE_KEYS[World.biomeAtPx(map, p.x, p.y)] || "heartlands";
+    const table = (SPAWN_TABLES[key] || SPAWN_TABLES.heartlands).filter(r => {
+      const def = ENEMY_TYPES[r.id];
+      return def && def.behavior !== "flee" && !(def.tags && def.tags.includes("critter"));
+    });
+    if (!table.length) return;
+    const pickEnemy = () => U.weighted(Math.random, table).id;
+    const ring = (count, dist, elite) => {
+      let made = 0;
+      for (let n = 0; n < count; n++) {
+        for (let tries = 0; tries < 8; tries++) {
+          const a = Math.random() * TAU, rr = dist + Math.random() * 60;
+          const ex = p.x + Math.cos(a) * rr, ey = p.y + Math.sin(a) * rr;
+          if (World.circleBlocked(map, ex, ey, 14)) continue;
+          const e = new Enemy(pickEnemy(), ex, ey);
+          e.homeX = ex; e.homeY = ey;
+          if (elite) e.makeElite();
+          e.enterChase();
+          G.entities.push(e);
+          made++;
+          break;
+        }
+      }
+      return made;
+    };
+
+    // standing tilts the odds: the disliked are ambushed; the well-regarded find allies
+    const rep = p.getRep("march");
+    const kind = U.weighted(Math.random, [
+      { w: 5 + (rep < 0 ? 3 : 0), t: "ambush" },
+      { w: 2, t: "miniboss" },
+      { w: 3 + (rep > 4 ? 3 : 0), t: "skirmish" },
+    ]).t;
+
+    if (kind === "miniboss") {
+      ring(1, 200, true);
+      this.encounterAlert("AN ASHEN CHAMPION", "Something out there burns brighter — and meaner.", "#ff7a3a");
+    } else if (kind === "skirmish") {
+      ring(U.randi(Math.random, 3, 4), 170, false);                         // the bandits
+      const guards = U.randi(Math.random, 2, 3);
+      for (let n = 0; n < guards; n++) G.entities.push(new Ally("guard", 45, 1.4));  // March-guards, blades already out
+      this.encounterAlert("A SKIRMISH", "March-guards and bandits, blade to blade. Pick a side or pass.", "#cbb78a");
+    } else {
+      ring(U.randi(Math.random, 3, 4), 150, false);
+      this.encounterAlert("AMBUSH", "Steel from the brush — they were waiting for you.", "#d89090");
+    }
+  },
+
   handleMetaKeys() {
     if (G.state === "play" && Input.pressed("toggleview")) {
       G.viewMode = G.viewMode === "fp" ? "top" : "fp";
@@ -806,6 +885,7 @@ const Game = {
     Projectile.update(dt);
     FX.update(dt);
     World.updateSpawners(dt);
+    this.tickEncounters(dt);
 
     // corpses age out
     for (let i = G.corpsePile.length - 1; i >= 0; i--) {

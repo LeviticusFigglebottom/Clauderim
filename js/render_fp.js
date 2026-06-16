@@ -659,7 +659,7 @@ const RenderFP = {
       if (e.dead || e === p) continue;
       if (e instanceof Ally) {
         addIf(e.x, e.y, 0.45, 0.5, (c) => {
-          const col = e.kind === "lantern" ? "#ffe9a8" : e.kind === "warden_shade" ? "#b9a8ff" : "#ffb060";
+          const col = e.kind === "lantern" ? "#ffe9a8" : e.kind === "guard" ? "#9ab0d8" : e.kind === "warden_shade" ? "#b9a8ff" : "#ffb060";
           const fl = 0.7 + 0.3 * Math.sin(tm * 7 + e.orbit);
           c.save();
           c.shadowColor = col; c.shadowBlur = 30;

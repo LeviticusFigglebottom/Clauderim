@@ -759,6 +759,18 @@ run(`{
 check("keybinds rebind, persist, and reset", run(`G.player._b1`) === "KeyG" && run(`G.player._bp`) === true && run(`G.player._b2`) === "KeyR");
 run(`{ G.settings.binds = { roll: ["KeyB"] }; Input.applyBinds(); G.player._ab = BINDS.roll[0]; Input.resetBinds(); }`);
 check("saved binds apply over defaults on load", run(`G.player._ab`) === "KeyB");
+
+// random encounters: spawn foes (and allies in a skirmish) + raise an unmissable alert
+run(`{
+  Game.enterMap("overworld", 220*32, 156*32);
+  G.encAlertT = 0;
+  const n0 = G.entities.length;
+  Game.spawnEncounter();
+  G.player._encGrew = G.entities.length > n0;
+  G.player._encAlert = G.encAlertT > 0;
+}`);
+check("an encounter spawns combatants", run(`G.player._encGrew`) === true);
+check("an encounter raises the alert indicator", run(`G.player._encAlert`) === true);
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 

@@ -741,13 +741,13 @@ const Render = {
 
     if (e instanceof Player) { this.drawPlayer(ctx, e, x, y); return; }
     if (e instanceof Ally) {
-      const col = e.kind === "lantern" ? "#ffe9a8" : e.kind === "warden_shade" ? "#b9a8ff" : "#ffb060";
+      const col = e.kind === "lantern" ? "#ffe9a8" : e.kind === "guard" ? "#9ab0d8" : e.kind === "warden_shade" ? "#b9a8ff" : "#ffb060";
       const fl = 0.7 + 0.3 * Math.sin(G.elapsed * 7 + e.orbit);
       ctx.save();
       ctx.shadowColor = col; ctx.shadowBlur = 16;
       ctx.fillStyle = col;
       ctx.globalAlpha = 0.55 + fl * 0.4;
-      if (e.kind === "warden_shade") {
+      if (e.kind === "warden_shade" || e.kind === "guard") {
         // a hooded, blade-bearing silhouette
         ctx.beginPath(); ctx.ellipse(x, y - 8, 5, 9, 0, 0, TAU); ctx.fill();
         ctx.fillRect(x + Math.cos(e.facing) * 6 - 1, y - 14, 2, 16);
@@ -1395,6 +1395,18 @@ const Render = {
       }
       ctx.fillStyle = "rgba(138,131,120,0.6)"; ctx.font = "9px serif";
       ctx.fillText("wheel or [ ] cycle · T use", G.W / 2, by - 4);
+      ctx.textAlign = "left";
+    }
+
+    /* random-encounter klaxon — pulses until the alert window lapses */
+    if (G.encAlertT > 0) {
+      const a = 0.55 + 0.45 * Math.sin(G.elapsed * 9);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = G.encAlertCol || "#d89090";
+      ctx.font = "bold 18px serif"; ctx.textAlign = "center";
+      ctx.fillText("⚔  ENCOUNTER", G.W / 2, 88);
+      ctx.restore();
       ctx.textAlign = "left";
     }
 
