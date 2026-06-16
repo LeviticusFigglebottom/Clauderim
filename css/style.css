@@ -166,6 +166,7 @@ html, body {
 .msg-line.good { color: #b9d8a0; }
 .msg-line.bad { color: #d89090; }
 .msg-line.ember { color: var(--ember); }
+.msg-line.hint { color: var(--gold); font-style: italic; }
 
 #area-banner {
   position: absolute; top: 17%; left: 0; right: 0; text-align: center;
@@ -377,6 +378,15 @@ html, body {
 
 /* ---------------- Help ---------------- */
 #help-screen { background: rgba(0,0,0,0.8); z-index: 65; }
+#favorites-screen { background: rgba(0,0,0,0.82); z-index: 66; }
+.fav-panel { max-width: 720px; width: 90%; }
+#fav-content { margin-bottom: 16px; max-height: 60vh; overflow-y: auto; }
+.fav-cat { color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; font-size: 12px; margin: 12px 0 6px; }
+.fav-row { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border: 1px solid rgba(74,64,48,0.6); margin-bottom: 5px; cursor: pointer; }
+.fav-row:hover { background: rgba(201,168,106,0.12); }
+.fav-row.equipped { border-color: var(--gold); }
+.fav-row .f-name { flex: 1; }
+.fav-row .f-kind { color: var(--ash); font-size: 12px; }
 .help-panel { width: 840px; }
 #help-content { columns: 2; column-gap: 40px; font-size: 14px; line-height: 1.7; margin-bottom: 18px; }
 #help-content h3 { color: var(--gold); font-weight: 400; letter-spacing: 0.15em; margin: 10px 0 6px; font-size: 15px; text-transform: uppercase; break-after: avoid; }

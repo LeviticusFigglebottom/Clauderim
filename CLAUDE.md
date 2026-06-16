@@ -136,6 +136,12 @@ multi-file. (Full detail + line numbers in `docs/CODEMAP.md`.)
 - **New SFX** → a recipe row in `SFX_TABLE` (`audio.js`), play with
   `Sfx.play("name")`. **New music mood** → `MOODS` + `Music.setMood`. Gated by
   `G.settings.sfx`/`.music`; nothing plays until `audioInit()` (first input).
+- **New onboarding hint** → `G.tip("uniqueKey", text)` at the trigger site. Shows once
+  per character (gold italic `msg-line.hint`), then remembered in `player.seenHints`
+  (already in `serialize`/`deserialize`). The **quick belt** (`player.belt`/`beltSel`,
+  wheel/`[ ]`/`T`) and **favorites** (`player.favorites`, `Z` → `UI.openFavorites`, a
+  pausing `"favorites"` state) both store type-tagged `{type:"item"|"spell",id}` and have
+  `beltToggle`/`favoriteToggle`/`isFavorite` — extend their menu hooks in `ui.js`.
 
 ## Combat model (the load-bearing numbers)
 

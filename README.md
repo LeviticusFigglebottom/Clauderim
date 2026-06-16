@@ -75,6 +75,7 @@ node test/smoke.js
 | **R** | Drink the Ember Flask |
 | **T** | Use the selected quick-belt slot (potion, throwable, or quick-swap weapon/spell) |
 | **Mouse wheel / [ ]** | Cycle the quick belt |
+| **Z** | Favorites — quick-select anything marked with ★ (equip/use, or assign to the belt) |
 | **E** | Interact (shrines, people, chests, herbs, doors) |
 | **Tab / I** | Menu · **M** map · **J** journal · **C** character · **Esc** system |
 

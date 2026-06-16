@@ -94,6 +94,14 @@ const G = {
     setTimeout(() => line.remove(), 5600);
   },
 
+  // one-shot teaching hint: shown once per character, then remembered in the save
+  tip(key, text) {
+    const p = G.player;
+    if (!p || !p.seenHints || p.seenHints[key]) return;
+    p.seenHints[key] = true;
+    G.msg(text, "hint");
+  },
+
   banner(title, sub = "") {
     const b = U.el("area-banner");
     b.innerHTML = U.esc(title) + (sub ? `<div class="sub">${U.esc(sub)}</div>` : "");

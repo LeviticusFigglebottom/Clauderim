@@ -306,6 +306,7 @@ class Enemy extends Entity {
           World.inArena(G.map, p.x, p.y, -10)) {
         this.engaged = true;
         G.bossFight = this;
+        G.tip("boss", "A Warden bars the way, and it will not bleed until you commit. The seal closes behind you.");
         UI.showBossBar(def);
         Music.setMood("boss");
         G.banner(def.intro || def.name.toUpperCase());

@@ -27,6 +27,7 @@ const UI = {
     U.el("btn-loadgame").onclick = () => { Sfx.play("ui"); this.openLoadList(); };
     U.el("btn-titlehelp").onclick = () => { Sfx.play("ui"); this.showHelp(); };
     U.el("help-close").onclick = () => { U.hide("help-screen"); if (G.state === "help") G.setState(G.prevState === "help" ? "title" : G.prevState); };
+    U.el("fav-close").onclick = () => this.closeFavorites();
     U.el("cg-back").onclick = () => { U.hide("chargen-screen"); U.show("title-screen"); G.setState("title"); };
     U.el("cg-begin").onclick = () => {
       const name = U.el("cg-name").value.trim() || "Wanderer";
@@ -198,8 +199,9 @@ const UI = {
         const eq = Object.values(p.equip).includes(s.id);
         const sel = this.selItem === s.id ? " sel" : "";
         const quick = p.beltIndexOf(s.id, "item") >= 0 ? ' <span style="color:#b9d8a0;font-size:11px">[belt]</span>' : "";
+        const fav = p.isFavorite(s.id, "item") ? ' <span style="color:#c9a86a;font-size:11px">★</span>' : "";
         list += `<div class="inv-row${eq ? " equipped" : ""}${sel}" data-item="${s.id}">
-          <span class="iname r-${it.rarity}">${U.esc(this.itemName(it, p))}${s.n > 1 ? " ×" + s.n : ""}${quick}</span>
+          <span class="iname r-${it.rarity}">${U.esc(this.itemName(it, p))}${s.n > 1 ? " ×" + s.n : ""}${quick}${fav}</span>
           <span class="imeta">${this.itemMeta(it)} · ${it.weight || 0}wt</span></div>`;
       }
     }
@@ -251,6 +253,9 @@ const UI = {
       const onBelt = p.beltIndexOf(it.id, "item") >= 0;
       actions += `<button class="act-btn" data-act="belt">${onBelt ? "Remove from Belt" : "Add to Belt"}</button>`;
     }
+    if (["weapon", "staff", "bow", "shield", "armor", "trinket", "consumable"].includes(it.type)) {
+      actions += `<button class="act-btn" data-act="fav">${p.isFavorite(it.id, "item") ? "★ Unfavorite" : "☆ Favorite"}</button>`;
+    }
     if (it.type === "book") actions += `<button class="act-btn" data-act="read">Read</button>`;
     if (it.type !== "key") actions += `<button class="act-btn danger" data-act="drop">Discard</button>`;
 
@@ -263,6 +268,7 @@ const UI = {
       if (b.dataset.act === "equip") p.equipItem(it.id);
       else if (b.dataset.act === "use") p.useConsumable(it.id);
       else if (b.dataset.act === "belt") { p.beltToggle(it.id, "item"); Sfx.play("ui"); }
+      else if (b.dataset.act === "fav") { p.favoriteToggle(it.id, "item"); Sfx.play("ui"); }
       else if (b.dataset.act === "read") { this.openBook(it.book); return; }
       else if (b.dataset.act === "drop") { p.removeItem(it.id, 1); Sfx.play("ui"); }
       this.renderMenu();
@@ -376,6 +382,7 @@ const UI = {
         <span class="sp-name">${sp.name}${onBelt ? ' <span style="color:#b9d8a0;font-size:11px">[belt]</span>' : ""}</span>
         <span class="spell-desc">${U.esc(sp.desc)}</span>
         <span class="sp-cost">${Combat.spellCost(p, sp)} mg</span>
+        <button class="act-btn" data-spellfav="${id}">${p.isFavorite(id, "spell") ? "★" : "☆"}</button>
         <button class="act-btn" data-spellbelt="${id}">${onBelt ? "− Belt" : "+ Belt"}</button></div>`;
     }
     if (!spells) spells = `<i style="color:#5d574c">You know no spells. Serah and the hermit Caldus teach those with coin.</i>`;
@@ -396,6 +403,12 @@ const UI = {
     c.querySelectorAll("[data-spellbelt]").forEach(el => el.onclick = ev => {
       ev.stopPropagation();
       G.player.beltToggle(el.dataset.spellbelt, "spell");
+      Sfx.play("ui");
+      this.renderMenu();
+    });
+    c.querySelectorAll("[data-spellfav]").forEach(el => el.onclick = ev => {
+      ev.stopPropagation();
+      G.player.favoriteToggle(el.dataset.spellfav, "spell");
       Sfx.play("ui");
       this.renderMenu();
     });
@@ -1164,6 +1177,74 @@ const UI = {
     });
   },
 
+  /* ============ favorites (Skyrim-style quick-select) ============ */
+
+  openFavorites() {
+    if (G.state !== "play") return;
+    const p = G.player;
+    if (!p) return;
+    p.draw = null; G.slowmoAim = false; p.holding = false; p.holdT = 0;
+    if (document.exitPointerLock) document.exitPointerLock();
+    G.setState("favorites");
+    U.show("favorites-screen");
+    this.renderFavorites();
+    Sfx.play("ui");
+  },
+
+  closeFavorites() {
+    U.hide("favorites-screen");
+    if (G.state === "favorites") G.setState("play");
+  },
+
+  renderFavorites() {
+    const p = G.player;
+    const box = U.el("fav-content");
+    if (!p.favorites.length) {
+      box.innerHTML = `<i style="color:#5d574c">No favorites yet. Open your pack [Tab] or the Magic tab and mark gear, potions and spells with ★ — they gather here for quick selection.</i>`;
+      return;
+    }
+    let html = "";
+    for (let i = 0; i < p.favorites.length; i++) {
+      const f = p.favorites[i];
+      if (f.type === "spell") {
+        const sp = SPELLS[f.id]; if (!sp) continue;
+        const eq = p.equippedSpell === f.id;
+        html += `<div class="fav-row${eq ? " equipped" : ""}" data-fav="${i}">
+          <span class="f-name">${sp.name}</span>
+          <span class="f-kind">spell · ${Combat.spellCost(p, sp)} mg${eq ? " · equipped" : ""}</span>
+          <button class="act-btn" data-favbelt="${i}">${p.beltIndexOf(f.id, "spell") >= 0 ? "− Belt" : "+ Belt"}</button></div>`;
+      } else {
+        const it = ITEMS[f.id]; if (!it) continue;
+        const have = p.countItem(f.id), eq = Object.values(p.equip).includes(f.id);
+        const isC = it.type === "consumable";
+        html += `<div class="fav-row${eq ? " equipped" : ""}" data-fav="${i}">
+          <span class="f-name r-${it.rarity}">${U.esc(this.itemName(it, p))}${isC ? " ×" + have : ""}</span>
+          <span class="f-kind">${it.type}${eq ? " · equipped" : ""}${(!isC && have === 0) ? " · none carried" : ""}</span>
+          <button class="act-btn" data-favbelt="${i}">${p.beltIndexOf(f.id, "item") >= 0 ? "− Belt" : "+ Belt"}</button></div>`;
+      }
+    }
+    box.innerHTML = html;
+    box.querySelectorAll("[data-fav]").forEach(row => row.onclick = () => {
+      const f = p.favorites[parseInt(row.dataset.fav)];
+      if (!f) return;
+      if (f.type === "spell") {
+        if (p.spells.includes(f.id)) { p.equippedSpell = f.id; Sfx.play("ui"); }
+      } else {
+        const it = ITEMS[f.id];
+        if (it && it.type === "consumable") { if (p.hasItem(f.id)) p.useConsumable(f.id); else { Sfx.play("deny"); return; } }
+        else if (it) { if (p.hasItem(f.id)) p.equipItem(f.id); else { Sfx.play("deny"); return; } }
+      }
+      this.closeFavorites();
+    });
+    box.querySelectorAll("[data-favbelt]").forEach(b => b.onclick = ev => {
+      ev.stopPropagation();
+      const f = p.favorites[parseInt(b.dataset.favbelt)];
+      if (f) p.beltToggle(f.id, f.type);
+      Sfx.play("ui");
+      this.renderFavorites();
+    });
+  },
+
   /* ============ help / manual ============ */
 
   showHelp() {
@@ -1181,7 +1262,9 @@ const UI = {
       a press mid-swing <b>buffers the next blow</b>, and <b>Space</b> rolls out of the follow-through</p>
       <p><b>RMB hold</b> block with shield — raise it at the last instant to <b>parry</b></p>
       <p><b>F hold</b> draw bow, release to loose · <b>Q</b> cast equipped spell</p>
-      <p><b>1–4</b> speak Edicts of the Old Tongue · <b>R</b> drink the Ember Flask · <b>T</b> quick item · <b>P</b> photo (clean screenshot)</p>
+      <p><b>1–4</b> speak Edicts of the Old Tongue · <b>R</b> drink the Ember Flask · <b>P</b> photo (clean screenshot)</p>
+      <p><b>T</b> use the selected quick-belt slot · <b>mouse wheel</b> or <b>[ / ]</b> cycle the belt — consumables you gather fill it automatically; weapons and spells can be slotted for quick-swap</p>
+      <p><b>Z</b> favorites: a quick-select of anything you've marked with ★ in your pack or spellbook — pick to equip/use, or assign to a belt slot</p>
       <h3>World</h3>
       <p><b>E</b> interact — shrines, people, chests, herbs, doors, graves, campfires, wells</p>
       <p><b>Tab</b> menu · <b>M</b> map · <b>J</b> journal · <b>C</b> character · <b>Esc</b> close/system</p>

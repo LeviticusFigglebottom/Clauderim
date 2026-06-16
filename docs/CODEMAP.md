@@ -164,6 +164,10 @@ sparkle`, + `FX.update(dt)` integrates particles and `G.floats`.
   use/equip/swap with `T`. Methods: `beltAdd/beltToggle/beltCycle/beltUse/beltUseSelected/
   beltEntry/beltIndexOf`. (Replaced the old single `quickItem`; `deserialize` still reads
   a legacy `quickItem` into `belt[0]`.)
+- Favorites/onboarding: `favorites` (`[{type,id}]`, Skyrim-style quick-select via `Z` →
+  `UI.openFavorites`, a pausing `"favorites"` state), `isFavorite/favoriteToggle`.
+  `seenHints{}` records one-shot tutorial hints; fire them with `G.tip(key,text)`
+  (shows once per character via `msg-line.hint`, then remembered in the save).
 - Magic: `spells[], equippedSpell, edicts[], edictCds{}`.
 - Flask: `flask{max:3,charges:3,heal:60}`.
 - Vitals: `hp/hpMax (80+vig·14+…), stam/stamMax (60+end·9), mag/magMax (40+mnd·11+…),
@@ -446,7 +450,7 @@ exits pointer lock.
 ### input.js (`Input`, `BINDS`)
 - `BINDS`: up `W/↑`, down `S/↓`, left `A`, right `D`, turnL/R `←/→`, toggleview `V`,
   sprint `Shift`, roll `Space`, interact `E`, flask `R`, quickuse (use belt slot) `T`,
-  beltprev/beltnext `[`/`]`, photo `P`, crouch `Ctrl/X`, cast `Q`, aim `F` (hold),
+  beltprev/beltnext `[`/`]`, favorites `Z`, photo `P`, crouch `Ctrl/X`, cast `Q`, aim `F` (hold),
   edict1-4 `1-4`, menu `Tab/I`, map `M`, journal `J`, character `C`, pause `Esc`.
   **Attack/block are mouse** (not in BINDS): light `mouse.pressed`, heavy `mouse.down`,
   block `mouse.rdown`+shield. **Mouse wheel** cycles the belt (`Input.wheel`, cleared in

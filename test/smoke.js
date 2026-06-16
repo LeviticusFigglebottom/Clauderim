@@ -471,6 +471,20 @@ run(`
 check("all origins build valid characters", run(`G._origOk`) === true);
 check("eight starter classes available", run(`G._origN`) === 8);
 
+// favorites quick-select: mark items + spells, toggle off
+run(`
+  G.player.favorites = []; G.player.seenHints = {};
+  G.player.favoriteToggle("iron_sword", "item");
+  G.player.favoriteToggle("firebolt", "spell");
+`);
+check("favorites add weapon and spell", run(`G.player.isFavorite("iron_sword","item") && G.player.isFavorite("firebolt","spell")`));
+run(`G.player.favoriteToggle("iron_sword","item");`);
+check("favorites toggle off", run(`!G.player.isFavorite("iron_sword","item")`));
+
+// one-shot teaching hints fire once and remember themselves
+run(`G.player.seenHints = {}; G.tip("t_demo","once"); G.tip("t_demo","twice"); G.player._tipSeen = G.player.seenHints.t_demo === true;`);
+check("a hint marks itself seen", run(`G.player._tipSeen`) === true);
+
 // critters: deer flees the player and drops venison when hunted
 run(`{
   Game.enterMap("overworld", 220*32, 156*32);
@@ -536,9 +550,17 @@ check("NPCs use day posts and night homes", run(`{
 }`));
 
 // save/load round-trips the new state
-run(`G.player.belt[0] = { type: "item", id: "small_hp_potion" }; G.player.honing.iron_sword = 2; SaveSys.save(3); Game.loadGame(3);`);
+run(`
+  G.player.belt[0] = { type: "item", id: "small_hp_potion" };
+  G.player.honing.iron_sword = 2;
+  G.player.favorites = [{ type: "item", id: "iron_sword" }];
+  G.player.seenHints = { boss: true };
+  SaveSys.save(3); Game.loadGame(3);
+`);
 check("save/load keeps honing and belt",
   run(`G.player.honing.iron_sword === 2 && G.player.belt[0] && G.player.belt[0].id === "small_hp_potion"`));
+check("save/load keeps favorites and seen hints",
+  run(`G.player.isFavorite("iron_sword","item") && G.player.seenHints.boss === true`));
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 

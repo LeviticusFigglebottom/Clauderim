@@ -38,6 +38,8 @@ class Player extends Entity {
     this.flask = { max: 3, charges: 3, heal: 60 };
     this.belt = new Array(BELT_SIZE).fill(null); // quick belt: {type:"item"|"spell", id} | null
     this.beltSel = 0;                            // active belt slot
+    this.favorites = [];     // Skyrim-style quick-select: [{type:"item"|"spell", id}]
+    this.seenHints = {};     // one-shot tutorial hints already shown (G.tip)
     this.honing = {};        // weaponId -> forge tier (0-3)
     this.fpPitch = 0;        // first-person look pitch
     this.stepT = 0;          // footstep cadence
@@ -260,6 +262,7 @@ class Player extends Entity {
     if (it.type === "consumable" && this.belt && this.beltIndexOf(id, "item") < 0) {
       const free = this.belt.indexOf(null);
       if (free >= 0) this.belt[free] = { type: "item", id };
+      else G.tip("beltfull", "Your belt is full. Rearrange it from your pack [Tab] or favorites [Z].");
     }
   }
   countItem(id) {
@@ -332,6 +335,20 @@ class Player extends Entity {
     const n = this.belt.length;
     this.beltSel = ((this.beltSel + dir) % n + n) % n;
     Sfx.play("ui");
+  }
+
+  isFavorite(id, type) {
+    type = type || (SPELLS[id] && !ITEMS[id] ? "spell" : "item");
+    return this.favorites.some(f => f.id === id && f.type === type);
+  }
+
+  // add if absent, remove if present; returns true when now favorited
+  favoriteToggle(id, type) {
+    type = type || (SPELLS[id] && !ITEMS[id] ? "spell" : "item");
+    const i = this.favorites.findIndex(f => f.id === id && f.type === type);
+    if (i >= 0) { this.favorites.splice(i, 1); return false; }
+    this.favorites.push({ type, id });
+    return true;
   }
 
   beltUseSelected() { this.beltUse(this.beltSel); }
@@ -431,6 +448,7 @@ class Player extends Entity {
   spendStam(n) {
     this.stam = Math.max(0, this.stam - n);
     this.stamLock = 0.8;
+    if (this.stam === 0) G.tip("stamina", "Stamina spent — no rolling or striking until it returns. The dead are the ones who emptied it.");
   }
 
   useFlask() {
@@ -476,6 +494,7 @@ class Player extends Entity {
 
     this.flashT = Math.max(0, this.flashT - dt);
     this.iframes = Math.max(0, this.iframes - dt);
+    if (this.hp > 0 && this.hp / this.hpMax < 0.25) G.tip("lowhp", "Life runs low. R drinks the Ember Flask; T uses the selected belt potion.");
     this.rollCd = Math.max(0, this.rollCd - dt);
     this.stamLock = Math.max(0, this.stamLock - dt);
     this.blockT += dt;
@@ -551,7 +570,7 @@ class Player extends Entity {
     if (this.draw) speed *= 0.5;
     if (this.atk) speed *= this.atk.heavy ? 0.34 : 0.5;
     if (this.cast) speed *= 0.55;
-    if (this.loadRatio() > 1) speed *= 0.45;
+    if (this.loadRatio() > 1) { speed *= 0.45; G.tip("burden", "Overburdened — your steps drag and your roll fails. Shed weight or raise Endurance."); }
     if (this.status.frost > 0) speed *= 0.6;
     speed *= World.slowAt(map, this.x, this.y);
 
@@ -574,7 +593,10 @@ class Player extends Entity {
 
     /* ---- blocking ---- */
     const wantBlock = Input.mouse.rdown && this.shield() && !this.draw && !this.atk && !this.cast;
-    if (wantBlock && !this.blocking) { this.blocking = true; this.blockT = 0; Sfx.play("block_raise"); }
+    if (wantBlock && !this.blocking) {
+      this.blocking = true; this.blockT = 0; Sfx.play("block_raise");
+      G.tip("block", "Hold the guard and it soaks blows. Raise it the instant before impact to parry and stagger your foe.");
+    }
     if (!wantBlock) this.blocking = false;
 
     /* ---- bow draw ---- */
@@ -625,6 +647,7 @@ class Player extends Entity {
         G.slowmoAim = false;
         Sfx.play("roll");
         FX.burst(this.x, this.y, "#aaa08a", 6, 60);
+        G.tip("roll", "A roll carries a flicker of invulnerability — roll *through* a blow, not merely away from it.");
       }
     }
 
@@ -706,7 +729,8 @@ class Player extends Entity {
       flask: this.flask, x: this.x, y: this.y, hp: this.hp, stam: this.stam, mag: this.mag,
       respawn: this.respawn, quests: this.quests, readBooks: this.readBooks,
       undimmedUsed: this.undimmedUsed, statsKills: this.statsKills, statsDeaths: this.statsDeaths,
-      belt: this.belt, beltSel: this.beltSel, honing: this.honing, enchants: this.enchants,
+      belt: this.belt, beltSel: this.beltSel, favorites: this.favorites, seenHints: this.seenHints,
+      honing: this.honing, enchants: this.enchants,
       bestiary: this.bestiary, statsFish: this.statsFish,
     };
   }
@@ -734,6 +758,8 @@ class Player extends Entity {
     else if (d.quickItem) { p.belt = new Array(BELT_SIZE).fill(null); p.belt[0] = { type: "item", id: d.quickItem }; }
     else { p.belt = new Array(BELT_SIZE).fill(null); }
     while (p.belt.length < BELT_SIZE) p.belt.push(null);
+    p.favorites = d.favorites || [];
+    p.seenHints = d.seenHints || {};
     p.honing = d.honing || {};
     p.enchants = d.enchants || {};
     p.bestiary = d.bestiary || {};

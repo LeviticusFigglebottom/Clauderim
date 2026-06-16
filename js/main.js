@@ -68,6 +68,9 @@ const Game = {
     G.banner("THE SHATTERED MARCH", "the Ember gutters · the March remembers");
     G.msg("You wake with ash on your tongue. A woman in lamplight watches you. [E] to speak, [Tab] for your pack.", "good");
     G.msg("Click to capture the mouse and look around — [V] toggles the top-down view.", "");
+    G.tip("belt", "Gear and potions you gather slot onto your belt — wheel or [ ] to choose a slot, T to use it.");
+    G.tip("favorites", "Press Z for favorites — star anything in your pack or spellbook to reach it fast.");
+    if (G.player.spells.length) G.tip("spell", "Q casts your equipped spell. Change it in the Magic tab, or slot it on your belt.");
     this.lastRegion = "";
   },
 
@@ -218,6 +221,7 @@ const Game = {
     }
     G.lostEmbers = p.embers > 0 ? { mapId: G.map.id, x: p.x, y: p.y, amount: p.embers } : null;
     p.embers = 0;
+    G.tip("death", "Your embers stay where you fell. Reclaim them on your next run — but fall again first and they gutter out for good.");
 
     G.setState("dead");
     const ds = U.el("death-screen");
@@ -761,7 +765,10 @@ const Game = {
       else if (Input.pressed("map")) UI.openMenu("map");
       else if (Input.pressed("journal")) UI.openMenu("quests");
       else if (Input.pressed("character")) UI.openMenu("character");
+      else if (Input.pressed("favorites")) UI.openFavorites();
       else if (Input.pressed("pause")) UI.openMenu("system");
+    } else if (G.state === "favorites") {
+      if (Input.pressed("pause") || Input.pressed("favorites")) UI.closeFavorites();
     } else if (G.state === "menu") {
       if (Input.pressed("pause") || Input.pressed("menu")) UI.closeMenu();
       else if (Input.pressed("map")) { UI.menuTab = "map"; UI.renderMenu(); }

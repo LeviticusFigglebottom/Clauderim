@@ -20,6 +20,7 @@ const BINDS = {
   quickuse: ["KeyT"],
   beltprev: ["BracketLeft"],     // cycle quick-belt left  (mouse wheel too)
   beltnext: ["BracketRight"],    // cycle quick-belt right
+  favorites: ["KeyZ"],           // Skyrim-style quick-select overlay
   photo: ["KeyP"],
   crouch: ["ControlLeft", "ControlRight", "KeyX"],
   cast: ["KeyQ"],
