@@ -147,6 +147,21 @@ multi-file. (Full detail + line numbers in `docs/CODEMAP.md`.)
   `player.loadouts`/`saveLoadout`/`applyLoadout`) both store type-tagged
   `{type:"item"|"spell",id}` and have `beltToggle`/`favoriteToggle`/`isFavorite` — extend
   their menu hooks in `ui.js`.
+- **Random encounters** → `Game.tickEncounters`/`spawnEncounter` (overworld only, away
+  from `World.nearSafeZone`). Pull foes from the biome's `SPAWN_TABLES`; always fire
+  `Game.encounterAlert` (banner + toast + `G.encAlertT` HUD klaxon) so it can't be missed.
+  Weighted by `player.getRep("march")` and `G.flags.road_faction` (the crossed side mounts
+  a named reprisal). **Skirmish allies** use the melee `Ally` kinds `guard`/`warden_shade`.
+- **Secret caches** → `World.scatterSecrets` pushes `{kind:"secret",look,tier}` stations
+  (overworld + both dungeon gens) with a top-down visual tell; `findInteractable`/`interact`
+  (`kind:"secret"`) roll `LOOT[tier]`, flag `searched_<id>`, fire `G.tip("secret",…)`.
+- **Faction standing** → `player.rep{faction:n}` (`getRep/addRep`, persisted); shifts
+  `buyPrice/sellPrice` and gates/colors encounters. Faction/morality quests resolve in
+  dialogue `action`s (set `G.flags`, `addRep`, `QS.complete`) — see `sq_tollroad`/`sq_hollowing`.
+- **Configurable keybinds** → `DEFAULT_BINDS` snapshot + `Input.applyBinds` layers
+  `G.settings.binds` over it at boot; `assignBind`/`resetBinds`; System-menu rebind UI sets
+  `Input.captureRebind`. **New books** → add to `BOOKS`; `UI.injectBooks` auto-creates a
+  `book_<id>` item — just add a `stock(...)`/`LOOT` line there.
 
 ## Combat model (the load-bearing numbers)
 
