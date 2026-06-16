@@ -165,9 +165,12 @@ sparkle`, + `FX.update(dt)` integrates particles and `G.floats`.
   beltEntry/beltIndexOf`. (Replaced the old single `quickItem`; `deserialize` still reads
   a legacy `quickItem` into `belt[0]`.)
 - Favorites/onboarding: `favorites` (`[{type,id}]`, Skyrim-style quick-select via `Z` →
-  `UI.openFavorites`, a pausing `"favorites"` state), `isFavorite/favoriteToggle`.
-  `seenHints{}` records one-shot tutorial hints; fire them with `G.tip(key,text)`
-  (shows once per character via `msg-line.hint`, then remembered in the save).
+  `UI.openFavorites`, a pausing `"favorites"` state), `isFavorite/favoriteToggle/favoriteMove`
+  (reorder persists). The overlay binds `1–9` (`UI.favSelect`/`favActivate`) and drag/▲▼.
+  `loadouts{slot1-3:{equip,spell}}` are gear-set snapshots (`saveLoadout/applyLoadout/
+  hasLoadout`; apply skips items you no longer own). `seenHints{}` records one-shot tutorial
+  hints; fire them with `G.tip(key,text)` (shows once per character via `msg-line.hint`,
+  then remembered in the save).
 - Magic: `spells[], equippedSpell, edicts[], edictCds{}`.
 - Flask: `flask{max:3,charges:3,heal:60}`.
 - Vitals: `hp/hpMax (80+vig·14+…), stam/stamMax (60+end·9), mag/magMax (40+mnd·11+…),

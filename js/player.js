@@ -39,6 +39,7 @@ class Player extends Entity {
     this.belt = new Array(BELT_SIZE).fill(null); // quick belt: {type:"item"|"spell", id} | null
     this.beltSel = 0;                            // active belt slot
     this.favorites = [];     // Skyrim-style quick-select: [{type:"item"|"spell", id}]
+    this.loadouts = {};      // gear-set snapshots: slot(1-3) -> {equip, spell}
     this.seenHints = {};     // one-shot tutorial hints already shown (G.tip)
     this.honing = {};        // weaponId -> forge tier (0-3)
     this.fpPitch = 0;        // first-person look pitch
@@ -348,6 +349,32 @@ class Player extends Entity {
     const i = this.favorites.findIndex(f => f.id === id && f.type === type);
     if (i >= 0) { this.favorites.splice(i, 1); return false; }
     this.favorites.push({ type, id });
+    return true;
+  }
+
+  // swap a favorite with its neighbor (dir -1 up / +1 down); order persists in the save
+  favoriteMove(i, dir) {
+    const j = i + dir;
+    if (i < 0 || i >= this.favorites.length || j < 0 || j >= this.favorites.length) return false;
+    const t = this.favorites[i]; this.favorites[i] = this.favorites[j]; this.favorites[j] = t;
+    return true;
+  }
+
+  /* ---------------- gear loadouts ---------------- */
+
+  saveLoadout(slot) {
+    this.loadouts[slot] = { equip: Object.assign({}, this.equip), spell: this.equippedSpell || null };
+  }
+  hasLoadout(slot) { return !!this.loadouts[slot]; }
+  applyLoadout(slot) {
+    const lo = this.loadouts[slot];
+    if (!lo) return false;
+    const ne = { weapon: null, ranged: null, shield: null, head: null, body: null, legs: null, trinket: null };
+    for (const s in ne) { const id = lo.equip[s]; if (id && this.hasItem(id)) ne[s] = id; }  // skip what you no longer own
+    this.equip = ne;
+    if (lo.spell && this.spells.includes(lo.spell)) this.equippedSpell = lo.spell;
+    this.hpMax = this.calcHpMax(); this.magMax = this.calcMagMax();
+    this.hp = Math.min(this.hp, this.hpMax); this.mag = Math.min(this.mag, this.magMax);
     return true;
   }
 
@@ -729,8 +756,8 @@ class Player extends Entity {
       flask: this.flask, x: this.x, y: this.y, hp: this.hp, stam: this.stam, mag: this.mag,
       respawn: this.respawn, quests: this.quests, readBooks: this.readBooks,
       undimmedUsed: this.undimmedUsed, statsKills: this.statsKills, statsDeaths: this.statsDeaths,
-      belt: this.belt, beltSel: this.beltSel, favorites: this.favorites, seenHints: this.seenHints,
-      honing: this.honing, enchants: this.enchants,
+      belt: this.belt, beltSel: this.beltSel, favorites: this.favorites, loadouts: this.loadouts,
+      seenHints: this.seenHints, honing: this.honing, enchants: this.enchants,
       bestiary: this.bestiary, statsFish: this.statsFish,
     };
   }
@@ -759,6 +786,7 @@ class Player extends Entity {
     else { p.belt = new Array(BELT_SIZE).fill(null); }
     while (p.belt.length < BELT_SIZE) p.belt.push(null);
     p.favorites = d.favorites || [];
+    p.loadouts = d.loadouts || {};
     p.seenHints = d.seenHints || {};
     p.honing = d.honing || {};
     p.enchants = d.enchants || {};

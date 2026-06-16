@@ -1199,50 +1199,124 @@ const UI = {
   renderFavorites() {
     const p = G.player;
     const box = U.el("fav-content");
-    if (!p.favorites.length) {
-      box.innerHTML = `<i style="color:#5d574c">No favorites yet. Open your pack [Tab] or the Magic tab and mark gear, potions and spells with ★ — they gather here for quick selection.</i>`;
-      return;
-    }
     let html = "";
-    for (let i = 0; i < p.favorites.length; i++) {
-      const f = p.favorites[i];
-      if (f.type === "spell") {
-        const sp = SPELLS[f.id]; if (!sp) continue;
-        const eq = p.equippedSpell === f.id;
-        html += `<div class="fav-row${eq ? " equipped" : ""}" data-fav="${i}">
-          <span class="f-name">${sp.name}</span>
-          <span class="f-kind">spell · ${Combat.spellCost(p, sp)} mg${eq ? " · equipped" : ""}</span>
-          <button class="act-btn" data-favbelt="${i}">${p.beltIndexOf(f.id, "spell") >= 0 ? "− Belt" : "+ Belt"}</button></div>`;
-      } else {
-        const it = ITEMS[f.id]; if (!it) continue;
-        const have = p.countItem(f.id), eq = Object.values(p.equip).includes(f.id);
-        const isC = it.type === "consumable";
-        html += `<div class="fav-row${eq ? " equipped" : ""}" data-fav="${i}">
-          <span class="f-name r-${it.rarity}">${U.esc(this.itemName(it, p))}${isC ? " ×" + have : ""}</span>
-          <span class="f-kind">${it.type}${eq ? " · equipped" : ""}${(!isC && have === 0) ? " · none carried" : ""}</span>
-          <button class="act-btn" data-favbelt="${i}">${p.beltIndexOf(f.id, "item") >= 0 ? "− Belt" : "+ Belt"}</button></div>`;
+
+    /* ---- favorites quick-select ---- */
+    if (!p.favorites.length) {
+      html += `<i style="color:#5d574c">No favorites yet. Open your pack [Tab] or the Magic tab and mark gear, potions and spells with ★ — they gather here for quick selection.</i>`;
+    } else {
+      html += `<div class="fav-cat">Favorites <span style="color:#5d574c;text-transform:none;letter-spacing:0">— press 1–9 to select, ▲▼ to reorder</span></div>`;
+      for (let i = 0; i < p.favorites.length; i++) {
+        const f = p.favorites[i];
+        const hot = i < 9 ? `<span class="f-hot">${i + 1}</span>` : `<span class="f-hot"> </span>`;
+        const reorder = `<button class="act-btn f-mv" data-favup="${i}"${i === 0 ? " disabled" : ""}>▲</button>` +
+                        `<button class="act-btn f-mv" data-favdown="${i}"${i === p.favorites.length - 1 ? " disabled" : ""}>▼</button>`;
+        if (f.type === "spell") {
+          const sp = SPELLS[f.id]; if (!sp) continue;
+          const eq = p.equippedSpell === f.id;
+          html += `<div class="fav-row${eq ? " equipped" : ""}" draggable="true" data-fav="${i}">
+            ${hot}<span class="f-name">${sp.name}</span>
+            <span class="f-kind">spell · ${Combat.spellCost(p, sp)} mg${eq ? " · equipped" : ""}</span>
+            ${reorder}<button class="act-btn" data-favbelt="${i}">${p.beltIndexOf(f.id, "spell") >= 0 ? "− Belt" : "+ Belt"}</button></div>`;
+        } else {
+          const it = ITEMS[f.id]; if (!it) continue;
+          const have = p.countItem(f.id), eq = Object.values(p.equip).includes(f.id);
+          const isC = it.type === "consumable";
+          html += `<div class="fav-row${eq ? " equipped" : ""}" draggable="true" data-fav="${i}">
+            ${hot}<span class="f-name r-${it.rarity}">${U.esc(this.itemName(it, p))}${isC ? " ×" + have : ""}</span>
+            <span class="f-kind">${it.type}${eq ? " · equipped" : ""}${(!isC && have === 0) ? " · none carried" : ""}</span>
+            ${reorder}<button class="act-btn" data-favbelt="${i}">${p.beltIndexOf(f.id, "item") >= 0 ? "− Belt" : "+ Belt"}</button></div>`;
+        }
       }
     }
-    box.innerHTML = html;
-    box.querySelectorAll("[data-fav]").forEach(row => row.onclick = () => {
-      const f = p.favorites[parseInt(row.dataset.fav)];
-      if (!f) return;
-      if (f.type === "spell") {
-        if (p.spells.includes(f.id)) { p.equippedSpell = f.id; Sfx.play("ui"); }
+
+    /* ---- gear loadouts ---- */
+    html += `<div class="fav-cat">Gear Loadouts <span style="color:#5d574c;text-transform:none;letter-spacing:0">— snapshot your kit + spell, swap in a tap</span></div>`;
+    for (let s = 1; s <= 3; s++) {
+      const lo = p.loadouts[s];
+      const roman = ["", "I", "II", "III"][s];
+      if (lo) {
+        const w = lo.equip.weapon ? (ITEMS[lo.equip.weapon] ? ITEMS[lo.equip.weapon].name : lo.equip.weapon) : "Fists";
+        const sp = lo.spell && SPELLS[lo.spell] ? SPELLS[lo.spell].name : "—";
+        html += `<div class="fav-row" data-loadapply="${s}">
+          <span class="f-hot">${roman}</span>
+          <span class="f-name">${U.esc(w)} <span style="color:#5d574c">·</span> <span style="color:#a8bcd8">${U.esc(sp)}</span></span>
+          <span class="f-kind">equip kit</span>
+          <button class="act-btn" data-loadsave="${s}">Overwrite</button>
+          <button class="act-btn danger" data-loadclear="${s}">Clear</button></div>`;
       } else {
-        const it = ITEMS[f.id];
-        if (it && it.type === "consumable") { if (p.hasItem(f.id)) p.useConsumable(f.id); else { Sfx.play("deny"); return; } }
-        else if (it) { if (p.hasItem(f.id)) p.equipItem(f.id); else { Sfx.play("deny"); return; } }
+        html += `<div class="fav-row" data-loadsave="${s}">
+          <span class="f-hot">${roman}</span>
+          <span class="f-name" style="color:#5d574c">Loadout ${roman} — empty</span>
+          <span class="f-kind">save current kit</span></div>`;
       }
-      this.closeFavorites();
+    }
+
+    box.innerHTML = html;
+
+    box.querySelectorAll("[data-fav]").forEach(row => {
+      row.onclick = () => { const f = p.favorites[parseInt(row.dataset.fav)]; if (f) this.favActivate(f); };
+      row.ondragstart = ev => { this._favDrag = parseInt(row.dataset.fav); if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move"; };
+      row.ondragover = ev => ev.preventDefault();
+      row.ondrop = ev => {
+        ev.preventDefault();
+        const to = parseInt(row.dataset.fav), from = this._favDrag;
+        if (from != null && from !== to) { const m = p.favorites.splice(from, 1)[0]; p.favorites.splice(to, 0, m); Sfx.play("ui"); this.renderFavorites(); }
+        this._favDrag = null;
+      };
     });
     box.querySelectorAll("[data-favbelt]").forEach(b => b.onclick = ev => {
       ev.stopPropagation();
       const f = p.favorites[parseInt(b.dataset.favbelt)];
       if (f) p.beltToggle(f.id, f.type);
-      Sfx.play("ui");
+      Sfx.play("ui"); this.renderFavorites();
+    });
+    box.querySelectorAll("[data-favup]").forEach(b => b.onclick = ev => {
+      ev.stopPropagation(); p.favoriteMove(parseInt(b.dataset.favup), -1); Sfx.play("ui"); this.renderFavorites();
+    });
+    box.querySelectorAll("[data-favdown]").forEach(b => b.onclick = ev => {
+      ev.stopPropagation(); p.favoriteMove(parseInt(b.dataset.favdown), 1); Sfx.play("ui"); this.renderFavorites();
+    });
+    box.querySelectorAll("[data-loadapply]").forEach(row => row.onclick = ev => {
+      if (ev.target.dataset.loadsave || ev.target.dataset.loadclear) return; // let buttons handle themselves
+      const s = parseInt(row.dataset.loadapply);
+      if (p.applyLoadout(s)) { Sfx.play("equip"); G.msg("Loadout equipped.", "good"); this.closeFavorites(); }
+      else Sfx.play("deny");
+    });
+    box.querySelectorAll("[data-loadsave]").forEach(b => b.onclick = ev => {
+      ev.stopPropagation(); const s = parseInt(b.dataset.loadsave);
+      p.saveLoadout(s); Sfx.play("ui"); G.tip("loadout", "Loadouts snapshot your gear and spell — equip a saved kit to swap everything at once.");
       this.renderFavorites();
     });
+    box.querySelectorAll("[data-loadclear]").forEach(b => b.onclick = ev => {
+      ev.stopPropagation(); delete p.loadouts[parseInt(b.dataset.loadclear)]; Sfx.play("ui"); this.renderFavorites();
+    });
+  },
+
+  // shared activation for click + digit hotkeys; closes the overlay on success
+  favActivate(f) {
+    const p = G.player;
+    if (f.type === "spell") {
+      if (p.spells.includes(f.id)) { p.equippedSpell = f.id; Sfx.play("ui"); this.closeFavorites(); return true; }
+      Sfx.play("deny"); return false;
+    }
+    const it = ITEMS[f.id];
+    if (it && it.type === "consumable") {
+      if (p.hasItem(f.id)) { p.useConsumable(f.id); this.closeFavorites(); return true; }
+      Sfx.play("deny"); return false;
+    }
+    if (it) {
+      if (p.hasItem(f.id)) { p.equipItem(f.id); this.closeFavorites(); return true; }
+      Sfx.play("deny"); return false;
+    }
+    return false;
+  },
+
+  // 1-based selection used by the 1–9 hotkeys
+  favSelect(n) {
+    const f = G.player.favorites[n - 1];
+    if (!f) { Sfx.play("deny"); return false; }
+    return this.favActivate(f);
   },
 
   /* ============ help / manual ============ */
@@ -1264,7 +1338,7 @@ const UI = {
       <p><b>F hold</b> draw bow, release to loose · <b>Q</b> cast equipped spell</p>
       <p><b>1–4</b> speak Edicts of the Old Tongue · <b>R</b> drink the Ember Flask · <b>P</b> photo (clean screenshot)</p>
       <p><b>T</b> use the selected quick-belt slot · <b>mouse wheel</b> or <b>[ / ]</b> cycle the belt — consumables you gather fill it automatically; weapons and spells can be slotted for quick-swap</p>
-      <p><b>Z</b> favorites: a quick-select of anything you've marked with ★ in your pack or spellbook — pick to equip/use, or assign to a belt slot</p>
+      <p><b>Z</b> favorites: a quick-select of anything you've marked with ★ — click or press <b>1–9</b> to equip/use, <b>▲▼</b> (or drag) to reorder, or assign to a belt slot. Save up to three <b>gear loadouts</b> here to swap your whole kit + spell in a tap.</p>
       <h3>World</h3>
       <p><b>E</b> interact — shrines, people, chests, herbs, doors, graves, campfires, wells</p>
       <p><b>Tab</b> menu · <b>M</b> map · <b>J</b> journal · <b>C</b> character · <b>Esc</b> close/system</p>

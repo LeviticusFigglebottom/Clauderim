@@ -105,6 +105,9 @@ const Input = {
     return false;
   },
 
+  // one-frame edge for a raw key code (for context menus that bypass BINDS)
+  pressedRaw(code) { return !!this.pressedSet[code]; },
+
   // world-space aim point: cursor in top-down, dead ahead in first person
   worldX() {
     if (G.viewMode === "fp" && G.player) return G.player.x + Math.cos(G.player.facing) * 220;

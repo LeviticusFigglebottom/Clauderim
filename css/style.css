@@ -387,6 +387,9 @@ html, body {
 .fav-row.equipped { border-color: var(--gold); }
 .fav-row .f-name { flex: 1; }
 .fav-row .f-kind { color: var(--ash); font-size: 12px; }
+.fav-row .f-hot { width: 22px; text-align: center; color: var(--gold); font-size: 13px; flex: 0 0 auto; }
+.fav-row .f-mv { padding: 2px 7px; }
+.fav-row[draggable] { cursor: grab; }
 .help-panel { width: 840px; }
 #help-content { columns: 2; column-gap: 40px; font-size: 14px; line-height: 1.7; margin-bottom: 18px; }
 #help-content h3 { color: var(--gold); font-weight: 400; letter-spacing: 0.15em; margin: 10px 0 6px; font-size: 15px; text-transform: uppercase; break-after: avoid; }

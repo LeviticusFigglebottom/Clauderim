@@ -140,8 +140,10 @@ multi-file. (Full detail + line numbers in `docs/CODEMAP.md`.)
   per character (gold italic `msg-line.hint`), then remembered in `player.seenHints`
   (already in `serialize`/`deserialize`). The **quick belt** (`player.belt`/`beltSel`,
   wheel/`[ ]`/`T`) and **favorites** (`player.favorites`, `Z` → `UI.openFavorites`, a
-  pausing `"favorites"` state) both store type-tagged `{type:"item"|"spell",id}` and have
-  `beltToggle`/`favoriteToggle`/`isFavorite` — extend their menu hooks in `ui.js`.
+  pausing `"favorites"` state with `1–9` hotkeys + reorder, plus 3 **gear loadouts**
+  `player.loadouts`/`saveLoadout`/`applyLoadout`) both store type-tagged
+  `{type:"item"|"spell",id}` and have `beltToggle`/`favoriteToggle`/`isFavorite` — extend
+  their menu hooks in `ui.js`.
 
 ## Combat model (the load-bearing numbers)
 

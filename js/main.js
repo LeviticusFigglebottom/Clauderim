@@ -769,6 +769,7 @@ const Game = {
       else if (Input.pressed("pause")) UI.openMenu("system");
     } else if (G.state === "favorites") {
       if (Input.pressed("pause") || Input.pressed("favorites")) UI.closeFavorites();
+      else for (let n = 1; n <= 9; n++) if (Input.pressedRaw("Digit" + n)) { UI.favSelect(n); break; }
     } else if (G.state === "menu") {
       if (Input.pressed("pause") || Input.pressed("menu")) UI.closeMenu();
       else if (Input.pressed("map")) { UI.menuTab = "map"; UI.renderMenu(); }

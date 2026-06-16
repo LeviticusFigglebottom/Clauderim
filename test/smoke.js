@@ -481,6 +481,30 @@ check("favorites add weapon and spell", run(`G.player.isFavorite("iron_sword","i
 run(`G.player.favoriteToggle("iron_sword","item");`);
 check("favorites toggle off", run(`!G.player.isFavorite("iron_sword","item")`));
 
+// favorites reorder + digit (1-based) quick-select
+run(`
+  G.player.favorites = [{type:"item",id:"small_hp_potion"},{type:"item",id:"iron_sword"}];
+  G.player.favoriteMove(0, 1);
+`);
+check("favoriteMove swaps order", run(`G.player.favorites[0].id === "iron_sword" && G.player.favorites[1].id === "small_hp_potion"`));
+run(`
+  if (!G.player.hasItem("iron_sword")) G.player.addItem("iron_sword",1);
+  G.player.equip.weapon = null;
+  UI.favSelect(1);
+`);
+check("favSelect(1) equips the first favorite", run(`G.player.equip.weapon === "iron_sword"`));
+
+// gear loadouts: snapshot the kit, strip it, restore it
+run(`
+  if (!G.player.hasItem("iron_sword")) G.player.addItem("iron_sword",1);
+  G.player.equip.weapon = "iron_sword";
+  G.player.saveLoadout(1);
+  G.player.equip.weapon = null;
+  G.player.applyLoadout(1);
+`);
+check("loadout restores the equipped weapon", run(`G.player.equip.weapon === "iron_sword"`));
+check("loadout slot reports saved", run(`G.player.hasLoadout(1) === true`));
+
 // one-shot teaching hints fire once and remember themselves
 run(`G.player.seenHints = {}; G.tip("t_demo","once"); G.tip("t_demo","twice"); G.player._tipSeen = G.player.seenHints.t_demo === true;`);
 check("a hint marks itself seen", run(`G.player._tipSeen`) === true);
@@ -555,12 +579,14 @@ run(`
   G.player.honing.iron_sword = 2;
   G.player.favorites = [{ type: "item", id: "iron_sword" }];
   G.player.seenHints = { boss: true };
+  G.player.saveLoadout(2);
   SaveSys.save(3); Game.loadGame(3);
 `);
 check("save/load keeps honing and belt",
   run(`G.player.honing.iron_sword === 2 && G.player.belt[0] && G.player.belt[0].id === "small_hp_potion"`));
 check("save/load keeps favorites and seen hints",
   run(`G.player.isFavorite("iron_sword","item") && G.player.seenHints.boss === true`));
+check("save/load keeps gear loadouts", run(`G.player.hasLoadout(2) === true`));
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 
