@@ -36,6 +36,12 @@ const SPELLS = {
     color: "#cfe0ff", price: 150,
     desc: "Lightning taught to heel. Burns the mind of casters struck.",
   },
+  venom_bolt: {
+    name: "Venom Bolt", school: "destruction", skill: "destruction",
+    cost: 18, cast: 0.45, kind: "bolt", dmg: 12, dtype: "poison", speed: 420, radius: 0,
+    color: "#9be09b", price: 180,
+    desc: "A glob of distilled spite. It keeps arguing long after it lands.",
+  },
   fireball: {
     name: "Fireball", school: "destruction", skill: "destruction",
     cost: 34, cast: 0.6, kind: "bolt", dmg: 38, dtype: "fire", speed: 380, radius: 70,

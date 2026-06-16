@@ -657,6 +657,29 @@ run(`{
   G.player._bash = bb.staggerT;
 }`);
 check("shield bash staggers a foe", run(`G.player._bash`) > 0);
+
+// Pass 3: magic — poison spell + shock interrupt
+run(`{
+  Game.enterMap("overworld", 220*32, 156*32);
+  const vp = new Enemy("bandit", G.player.x + 60, G.player.y);
+  G.entities.push(vp); vp.state = "chase";
+  Combat.projectileHit({ dmg: 5, dtype: "poison", edmg: {}, slow: 0, magBurn: 0, spell: "venom_bolt", radius: 0 }, vp);
+  G.player._ven = vp.status.poison;
+}`);
+check("venom bolt applies poison", run(`G.player._ven`) > 0);
+check("venom_bolt is a poison spell sold in town", run(`SPELLS.venom_bolt.dtype === "poison" && NPC_DEFS.serah.shop.spells.includes("venom_bolt")`));
+run(`{
+  Game.enterMap("overworld", 220*32, 156*32);
+  const sa = new Enemy("bandit", G.player.x + 300, G.player.y);
+  const sb = new Enemy("bandit", G.player.x + 340, G.player.y);
+  G.entities.push(sa, sb);
+  sa.state = sb.state = "chase";
+  sa.poise = sa.poiseMax = 16; sb.poise = sb.poiseMax = 16; sa.staggerT = sb.staggerT = 0;
+  Combat.applyDamage(sa, { amount: 1, dtype: "phys", edmg: {}, poiseDmg: 5, attacker: G.player });
+  Combat.applyDamage(sb, { amount: 1, dtype: "phys", edmg: { shock: 4 }, poiseDmg: 5, attacker: G.player });
+  G.player._shock = (sb.staggerT > 0 && sa.staggerT === 0);
+}`);
+check("shock interrupts where a plain hit doesn't", run(`G.player._shock`) === true);
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 

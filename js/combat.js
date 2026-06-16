@@ -187,6 +187,7 @@ const Combat = {
       p.gainSkill("destruction", 5);
       if (pr.slow) e.status.frost = Math.max(e.status.frost || 0, pr.slow * (p.hasPerk("de_3") ? 2 : 1));
       if (pr.dtype === "fire") e.status.burn = Math.max(e.status.burn || 0, 3 * (p.hasPerk("de_3") ? 2 : 1));
+      if (pr.dtype === "poison") e.status.poison = Math.max(e.status.poison || 0, 5 * (p.hasPerk("de_3") ? 2 : 1));
       if (pr.magBurn && !e.def.boss) {
         // mind-burn: scramble a winding/casting foe and delay its next action
         if (e.state === "attack") { e.staggerT = Math.max(e.staggerT, 0.55); e.attackPhase = null; e.state = "chase"; }
@@ -256,6 +257,7 @@ const Combat = {
     }
 
     // elemental riders
+    let shockPoise = 0;
     if (info.edmg) {
       for (const t in info.edmg) {
         const res = (def.resist && def.resist[t]) || 0;
@@ -264,7 +266,7 @@ const Combat = {
         else if (t === "frost") e.status.frost = Math.max(e.status.frost || 0, 2.5);
         else if (t === "poison") e.status.poison = Math.max(e.status.poison || 0, 5);
         else if (t === "bleed") e.status.bleed = Math.max(e.status.bleed || 0, 4);
-        else if (t === "shock") dmg += info.edmg[t] * (1 - res / 100);
+        else if (t === "shock") { dmg += info.edmg[t] * (1 - res / 100); shockPoise += 14; } // a jolt that interrupts
       }
     }
 
@@ -280,7 +282,7 @@ const Combat = {
     G.float(e.x + (Math.random() - 0.5) * 10, e.y - e.r - 10, String(dmg), col, info.sneak || info.crit ? 17 : 13);
 
     // poise
-    e.poise -= info.poiseDmg || 8;
+    e.poise -= (info.poiseDmg || 8) + shockPoise;
     if (e.poise <= 0 && !def.boss) {
       e.poise = e.poiseMax;
       e.staggerT = Math.max(e.staggerT, 0.65);
@@ -553,7 +555,8 @@ const Combat = {
     Sfx.play("cast_charge");
   },
 
-  finishCast(p, spellId) {
+  finishCast(p, spellId, oc) {
+    oc = oc || 1;
     const sp = SPELLS[spellId];
     const cost = this.spellCost(p, sp);
     if (p.mag < cost) return;
@@ -565,12 +568,13 @@ const Combat = {
 
     if (sp.kind === "bolt") {
       const ang = U.angTo(p.x, p.y, Input.worldX(), Input.worldY());
+      if (oc > 1.1) { G.float(p.x, p.y - 30, "overcharged", sp.color, 13); G.shake(2, 0.1); }
       Projectile.spawn({
         x: p.x + Math.cos(ang) * 16, y: p.y + Math.sin(ang) * 16,
-        ang, speed: sp.speed, dmg: sp.dmg * power, dtype: sp.dtype,
+        ang, speed: sp.speed, dmg: sp.dmg * power * oc, dtype: sp.dtype,
         color: sp.color, from: "player",
         radius: sp.radius * (p.hasPerk("de_4") ? 1 : 1) + (p.hasPerk("de_4") && !sp.radius ? 36 : 0),
-        pierce: sp.pierce, slow: sp.slow || 0, magBurn: sp.magBurn || 0, spell: spellId, r: 6,
+        pierce: sp.pierce, slow: sp.slow || 0, magBurn: sp.magBurn || 0, spell: spellId, r: 6 + (oc > 1.1 ? 3 : 0),
       });
     } else if (sp.kind === "nova") {
       FX.ring(p.x, p.y, sp.radius, sp.color);

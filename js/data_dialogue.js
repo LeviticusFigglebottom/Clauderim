@@ -14,7 +14,7 @@ const NPC_DEFS = {
   serah: {
     name: "Serah the Lampwright", town: "emberfall", role: "guide",
     look: { body: "#7a5c30", trim: "#e8cf9a", hair: "#d8d0c0" },
-    shop: { stock: ["torch", "small_hp_potion", "ember_shard"], spells: ["frost_spike", "spark_lash", "lesser_heal", "cleanse", "stoneskin", "ward", "lantern_orb"] },
+    shop: { stock: ["torch", "small_hp_potion", "ember_shard"], spells: ["frost_spike", "spark_lash", "venom_bolt", "lesser_heal", "cleanse", "stoneskin", "ward", "lantern_orb"] },
     bark: ["The lamps are low tonight.", "Kneel to every shrine you pass.", "The light looks after its own."],
   },
   bram: {

@@ -577,10 +577,20 @@ class Player extends Entity {
     /* ---- casting / flask animation (you keep your feet) ---- */
     if (this.cast) {
       this.cast.t -= dt;
-      if (this.cast.t <= 0) {
-        const c = this.cast;
-        this.cast = null;
-        if (!c.flask && c.spell) Combat.finishCast(this, c.spell);
+      const c = this.cast;
+      const csp = c.spell ? SPELLS[c.spell] : null;
+      if (c.t <= 0) {
+        // charged bolts: keep holding to overcharge (up to +50%), release to loose
+        if (csp && csp.kind === "bolt" && !c.flask) {
+          c.over = (c.over || 0) + dt;
+          if (!Input.act("cast") || c.over >= 0.6) {
+            this.cast = null;
+            Combat.finishCast(this, c.spell, 1 + Math.min(c.over, 0.6) * 0.83);
+          }
+        } else {
+          this.cast = null;
+          if (!c.flask && c.spell) Combat.finishCast(this, c.spell);
+        }
       }
     }
 
