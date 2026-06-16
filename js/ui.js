@@ -1349,7 +1349,7 @@ const UI = {
       a press mid-swing <b>buffers the next blow</b>, and <b>Space</b> rolls out of the follow-through</p>
       <p><b>RMB hold</b> block with shield — raise it at the last instant to <b>parry</b></p>
       <p><b>F hold</b> draw bow, release to loose · <b>Q</b> cast equipped spell</p>
-      <p><b>1–4</b> speak Edicts of the Old Tongue · <b>R</b> drink the Ember Flask · <b>P</b> photo (clean screenshot)</p>
+      <p><b>1–5</b> speak Edicts of the Old Tongue · <b>R</b> drink the Ember Flask · <b>P</b> photo (clean screenshot)</p>
       <p><b>T</b> use the selected quick-belt slot · <b>mouse wheel</b> or <b>[ / ]</b> cycle the belt — consumables you gather fill it automatically; weapons and spells can be slotted for quick-swap</p>
       <p><b>Z</b> favorites: a quick-select of anything you've marked with ★ — click or press <b>1–9</b> to equip/use, <b>▲▼</b> (or drag) to reorder, or assign to a belt slot. Save up to three <b>gear loadouts</b> here to swap your whole kit + spell in a tap.</p>
       <h3>World</h3>

@@ -728,8 +728,8 @@ class Player extends Entity {
       Combat.beginCast(this, this.equippedSpell);
     }
 
-    /* ---- edicts 1-4 ---- */
-    for (let i = 0; i < this.edicts.length && i < 4; i++) {
+    /* ---- edicts 1-5 ---- */
+    for (let i = 0; i < this.edicts.length && i < 5; i++) {
       if (Input.pressed("edict" + (i + 1))) Combat.useEdict(this, this.edicts[i]);
     }
   }

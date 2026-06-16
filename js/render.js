@@ -741,13 +741,19 @@ const Render = {
 
     if (e instanceof Player) { this.drawPlayer(ctx, e, x, y); return; }
     if (e instanceof Ally) {
-      const col = e.kind === "lantern" ? "#ffe9a8" : "#ffb060";
+      const col = e.kind === "lantern" ? "#ffe9a8" : e.kind === "warden_shade" ? "#b9a8ff" : "#ffb060";
       const fl = 0.7 + 0.3 * Math.sin(G.elapsed * 7 + e.orbit);
       ctx.save();
       ctx.shadowColor = col; ctx.shadowBlur = 16;
       ctx.fillStyle = col;
       ctx.globalAlpha = 0.55 + fl * 0.4;
-      ctx.beginPath(); ctx.arc(x, y - 10, e.kind === "lantern" ? 6 : 5 + fl * 1.5, 0, TAU); ctx.fill();
+      if (e.kind === "warden_shade") {
+        // a hooded, blade-bearing silhouette
+        ctx.beginPath(); ctx.ellipse(x, y - 8, 5, 9, 0, 0, TAU); ctx.fill();
+        ctx.fillRect(x + Math.cos(e.facing) * 6 - 1, y - 14, 2, 16);
+      } else {
+        ctx.beginPath(); ctx.arc(x, y - 10, e.kind === "lantern" ? 6 : 5 + fl * 1.5, 0, TAU); ctx.fill();
+      }
       if (e.kind === "sprite") {
         ctx.beginPath();
         ctx.moveTo(x, y - 20 - fl * 3);
@@ -1330,9 +1336,9 @@ const Render = {
     if (be && be.type === "spell") { const bsp = SPELLS[be.id]; beName = bsp ? bsp.name : "?"; beCol = "#a8bcd8"; }
     else if (be) { const bit = ITEMS[be.id]; beName = bit ? (bit.type === "consumable" ? `${bit.name} ×${p.countItem(be.id)}` : bit.name) : "?"; beCol = "#b9d8a0"; }
     slotBox(G.W / 2 + 69, "BELT  [T] · wheel/[ ]", beName, beCol);
-    // edicts with cooldown sweep
+    // edicts with cooldown sweep (up to five words of the Old Tongue)
     let ex = G.W / 2 + 207;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       const eid = p.edicts[i];
       ctx.fillStyle = "rgba(10,9,7,0.78)";
       ctx.fillRect(ex, cy, 32, 40);

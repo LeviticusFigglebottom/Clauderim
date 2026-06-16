@@ -595,7 +595,9 @@ const Combat = {
       }
       G.entities.push(new Ally(sp.summon, sp.dur, power));
       FX.burst(p.x, p.y, sp.color, 18, 100);
-      G.msg(sp.summon === "lantern" ? "A patient light takes your shoulder." : "The Ember sends a spark with opinions.", "good");
+      G.msg(sp.summon === "lantern" ? "A patient light takes your shoulder."
+        : sp.summon === "warden_shade" ? "A Warden's memory steps from the air and stands between you and the dark."
+        : "The Ember sends a spark with opinions.", "good");
     } else if (sp.kind === "self") {
       if (sp.heal) {
         p.heal(sp.heal * power);
@@ -680,6 +682,24 @@ const Combat = {
         }
         FX.cone(p.x, p.y, p.facing, e.range, e.arc, "#ff7a2a");
         FX.cone(p.x, p.y, p.facing, e.range * 0.7, e.arc, "#ffd34a");
+        break;
+      }
+      case "end": { // OND — the Word for Enough
+        FX.ring(p.x, p.y, e.range, e.color);
+        FX.ring(p.x, p.y, e.range * 0.6, "#ffffff");
+        G.shake(9, 0.5);
+        Sfx.play("slam");
+        for (const en of G.entities) {
+          if (!en.isEnemy || en.dead) continue;
+          if (U.dist(p.x, p.y, en.x, en.y) > e.range + en.r) continue;
+          if (!en.def.boss && en.hp <= en.hpMax * e.execFrac) {
+            // the unbossed and nearly-spent simply stop
+            this.applyDamage(en, { amount: en.hp + 9999, dtype: "phys", poiseDmg: 220, attacker: p });
+            G.float(en.x, en.y - en.r - 16, "enough.", e.color, 16);
+          } else {
+            this.applyDamage(en, { amount: e.dmg, dtype: "phys", poiseDmg: 90, attacker: p });
+          }
+        }
         break;
       }
     }

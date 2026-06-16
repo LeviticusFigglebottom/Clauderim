@@ -101,7 +101,8 @@ multi-file. (Full detail + line numbers in `docs/CODEMAP.md`.)
 - **New spell/edict** → `SPELLS`/`EDICTS`. `kind` is switched in `combat.js`
   (`bolt/self/nova/summon`; edict `force/drain/time/breath`) — a new kind does
   nothing without combat code. ⚠ spell `cure` is an **array**; item `use.cure` is
-  a **string**. Edict `key` must stay `"1".."4"` (matches `BINDS`).
+  a **string**. Edict `key` must stay `"1".."5"` (matches `BINDS` `edict1..edict5`;
+  the player/HUD loops cap at 5 — `ond` is the fifth, granted by Maerodric).
 - **New perk** → add to a `SKILL_DEFS[x].perks` (id `<2-letter>_<1..4>`, req
   10/25/45/70) **AND** wire its effect with `p.hasPerk("id")` in
   `combat.js`/`player.js`. ⚠ `hasPerk` is string-keyed and fails **silently** — a

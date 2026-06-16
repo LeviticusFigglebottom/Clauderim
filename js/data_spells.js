@@ -91,6 +91,12 @@ const SPELLS = {
     color: "#ffb060", price: 600,
     desc: "Ask the Ember for company. A spark with opinions circles you and shares them, at speed, with your enemies.",
   },
+  conjure_shade: {
+    name: "Conjure Warden-Shade", school: "conjuration", skill: "restoration",
+    cost: 40, cast: 0.8, kind: "summon", summon: "warden_shade", dur: 28,
+    color: "#b9a8ff", price: 520,
+    desc: "Call up the memory of a Warden's discipline. It does not speak and does not tire, and it puts itself between you and the dark.",
+  },
   lantern_orb: {
     name: "Lampwright's Lantern", school: "conjuration", skill: "restoration",
     cost: 22, cast: 0.5, kind: "summon", summon: "lantern", dur: 180,
@@ -147,6 +153,15 @@ const EDICTS = {
     color: "#ff7a2a",
     desc: "Call, and the First Ember answers through your throat. What it says is brief, ancient, and on fire.",
     source: "Claimed from Velmora, the Ashpriest.",
+  },
+  ond: {
+    name: "OND — the Word for Enough", key: "5",
+    cooldown: 80,
+    kind: "end",  // radial reaping: heavy damage, and the nearly-spent simply stop
+    range: 210, dmg: 60, execFrac: 0.28,
+    color: "#e8d8b0",
+    desc: "The coronation word the line of Ald kept unspoken — the word for enough. Said aloud at last, it informs the world around you that it has had quite enough; and the world, exhausted, agrees.",
+    source: "Reclaimed from Maerodric, the Pale King, who swallowed it whole rather than say it.",
   },
 };
 for (const id in EDICTS) EDICTS[id].id = id;

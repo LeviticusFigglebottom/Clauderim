@@ -378,6 +378,7 @@ const ENEMY_TYPES = {
       ],
     },
     drops: [["pale_crown", 1], ["pale_claymore", 1]],
+    grantsEdict: "ond",
     voice: "whisper",
     intro: "MAERODRIC, THE PALE KING",
   },

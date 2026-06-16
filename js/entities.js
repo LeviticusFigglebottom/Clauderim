@@ -495,8 +495,8 @@ class Ally extends Entity {
     this.power = power || 1;
     this.orbit = Math.random() * TAU;
     this.fireCd = 1;
-    this.lightR = kind === "lantern" ? 150 : 80;
-    this.lightColor = kind === "lantern" ? "255,233,168" : "255,150,60";
+    this.lightR = kind === "lantern" ? 150 : kind === "warden_shade" ? 60 : 80;
+    this.lightColor = kind === "lantern" ? "255,233,168" : kind === "warden_shade" ? "185,168,255" : "255,150,60";
   }
   update(dt) {
     const p = G.player;
@@ -504,9 +504,41 @@ class Ally extends Entity {
     this.life -= dt;
     if (this.life <= 0) {
       this.dead = true;
-      FX.burst(this.x, this.y, this.kind === "lantern" ? "#ffe9a8" : "#ffb060", 14, 80);
+      FX.burst(this.x, this.y, this.kind === "lantern" ? "#ffe9a8" : this.kind === "warden_shade" ? "#b9a8ff" : "#ffb060", 14, 80);
       return;
     }
+
+    // warden-shade: a melee guardian that seeks the nearest foe and hews it
+    if (this.kind === "warden_shade") {
+      let best = null, bd = 340 * 340;
+      for (const e of G.entities) {
+        if (!e.isEnemy || e.dead || e.def.behavior === "flee") continue;
+        const d2 = U.dist2(this.x, this.y, e.x, e.y);
+        if (d2 < bd) { bd = d2; best = e; }
+      }
+      this.fireCd -= dt;
+      if (best) {
+        const ang = U.angTo(this.x, this.y, best.x, best.y);
+        this.facing = ang;
+        if (Math.sqrt(bd) > this.r + best.r + 4) {
+          const sp = 165 * dt;
+          World.moveCircle(G.map, this, Math.cos(ang) * sp, Math.sin(ang) * sp);
+        } else if (this.fireCd <= 0) {
+          this.fireCd = 0.85;
+          Combat.applyDamage(best, { amount: 16 * this.power, dtype: "phys", poiseDmg: 16, attacker: p });
+          FX.slash(this.x + Math.cos(ang) * this.r, this.y + Math.sin(ang) * this.r, ang, "#b9a8ff", 26);
+          Sfx.play("swing");
+        }
+      } else {
+        this.orbit += dt * 0.8;
+        const tx = p.x + Math.cos(this.orbit) * 40, ty = p.y + Math.sin(this.orbit) * 40;
+        this.x += (tx - this.x) * Math.min(1, dt * 4);
+        this.y += (ty - this.y) * Math.min(1, dt * 4);
+      }
+      if (Math.random() < 1.5 * dt) FX.sparkle(this.x, this.y, "#b9a8ff");
+      return;
+    }
+
     // drift at the shoulder
     this.orbit += dt * (this.kind === "sprite" ? 1.7 : 1.0);
     const tx = p.x + Math.cos(this.orbit) * 36;

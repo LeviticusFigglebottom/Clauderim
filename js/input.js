@@ -25,7 +25,7 @@ const BINDS = {
   crouch: ["ControlLeft", "ControlRight", "KeyX"],
   cast: ["KeyQ"],
   aim: ["KeyF"],                  // hold to draw equipped bow
-  edict1: ["Digit1"], edict2: ["Digit2"], edict3: ["Digit3"], edict4: ["Digit4"],
+  edict1: ["Digit1"], edict2: ["Digit2"], edict3: ["Digit3"], edict4: ["Digit4"], edict5: ["Digit5"],
   menu: ["Tab", "KeyI"],
   map: ["KeyM"],
   journal: ["KeyJ"],

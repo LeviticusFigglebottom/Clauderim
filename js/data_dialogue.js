@@ -77,7 +77,7 @@ const NPC_DEFS = {
   caldus: {
     name: "Caldus the Unlit", town: "watchtower", role: "hermit",
     look: { body: "#3a3a44", trim: "#8888a8", hair: "#909090" },
-    shop: { spells: ["fireball", "glacial_burst", "soul_lance", "greater_heal", "ember_sprite"] },
+    shop: { spells: ["fireball", "glacial_burst", "soul_lance", "greater_heal", "ember_sprite", "conjure_shade"] },
     bark: "...",
   },
 };

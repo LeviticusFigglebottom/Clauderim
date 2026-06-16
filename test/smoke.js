@@ -680,6 +680,33 @@ run(`{
   G.player._shock = (sb.staggerT > 0 && sa.staggerT === 0);
 }`);
 check("shock interrupts where a plain hit doesn't", run(`G.player._shock`) === true);
+
+// Pass 3b: the fifth Edict + Warden-Shade summon
+check("OND is the fifth word, granted by the Pale King",
+  run(`EDICTS.ond && EDICTS.ond.key === "5" && ENEMY_TYPES.boss_maerodric.grantsEdict === "ond"`));
+run(`{
+  Game.enterMap("overworld", 220*32, 156*32);
+  if (!G.player.edicts.includes("ond")) G.player.edicts = G.player.edicts.concat("ond");
+  G.player.edictCds = {}; G.player.atk = null; G.player.cast = null; G.player.rollT = 0;
+  const lowF = new Enemy("bandit", G.player.x + 40, G.player.y);
+  G.entities.push(lowF); lowF.state = "chase";
+  lowF.hp = Math.max(1, Math.floor(lowF.hpMax * 0.1));
+  Combat.useEdict(G.player, "ond");
+  G.player._ond = lowF.dead;
+}`);
+check("OND executes the nearly-spent", run(`G.player._ond`) === true);
+run(`{
+  Game.enterMap("overworld", 220*32, 156*32);
+  G.player.magMax = 200; G.player.mag = 200;
+  if (!G.player.spells.includes("conjure_shade")) G.player.spells = G.player.spells.concat("conjure_shade");
+  const n0 = G.entities.filter(x => (x instanceof Ally) && x.kind === "warden_shade").length;
+  Combat.finishCast(G.player, "conjure_shade");
+  const sh = G.entities.find(x => (x instanceof Ally) && x.kind === "warden_shade");
+  if (sh) sh.update(0.1);
+  const n1 = G.entities.filter(x => (x instanceof Ally) && x.kind === "warden_shade").length;
+  G.player._shade = (n1 === n0 + 1);
+}`);
+check("Conjure Warden-Shade summons a guardian", run(`G.player._shade`) === true);
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 
