@@ -460,16 +460,27 @@ const World = {
     map.lights.push({ x: (cx - 9) * TILE + 16, y: (cy - 4) * TILE + 16, r: 120, color: "255,150,60", flicker: true });
   },
 
-  /* ---- stone mouth of a dungeon, with portal ---- */
+  /* ---- a cave mouth bedded into a rocky rise (with portal) ---- */
   stampDungeonMouth(map, poi) {
     const { tx, ty } = poi;
-    this.clearArea(map, tx, ty, 2);
+    this.clearArea(map, tx, ty, 3);
+    // a short stone recess for the dark throat...
     for (let x = tx - 1; x <= tx + 1; x++) map.tiles[(ty - 1) * map.w + x] = T.WALL_STONE;
     map.tiles[ty * map.w + (tx - 1)] = T.WALL_STONE;
     map.tiles[ty * map.w + (tx + 1)] = T.WALL_STONE;
     map.tiles[ty * map.w + tx] = T.VOID;
-    this.setDeco(map, tx - 2, ty, D.PILLAR);
-    this.setDeco(map, tx + 2, ty, D.PILLAR);
+    // ...then bury the blunt block in rock so it reads as a cave, not masonry:
+    // boulders heaped at the shoulders, smaller rocks strewn down the approach
+    this.setDeco(map, tx - 2, ty - 1, D.BOULDER);
+    this.setDeco(map, tx + 2, ty - 1, D.BOULDER);
+    this.setDeco(map, tx - 2, ty, D.BOULDER);
+    this.setDeco(map, tx + 2, ty, D.BOULDER);
+    this.setDeco(map, tx - 3, ty + 1, D.ROCK);
+    this.setDeco(map, tx + 3, ty + 1, D.ROCK);
+    this.setDeco(map, tx - 2, ty + 2, D.ROCK);
+    this.setDeco(map, tx + 2, ty + 2, D.ROCK);
+    this.setDeco(map, tx - 1, ty + 3, D.ROCK);
+    this.setDeco(map, tx + 1, ty + 3, D.ROCK);
     map.portals.push({
       id: "mouth_" + poi.id, x: tx * TILE + 16, y: (ty + 1) * TILE + 16,
       to: poi.interior, name: poi.name, lockedBy: poi.lockedBy || null, poiId: poi.id,
