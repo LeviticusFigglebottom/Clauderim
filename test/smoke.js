@@ -1137,60 +1137,54 @@ frames(10);
 
 // settings round-trip through localStorage
 run(`{
-  G.settings.renderScale = "high";
-  G.settings.viewDist = "vfar";
-  G.settings.grain = false;
+  G.settings.autoRes = false; G.settings.fpResH = 720; G.settings.viewDist = 120; G.settings.grain = false;
   G.saveSettings();
-  G.settings.renderScale = "auto"; G.settings.viewDist = "far"; G.settings.grain = true;
+  G.settings.autoRes = true; G.settings.fpResH = 360; G.settings.viewDist = 48; G.settings.grain = true;
   G.loadSettings();
-  G.setOk = G.settings.renderScale === "high" && G.settings.viewDist === "vfar" && G.settings.grain === false;
+  G.setOk = G.settings.autoRes === false && G.settings.fpResH === 720 && G.settings.viewDist === 120 && G.settings.grain === false;
 }`);
 check("settings persist and reload", run(`G.setOk`) === true);
 
-// render scale presets drive the internal buffer
+// the resolution slider drives the internal buffer, up to large heights
 run(`{
-  G.settings.renderScale = "low"; RenderFP.applySettings();
-  G.lowRes = RenderFP.W === 480 && RenderFP.H === 270;
-  G.settings.renderScale = "high"; RenderFP.applySettings();
-  G.highRes = RenderFP.W === 854 && RenderFP.H === 480;
+  G.settings.autoRes = false;
+  G.settings.fpResH = 270; RenderFP.applySettings(); G.lowRes = (RenderFP.H === 270);
+  G.settings.fpResH = 720; RenderFP.applySettings(); G.hiRes = (RenderFP.H === 720 && RenderFP.W === Math.round(720 * G.W / G.H));
 }`);
-check("render scale presets apply (480p low, 854p high)", run(`G.lowRes && G.highRes`));
+check("resolution slider drives the buffer (up to 1080p)", run(`G.lowRes && G.hiRes`));
 
-// view distance moves the fog ceiling
+// view distance is a numeric slider, far wider range than before
 run(`{
-  G.settings.viewDist = "near"; G.mdNear = RenderFP.maxDist;
-  G.settings.viewDist = "vfar"; G.mdFar = RenderFP.maxDist;
-  G.settings.viewDist = "far";
+  G.settings.viewDist = 24; G.mdNear = RenderFP.maxDist;
+  G.settings.viewDist = 200; G.mdFar = RenderFP.maxDist;
+  G.settings.viewDist = 48;
 }`);
-check("view distance setting spans 36..64 tiles", run(`G.mdNear === 36 && G.mdFar === 64`));
+check("view distance slider spans 24..200 tiles", run(`G.mdNear === 24 && G.mdFar === 200`));
 
-// a frame renders without grain at high res (the expensive path, exercised)
-run(`{ Game.enterMap("overworld", 200*32, 206*32); G.settings.grain = false; }`);
+// a frame renders without grain at a high manual resolution (the expensive path)
+run(`{ Game.enterMap("overworld", 200*32, 206*32); G.settings.autoRes = false; G.settings.fpResH = 480; RenderFP.applySettings(); G.settings.grain = false; }`);
 let hiOk = true;
 try { frames(3); } catch (e) { hiOk = false; console.error(e); }
 check("high-res grainless frame renders clean", hiOk);
-run(`{ G.settings.renderScale = "med"; RenderFP.applySettings(); G.settings.grain = true; G.saveSettings(); }`);
+run(`{ G.settings.autoRes = true; RenderFP.applySettings(); G.settings.grain = true; G.saveSettings(); }`);
 frames(2);
 
-// adaptive only steers when set to auto (two bad windows = a signal)
+// adaptive only steers when autoRes is on (two bad windows = a signal)
 run(`{
+  RenderFP.setResH(360);
+  G.settings.autoRes = false;
   RenderFP._resDown = 0; RenderFP._resUp = 0;
-  RenderFP.frameMs = 30; RenderFP.frameN = 119;
-  RenderFP.autoRes();
-  RenderFP.frameN = 119;
-  RenderFP.autoRes();
-  G.noSteer = RenderFP.W === 640; // 'med' pins the buffer
-  G.settings.renderScale = "auto";
+  RenderFP.frameMs = 30; RenderFP.frameN = 119; RenderFP.autoRes();
+  RenderFP.frameN = 119; RenderFP.autoRes();
+  G.noSteer = RenderFP.H === 360; // manual pins the buffer
+  G.settings.autoRes = true;
   RenderFP._resDown = 0; RenderFP._resUp = 0;
-  RenderFP.frameMs = 30; RenderFP.frameN = 119;
-  RenderFP.autoRes();
-  RenderFP.frameN = 119;
-  RenderFP.autoRes();
-  G.steered = RenderFP.W === 480;
-  RenderFP.setRes(640, 360);
-  G.settings.renderScale = "med";
+  RenderFP.frameMs = 30; RenderFP.frameN = 119; RenderFP.autoRes();
+  RenderFP.frameN = 119; RenderFP.autoRes();
+  G.steered = RenderFP.H === 270;
+  RenderFP.setResH(360);
 }`);
-check("manual scale pins the buffer; auto adapts under load", run(`G.noSteer && G.steered`));
+check("manual res pins the buffer; auto adapts under load", run(`G.noSteer && G.steered`));
 
 // storms strike during heavy rain
 run(`{

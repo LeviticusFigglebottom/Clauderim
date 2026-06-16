@@ -28,6 +28,16 @@ const Game = {
 
   fitScreen() {
     const root = U.el("game-root");
+    // ultrawide: take the window's aspect (clamped) at a fixed height, so wide monitors
+    // see more of the world instead of black bars. 16:9 stays exactly 1280×720.
+    const winAspect = (window.innerWidth && window.innerHeight) ? window.innerWidth / window.innerHeight : 16 / 9;
+    const newW = Math.round(G.H * U.clamp(winAspect, 1.4, 2.2));
+    if (newW !== G.W) {
+      G.W = newW;
+      if (G.canvas) { G.canvas.width = G.W; G.canvas.height = G.H; }
+      if (Render.chunkCache && Render.chunkCache.clear) Render.chunkCache.clear();
+      if (typeof RenderFP !== "undefined" && RenderFP.refit) RenderFP.refit();
+    }
     const s = Math.min(window.innerWidth / G.W, window.innerHeight / G.H);
     root.style.transform = `translate(-50%, -50%) scale(${s})`;
   },

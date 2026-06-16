@@ -101,31 +101,36 @@ const RenderFP = {
     this.canvas = null; // full re-init next frame
     // sprite cache is resolution-independent (128x176 vectors) — keep it
   },
-  // the player's word is law; 'auto' lets the frame budget decide
+  // set the internal buffer to a given HEIGHT; width tracks the canvas aspect (ultrawide-safe)
+  setResH(h) {
+    const aspect = (G.W && G.H) ? G.W / G.H : 16 / 9;
+    this.setRes(Math.max(2, Math.round(h * aspect)), Math.max(2, Math.round(h)));
+  },
+  // re-derive the buffer width when the canvas aspect changes (resize / ultrawide)
+  refit() { this.setResH(this.H); },
+  // the player's word is law; auto lets the frame budget decide
   applySettings() {
-    const rs = G.settings.renderScale;
-    if (rs === "low") this.setRes(480, 270);
-    else if (rs === "med") this.setRes(640, 360);
-    else if (rs === "high") this.setRes(854, 480);
-    // 'auto' keeps whatever autoRes chose
+    if (G.settings.autoRes) return;       // adaptive keeps whatever autoRes chose
+    this.setResH(U.clamp(G.settings.fpResH || 360, 240, 1080));
   },
   get maxDist() {
-    const v = G.settings.viewDist;
-    return v === "near" ? 36 : v === "vfar" ? 64 : 48;
+    let v = G.settings.viewDist;
+    if (typeof v === "string") v = v === "near" ? 36 : v === "vfar" ? 64 : 48; // legacy strings
+    return U.clamp(v || 48, 24, 200);
   },
   autoRes() {
-    if (G.settings.renderScale !== "auto") return;
+    if (!G.settings.autoRes) return;
     this.frameN++;
     if (this.frameN < 120) return;
     this.frameN = 0;
     // hysteresis: two consecutive bad/good windows before switching, so a
     // single GC spike or a quiet moment can't ping-pong the resolution
-    if (this.frameMs > 15 && this.W > 480) {
+    if (this.frameMs > 15 && this.H > 270) {
       this._resDown = (this._resDown || 0) + 1; this._resUp = 0;
-      if (this._resDown >= 2) { this._resDown = 0; this.setRes(480, 270); }
-    } else if (this.frameMs < 5.5 && this.W < 640) {
+      if (this._resDown >= 2) { this._resDown = 0; this.setResH(270); }
+    } else if (this.frameMs < 5.5 && this.H < 360) {
       this._resUp = (this._resUp || 0) + 1; this._resDown = 0;
-      if (this._resUp >= 2) { this._resUp = 0; this.setRes(640, 360); }
+      if (this._resUp >= 2) { this._resUp = 0; this.setResH(360); }
     } else {
       this._resDown = 0; this._resUp = 0;
     }
@@ -193,7 +198,10 @@ const RenderFP = {
        same lens as horizontal, so circles stay circles and the edges of
        the frame stop stretching. Sprint widens the lens a touch. */
     const fovDeg = U.clamp(G.settings.fov || 75, 60, 100);
-    const planeTarget = Math.tan(fovDeg * Math.PI / 360) * (p.sprinting ? 1.12 : 1);
+    // fovDeg is the horizontal FOV at 16:9; hold the VERTICAL FOV constant and let the
+    // horizontal widen with the buffer aspect, so ultrawide shows more (and 16:9 is identical)
+    const vertTan = Math.tan(fovDeg * Math.PI / 360) * (9 / 16);
+    const planeTarget = vertTan * (W / H) * (p.sprinting ? 1.12 : 1);
     this.fov += (planeTarget - this.fov) * Math.min(1, (G.rdt || 0.016) * 7);
     const focal = (W * 0.5) / this.fov;   // pixels per unit tan
     this.focal = focal;

@@ -52,8 +52,9 @@ const G = {
     sfx: true,
     screenShake: true,
     showDamage: true,
-    renderScale: "auto",   // auto | low | med | high
-    viewDist: "far",       // near | far | vfar
+    autoRes: true,         // adaptive internal resolution (climbs/eases with frame budget)
+    fpResH: 360,           // manual internal render height (240..1080) when autoRes is off
+    viewDist: 48,          // render/fog distance in tiles (24..200)
     grain: true,           // per-pixel texture grain in first person
     showFps: false,
     fov: 75,               // horizontal degrees, 60..100

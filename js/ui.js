@@ -524,8 +524,7 @@ const UI = {
     }
     const chk = (key, label) => `<label style="display:flex;justify-content:space-between;cursor:pointer">
       <span>${label}</span><input type="checkbox" data-set="${key}" ${G.settings[key] ? "checked" : ""}></label>`;
-    const scaleNames = { auto: "Auto (adaptive)", low: "Low — 480×270", med: "Medium — 640×360", high: "High — 854×480" };
-    const distNames = { near: "Near — 36 tiles", far: "Far — 48 tiles", vfar: "Very far — 64 tiles" };
+    const curResH = G.settings.fpResH || 360;
     const keyLabel = code => {
       if (!code) return "—";
       const map = { ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→", BracketLeft: "[", BracketRight: "]", ShiftLeft: "Shift", ShiftRight: "Shift", ControlLeft: "Ctrl", ControlRight: "Ctrl", Escape: "Esc", Space: "Space" };
@@ -550,8 +549,15 @@ const UI = {
       <button class="act-btn" id="sys-diff">Difficulty: ${diffNames[G.settings.difficulty] || diffNames.measured}</button>
       ${chk("pauseOnBlur", "Pause when the window loses focus")}
       <div style="color:#c9a86a;letter-spacing:.15em;font-size:13px">GRAPHICS</div>
-      <button class="act-btn" id="sys-scale">Render scale: ${scaleNames[G.settings.renderScale]}</button>
-      <button class="act-btn" id="sys-dist">View distance: ${distNames[G.settings.viewDist]}</button>
+      ${chk("autoRes", "Adaptive resolution (auto)")}
+      <label style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <span>Resolution: <span id="sys-res-val">${curResH}p${G.settings.autoRes ? " (auto on)" : ""}</span></span>
+        <input type="range" id="sys-res" min="240" max="1080" step="30" value="${curResH}" style="flex:1;max-width:180px">
+      </label>
+      <label style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <span>View distance: <span id="sys-dist-val">${RenderFP.maxDist} tiles</span></span>
+        <input type="range" id="sys-dist" min="24" max="200" step="4" value="${typeof G.settings.viewDist === "number" ? G.settings.viewDist : 48}" style="flex:1;max-width:180px">
+      </label>
       ${chk("grain", "Texture grain (first person)")}
       ${chk("showFps", "Frame meter")}
       ${chk("screenShake", "Screen shake")}${chk("showDamage", "Damage numbers")}
@@ -596,22 +602,19 @@ const UI = {
     c.querySelectorAll("[data-set]").forEach(el => el.onchange = () => {
       G.settings[el.dataset.set] = el.checked;
       if (el.dataset.set === "music") { const m = Music.mood; Music.mood = null; Music.setMood(el.checked ? (m || "world") : null); }
+      if (el.dataset.set === "autoRes") { RenderFP.applySettings(); this.renderMenu(); }
       G.saveSettings();
     });
-    U.el("sys-scale").onclick = () => {
-      const order = ["auto", "low", "med", "high"];
-      G.settings.renderScale = order[(order.indexOf(G.settings.renderScale) + 1) % order.length];
-      RenderFP.applySettings();
+    U.el("sys-res").oninput = (e) => {
+      G.settings.fpResH = parseInt(e.target.value);
+      U.el("sys-res-val").textContent = G.settings.fpResH + "p" + (G.settings.autoRes ? " (auto on)" : "");
+      if (!G.settings.autoRes) RenderFP.applySettings();
       G.saveSettings();
-      Sfx.play("ui");
-      this.renderMenu();
     };
-    U.el("sys-dist").onclick = () => {
-      const order = ["near", "far", "vfar"];
-      G.settings.viewDist = order[(order.indexOf(G.settings.viewDist) + 1) % order.length];
+    U.el("sys-dist").oninput = (e) => {
+      G.settings.viewDist = parseInt(e.target.value);
+      U.el("sys-dist-val").textContent = RenderFP.maxDist + " tiles";
       G.saveSettings();
-      Sfx.play("ui");
-      this.renderMenu();
     };
     U.el("sys-diff").onclick = () => {
       const order = ["tender", "measured", "unforgiving"];
