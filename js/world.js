@@ -181,6 +181,7 @@ const World = {
     for (const c of chestSpots) this.placeChest(map, c[0], c[1], c[2]);
 
     this.scatterPickups(map, rng);
+    this.scatterSecrets(map, rng, 7, "chest_fine", ["cairn", "scorch", "crack"]);
 
     /* ---- ambient spawners ---- */
     for (let gy = 24; gy < h - 24; gy += 24) {
@@ -534,6 +535,29 @@ const World = {
     }
   },
 
+  // hidden caches with a semi-obvious visual tell (cairn / scorch / cracked wall)
+  scatterSecrets(map, rng, count, tier, looks) {
+    let placed = 0, tries = 0;
+    while (placed < count && tries++ < 2500) {
+      const tx = U.randi(rng, 6, map.w - 6), ty = U.randi(rng, 6, map.h - 6);
+      const i = ty * map.w + tx;
+      if (SOLID_TILES.has(map.tiles[i]) || map.deco[i] !== D.NONE || map.tiles[i] === T.ROAD) continue;
+      if (map.outdoor && this.nearSafeZone(map, tx * TILE, ty * TILE, 60)) continue;
+      const look = looks[U.randi(rng, 0, looks.length - 1)];
+      if (look === "crack") {   // a false-wall cache wants a wall to be set into
+        let nearWall = false;
+        for (let oy = -1; oy <= 1 && !nearWall; oy++)
+          for (let ox = -1; ox <= 1; ox++) {
+            if (!this.inBounds(map, tx + ox, ty + oy)) continue;
+            if (SOLID_TILES.has(map.tiles[(ty + oy) * map.w + (tx + ox)])) { nearWall = true; break; }
+          }
+        if (!nearWall) continue;
+      }
+      map.stations.push({ kind: "secret", id: map.id + "_sx" + placed, x: tx * TILE + 16, y: ty * TILE + 16, look, tier });
+      placed++;
+    }
+  },
+
   nearSafeZone(map, x, y, extra) {
     for (const z of map.safeZones) {
       if (U.dist(x, y, z.x, z.y) < z.r + (extra || 0)) return true;
@@ -748,6 +772,7 @@ const World = {
     }
 
     this.populateDungeon(map, rng, rooms, entrance, bossRoom, opt);
+    this.scatterSecrets(map, rng, 2, "chest_rare", ["crack", "cairn"]);
     return map;
   },
 
@@ -876,6 +901,7 @@ const World = {
       rooms.push({ cx: j % w, cy: (j / w) | 0, x: j % w, y: (j / w) | 0, w: 1, h: 1 });
     }
     this.populateDungeon(map, rng, rooms, { cx: ex, cy: ey }, bossRoom, opt);
+    this.scatterSecrets(map, rng, 2, "chest_rare", ["crack", "cairn"]);
     return map;
   },
 

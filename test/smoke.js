@@ -771,6 +771,20 @@ run(`{
 }`);
 check("an encounter spawns combatants", run(`G.player._encGrew`) === true);
 check("an encounter raises the alert indicator", run(`G.player._encAlert`) === true);
+
+// secret caches: seeded on the overworld, searchable for a reward
+run(`{
+  Game.enterMap("overworld", 220*32, 156*32);
+  G.player._secN = G.map.stations.filter(s => s.kind === "secret").length;
+  const sec = G.map.stations.find(s => s.kind === "secret");
+  if (sec) {
+    const e0 = G.player.embers;
+    Game.interact({ kind: "secret", obj: sec });
+    G.player._secOk = (G.player.embers > e0 && G.flags["searched_" + sec.id] === true);
+  } else G.player._secOk = false;
+}`);
+check("overworld hides secret caches", run(`G.player._secN`) > 0);
+check("searching a secret rewards and marks it", run(`G.player._secOk`) === true);
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 

@@ -300,6 +300,11 @@ const Game = {
         consider(st.x, st.y, 46, "station", st, "Work the Lampwright's altar");
       } else if (st.kind === "board") {
         consider(st.x, st.y, 46, "board", st, "Read the Wardens' Ledger");
+      } else if (st.kind === "secret") {
+        if (!G.flags["searched_" + st.id]) {
+          const what = st.look === "crack" ? "the cracked wall" : st.look === "scorch" ? "the scorched ground" : "the odd cairn";
+          consider(st.x, st.y, 42, "secret", st, "Search " + what);
+        }
       } else {
         consider(st.x, st.y, 46, "station", st, st.kind === "smith" ? "Use the forge" : "Use the alchemy bench");
       }
@@ -445,6 +450,18 @@ const Game = {
       case "gauntlet": this.startGauntletWave(); break;
       case "fish": this.startFishing(t.obj.x, t.obj.y); break;
       case "board": UI.openBoard(); break;
+      case "secret": {
+        const st = t.obj;
+        G.flags["searched_" + st.id] = true;
+        Sfx.play("chest");
+        FX.burst(st.x, st.y, "#ffd9a0", 16, 130);
+        const roll = U.weighted(Math.random, LOOT[st.tier] || LOOT.chest_fine);
+        if (roll.gold) { const g = U.randi(Math.random, roll.gold[0], roll.gold[1]); p.gold += g; G.msg(`A hidden cache — ${g} gold.`, "good"); }
+        else if (roll.id) { const n = roll.n ? U.randi(Math.random, roll.n[0], roll.n[1]) : 1; p.addItem(roll.id, n); G.msg(`A hidden cache — ${ITEMS[roll.id].name}${n > 1 ? " ×" + n : ""}.`, "good"); }
+        p.gainEmbers(40);
+        G.tip("secret", "The March hides its kindnesses. Watch for ground that doesn't match — cracked walls, odd cairns, scorched earth.");
+        break;
+      }
       case "grave": {
         const g = t.obj;
         G.flags["searched_" + g.id] = true;
