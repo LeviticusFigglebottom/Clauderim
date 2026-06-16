@@ -731,6 +731,13 @@ const Game = {
     /* global key handling */
     this.handleMetaKeys();
 
+    // any non-play screen (menu, dialogue, station, shrine, favorites…) needs the
+    // cursor back — otherwise pointer-lock from first-person eats clicks on the UI
+    if (typeof document !== "undefined" && document.exitPointerLock &&
+        document.pointerLockElement && G.state !== "play") {
+      document.exitPointerLock();
+    }
+
     // hit-stop: a frozen beat of impact (world halts, rendering continues)
     if (G.hitstop > 0) {
       G.hitstop -= dt;

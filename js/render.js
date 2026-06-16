@@ -770,9 +770,16 @@ const Render = {
       ctx.fillStyle = col;
       ctx.globalAlpha = 0.55 + fl * 0.4;
       if (e.kind === "warden_shade" || e.kind === "guard") {
-        // a hooded, blade-bearing silhouette
-        ctx.beginPath(); ctx.ellipse(x, y - 8, 5, 9, 0, 0, TAU); ctx.fill();
-        ctx.fillRect(x + Math.cos(e.facing) * 6 - 1, y - 14, 2, 16);
+        // a small hooded, blade-bearing figure (not an orb)
+        ctx.globalAlpha = 0.9;
+        ctx.beginPath(); ctx.ellipse(x, y - 6, 5, 8, 0, 0, TAU); ctx.fill();   // cloak/torso
+        ctx.beginPath(); ctx.arc(x, y - 14, 3.2, 0, TAU); ctx.fill();          // head
+        ctx.strokeStyle = "#d8d8e0"; ctx.lineWidth = 1.8;
+        const ba = e.facing;
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(ba) * 4, y - 8 + Math.sin(ba) * 4);
+        ctx.lineTo(x + Math.cos(ba) * 13, y - 8 + Math.sin(ba) * 13);
+        ctx.stroke();
       } else {
         ctx.beginPath(); ctx.arc(x, y - 10, e.kind === "lantern" ? 6 : 5 + fl * 1.5, 0, TAU); ctx.fill();
       }

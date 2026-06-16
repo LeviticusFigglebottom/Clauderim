@@ -658,17 +658,35 @@ const RenderFP = {
     for (const e of G.entities) {
       if (e.dead || e === p) continue;
       if (e instanceof Ally) {
-        addIf(e.x, e.y, 0.45, 0.5, (c) => {
-          const col = e.kind === "lantern" ? "#ffe9a8" : e.kind === "guard" ? "#9ab0d8" : e.kind === "warden_shade" ? "#b9a8ff" : "#ffb060";
-          const fl = 0.7 + 0.3 * Math.sin(tm * 7 + e.orbit);
-          c.save();
-          c.shadowColor = col; c.shadowBlur = 30;
-          c.fillStyle = col;
-          c.globalAlpha = 0.6 + fl * 0.4;
-          c.beginPath(); c.arc(64, 88, e.kind === "lantern" ? 13 : 10 + fl * 4, 0, TAU); c.fill();
-          c.restore();
-          c.globalAlpha = 1;
-        }, 1, 0.85);
+        const col = e.kind === "lantern" ? "#ffe9a8" : e.kind === "guard" ? "#9ab0d8" : e.kind === "warden_shade" ? "#b9a8ff" : "#ffb060";
+        if (e.kind === "guard" || e.kind === "warden_shade") {
+          // an upright figure with a blade — not a floating orb
+          addIf(e.x, e.y, 1.05, 0.84, (c) => {
+            c.save();
+            c.fillStyle = "rgba(0,0,0,0.28)";
+            c.beginPath(); c.ellipse(64, 152, 18, 6, 0, 0, TAU); c.fill();
+            c.fillStyle = col;
+            c.fillRect(58, 118, 5, 30); c.fillRect(67, 118, 5, 30);            // legs
+            c.beginPath(); c.moveTo(50, 122); c.lineTo(78, 122); c.lineTo(72, 72); c.lineTo(56, 72); c.closePath(); c.fill(); // cloaked torso
+            c.beginPath(); c.arc(64, 62, 10, 0, TAU); c.fill();                 // head
+            c.strokeStyle = "#d8d8e0"; c.lineWidth = 3;
+            c.beginPath(); c.moveTo(80, 112); c.lineTo(95, 66); c.stroke();     // blade
+            c.save(); c.globalAlpha = 0.45; c.shadowColor = col; c.shadowBlur = 16;
+            c.fillStyle = col; c.beginPath(); c.arc(64, 96, 7, 0, TAU); c.fill(); c.restore();
+            c.restore();
+          }, 1.1, 0);
+        } else {
+          addIf(e.x, e.y, 0.45, 0.5, (c) => {
+            const fl = 0.7 + 0.3 * Math.sin(tm * 7 + e.orbit);
+            c.save();
+            c.shadowColor = col; c.shadowBlur = 30;
+            c.fillStyle = col;
+            c.globalAlpha = 0.6 + fl * 0.4;
+            c.beginPath(); c.arc(64, 88, e.kind === "lantern" ? 13 : 10 + fl * 4, 0, TAU); c.fill();
+            c.restore();
+            c.globalAlpha = 1;
+          }, 1, 0.85);
+        }
         continue;
       }
       if (e instanceof Hazard) {
@@ -684,7 +702,11 @@ const RenderFP = {
       const size = look.size || 1;
       const shapeH = { beast: 0.8, crawler: 0.7, blob: 0.85, wisp: 1.25 }[look.shape] || 1.45;
       addIf(e.x, e.y, U.clamp(shapeH * size, 0.45, 4.2), 0.77, (c) => {
-        e._fpFace = Math.PI / 2 + U.angDiff(p.facing, e.facing) * 0.5;
+        // quadrupeds (beast/crawler) are drawn with ctx.rotate(facing); a near-vertical
+        // billboard face would stand them on end — keep them side-on so they stay upright
+        e._fpFace = (look.shape === "beast" || look.shape === "crawler")
+          ? (U.angDiff(p.facing, e.facing) < 0 ? Math.PI : 0)
+          : Math.PI / 2 + U.angDiff(p.facing, e.facing) * 0.5;
         c.save(); c.scale(2, 2);
         Render.drawEntity(c, e, e.x - 32, e.y - 60);
         c.restore();
