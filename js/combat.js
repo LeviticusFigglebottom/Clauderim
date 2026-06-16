@@ -77,6 +77,15 @@ const Combat = {
         dmg *= mult;
         p.gainSkill("sneak", 18);
       }
+      // riposte: a parry throws the foe open to a killing answer
+      if (p.riposteT > 0) { dmg *= 2.5; crit = true; }
+      // openings & angles for melee (the unaware are already handled above)
+      if (!sneak) {
+        if (e.staggerT > 0) { dmg *= 1.7; crit = true; }                       // punish the staggered
+        else if (w && w.wclass === "dagger" && Math.random() < 0.15) { dmg *= 2; crit = true; } // a knife finds the gap
+        const behind = Math.abs(U.angDiff(e.facing, U.angTo(e.x, e.y, p.x, p.y))) > 2.4;
+        if (behind) { dmg *= 1.5; crit = true; }                               // backstab
+      }
       // bleed perk
       const edmg = Object.assign({}, w && w.edmg);
       if (w && w.skill === "onehand" && !heavy && p.hasPerk("oh_2") && Math.random() < 0.2) edmg.bleed = 5;
@@ -117,7 +126,32 @@ const Combat = {
       Sfx.play("hit_flesh");
       G.shake(heavy ? 4 : 2, 0.12);
       if (heavy) G.hitstop = Math.max(G.hitstop || 0, 0.03); // a beat of weight on heavy connects
+      p.riposteT = 0; // the opening is spent
     }
+  },
+
+  // shield bash: tap LMB while guarding — little damage, heavy poise, opens foes up
+  shieldBash(p) {
+    const sh = p.shield();
+    if (!sh || p.stam < 8) { Sfx.play("deny"); return; }
+    p.spendStam(10);
+    const reach = 30 + p.r;
+    FX.slash(p.x + Math.cos(p.facing) * reach * 0.5, p.y + Math.sin(p.facing) * reach * 0.5,
+      p.facing, "#cbb78a", reach * 0.7);
+    Sfx.play("slam");
+    let hit = false;
+    for (const e of G.entities) {
+      if (!e.isEnemy || e.dead) continue;
+      const d = U.dist(p.x, p.y, e.x, e.y);
+      if (d > reach + e.r) continue;
+      if (Math.abs(U.angDiff(p.facing, U.angTo(p.x, p.y, e.x, e.y))) > 1.0) continue;
+      hit = true;
+      this.applyDamage(e, {
+        amount: 5 + sh.block * 0.1, dtype: "phys",
+        poiseDmg: 30 + (sh.stability || 0) * 0.3, attacker: p,
+      });
+    }
+    if (hit) { G.shake(3, 0.12); p.gainSkill("block", 6); }
   },
 
   playerShoot(p, power) {
@@ -388,6 +422,7 @@ const Combat = {
         G.hitstop = Math.max(G.hitstop || 0, 0.09);
         FX.burst(p.x + Math.cos(srcAng) * 18, p.y + Math.sin(srcAng) * 18, "#ffe9a8", 18, 180);
         G.float(p.x, p.y - 26, "PARRY", "#ffe9a8", 16);
+        p.riposteT = 1.5; // the next strike lands as a riposte
         p.gainSkill("block", 14);
         return;
       }

@@ -630,6 +630,33 @@ run(`{
   G.player._mb = (mbE.staggerT > 0 && mbE.state !== "attack");
 }`);
 check("spark_lash magBurn interrupts a winding foe", run(`G.player._mb`) === true);
+
+// Pass 2: combat depth — riposte window + shield bash
+run(`{
+  Game.enterMap("overworld", 220*32, 156*32);
+  if (!G.player.hasItem("wooden_shield")) G.player.addItem("wooden_shield", 1);
+  G.player.equip.shield = "wooden_shield";
+  const rb = new Enemy("bandit", G.player.x + 22, G.player.y);
+  G.entities.push(rb);
+  G.player.iframes = 0; G.player.blocking = true; G.player.blockT = 0; G.player.riposteT = 0;
+  G.player.facing = U.angTo(G.player.x, G.player.y, rb.x, rb.y);
+  Combat.enemyHitPlayer(rb, 1);
+  G.player._rip = G.player.riposteT;
+  G.player.blocking = false;
+}`);
+check("a parry opens a riposte window", run(`G.player._rip`) > 0);
+run(`{
+  Game.enterMap("overworld", 220*32, 156*32);
+  G.player.equip.shield = "wooden_shield";
+  const bb = new Enemy("bandit", G.player.x + 24, G.player.y);
+  G.entities.push(bb);
+  bb.poise = 5; bb.staggerT = 0;
+  G.player.stam = 50;
+  G.player.facing = U.angTo(G.player.x, G.player.y, bb.x, bb.y);
+  Combat.shieldBash(G.player);
+  G.player._bash = bb.staggerT;
+}`);
+check("shield bash staggers a foe", run(`G.player._bash`) > 0);
 check("save/load keeps way-lamp flags", run(`QS.flagCount("waylamp_um_")`) === 3);
 frames(30);
 

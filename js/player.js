@@ -11,6 +11,15 @@ const LEVEL_COST = lvl => Math.floor(80 * Math.pow(lvl, 1.55));
 const SKILL_XP_TO_NEXT = lvl => 80 + lvl * 14;
 const BELT_SIZE = 6;   // quick-belt slots (wheel / [ ] to cycle, T to use)
 
+// weapon move-sets: phase ratios (of total swing time) + a total multiplier.
+// daggers snap, spears thrust long, great-weapons commit hard.
+const MOVESETS = {
+  dagger:  { mul: 0.9,  wind: 0.30, strike: 0.13, rec: 0.34 },
+  spear:   { mul: 1.0,  wind: 0.42, strike: 0.20, rec: 0.40 },
+  twohand: { mul: 1.05, wind: 0.46, strike: 0.16, rec: 0.50 },
+  default: { mul: 1.0,  wind: 0.40, strike: 0.15, rec: 0.45 },
+};
+
 class Player extends Entity {
   constructor(name, originId) {
     super(0, 0, 11);
@@ -77,6 +86,7 @@ class Player extends Entity {
     this.status = {};         // poison/burn/frost/bleed
     this.buffs = {};
     this.iframes = 0;
+    this.riposteT = 0;        // open window after a parry: next strike crits
     this.staggerT = 0;
     this.flashT = 0;
     this.moveAng = 0; this.moving = false;
@@ -530,6 +540,7 @@ class Player extends Entity {
 
     this.flashT = Math.max(0, this.flashT - dt);
     this.iframes = Math.max(0, this.iframes - dt);
+    this.riposteT = Math.max(0, this.riposteT - dt);
     if (this.hp > 0 && this.hp / this.hpMax < 0.25) G.tip("lowhp", "Life runs low. R drinks the Ember Flask; T uses the selected belt potion.");
     this.rollCd = Math.max(0, this.rollCd - dt);
     this.stamLock = Math.max(0, this.stamLock - dt);
@@ -648,6 +659,11 @@ class Player extends Entity {
       Combat.playerShoot(this, power);
     }
 
+    /* ---- shield bash: tap LMB while guarding ---- */
+    if (this.blocking && Input.mouse.pressed && this.shield() && !this.atk && !this.cast && !this.draw) {
+      Combat.shieldBash(this);
+    }
+
     /* ---- light / heavy attacks (LMB tap vs hold) ---- */
     if (this.atk) {
       // mid-swing: LMB buffers the next blow instead of vanishing
@@ -716,14 +732,15 @@ class Player extends Entity {
       return;
     }
     const spd = w.spd || 1.2;
-    const total = (1 / spd) * (heavy ? 1.5 : 1);
+    const prof = MOVESETS[w.wclass] || (w.skill === "twohand" ? MOVESETS.twohand : MOVESETS.default);
+    const total = (1 / spd) * (heavy ? 1.5 : 1) * prof.mul;
     const cost = (w.stam || 12) * (heavy ? 1.7 : 1) * (this.hasPerk("oh_3") && w.skill === "onehand" ? 0.75 : 1);
     if (this.stam < 1) { Sfx.play("deny"); return; }
     this.spendStam(cost);
     this.atk = {
       phase: "wind", heavy,
-      windT: total * 0.4, strikeT: total * 0.15, recT: total * 0.45,
-      t: total * 0.4, hit: false,
+      windT: total * prof.wind, strikeT: total * prof.strike, recT: total * prof.rec,
+      t: total * prof.wind, hit: false,
     };
     Sfx.play(heavy ? "swing_heavy" : "swing");
   }
